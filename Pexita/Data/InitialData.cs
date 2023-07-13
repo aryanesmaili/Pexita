@@ -1,11 +1,10 @@
-﻿using Pexita.Data.Models;
-namespace Pexita.Data
+﻿namespace Pexita.Data
 {
     public class InitialData
     {
         public static void Seed(IApplicationBuilder applicationBuilder)
         {
-            using (var ServiceScope = applicationBuilder.ApplicationServices.CreateScope())
+            /*using (var ServiceScope = applicationBuilder.ApplicationServices.CreateScope())
             {
                 var context = ServiceScope.ServiceProvider.GetService<AppDBContext>();
 
@@ -19,7 +18,7 @@ namespace Pexita.Data
                         DatePurchased = DateTime.Now.AddDays(-25),
                         Rate = 3.5,
                         Category = "Jean",
-                        BrandName = "Gucci",
+                        Brand = new BrandModel { Name="Gucci", BrandPicURL="", },
                         ProductPicURL = "https://",
                         DateAdded = DateTime.Now.AddDays(-50),
                     }, new ProductModel()
@@ -29,13 +28,13 @@ namespace Pexita.Data
                         IsPurchasedBefore = false,
                         Rate = 3.5,
                         Category = "Sweather",
-                        BrandName = "Fendi",
+                        Brand = new BrandModel { Name = "Fendi", BrandPicURL = "" },
                         ProductPicURL = "https://",
                         DateAdded = DateTime.Now.AddDays(-37),
                     });
                     context.SaveChanges();
                 }
-            }
+            }*/
         }
     }
 }

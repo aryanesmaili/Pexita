@@ -1,5 +1,4 @@
-﻿using Pexita.Data.Models;
-using Pexita.Data.ViewModels;
+﻿using Pexita.Data.Entities.Products;
 namespace Pexita.Services.Interfaces
 {
     public interface IProductService

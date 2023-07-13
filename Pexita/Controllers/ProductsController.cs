@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Pexita.Data.ViewModels;
+using Pexita.Data.Entities.Products;
 using Pexita.Services;
 using Pexita.Services.Interfaces;
 
@@ -29,7 +29,7 @@ namespace Pexita.Controllers
                 return BadRequest();
             }
         }
-        [HttpGet("products/{id}")]
+        [HttpGet("products/{id:int}")]
         public IActionResult GetProductByID(int id)
         {
             try

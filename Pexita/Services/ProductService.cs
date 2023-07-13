@@ -1,6 +1,5 @@
 ﻿using Pexita.Data;
-using Pexita.Data.Models;
-using Pexita.Data.ViewModels;
+using Pexita.Data.Entities.Products;
 using Pexita.Services.Interfaces;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 
@@ -22,13 +21,11 @@ namespace Pexita.Services
                     Title = product.Title,
                     Description = product.Description,
                     Price = product.Price,
-                    BrandName = product.BrandName,
-                    IsPurchasedBefore = product.IsPurchasedBefore,
-                    DatePurchased = product.IsPurchasedBefore ? product.DatePurchased!.Value : null,
+                    Brand = product.Brand,
                     Rate = product.IsPurchasedBefore ? product.Rate!.Value : null,
-                    Category = product.Category,
                     ProductPicURL = product.ProductPicURL,
-                    DateAdded = DateTime.UtcNow
+                    DateAdded = DateTime.UtcNow,
+                    IsAvailable = true
                 };
                 _Context.Products.Add(NewProduct);
                 _Context.SaveChanges();
@@ -52,12 +49,10 @@ namespace Pexita.Services
                 Product.Title = product.Title;
                 Product.Description = product.Description;
                 Product.Price = product.Price;
-                Product.BrandName = product.BrandName;
-                Product.IsPurchasedBefore = product.IsPurchasedBefore;
-                Product.DatePurchased = product.IsPurchasedBefore ? product.DatePurchased!.Value : null;
+                Product.Brand= product.Brand;
                 Product.Rate = product.IsPurchasedBefore ? product.Rate!.Value : null;
-                Product.Category = product.Category;
                 Product.ProductPicURL = product.ProductPicURL;
+                Product.IsAvailable = product.IsAvailable;
                 _Context.SaveChanges();
             }
             return Product;

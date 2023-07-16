@@ -114,7 +114,7 @@ namespace Pexita.Data
         public DbSet<ProductNewsLetterModel> NewsLetters { get; set; }
         public DbSet<PaymentModel> Payments { get; set; }
         public DbSet<ShoppingCartModel> ShoppingCarts { get; set; }
-        public DbSet<TagsModel> Tags { get; set; }
+        public DbSet<TagModel> Tags { get; set; }
         public DbSet<UserModel> Users { get; set; }
     }
 }

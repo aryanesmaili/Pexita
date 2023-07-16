@@ -18,7 +18,7 @@ namespace Pexita.Controllers
             return Ok();
         }
         [HttpGet("Login")]
-        public IActionResult Login([FromBody] BrandVM brand)
+        public IActionResult Login([FromBody] BrandInfoVM brand)
         {
             return Ok();
         }
@@ -28,7 +28,7 @@ namespace Pexita.Controllers
             return Ok();
         }
         [HttpPut("Edit")]
-        public IActionResult EditBrand(int id, [FromBody] BrandVM brand)
+        public IActionResult EditBrand(int id, [FromBody] BrandInfoVM brand)
         {
             return Ok();
         }

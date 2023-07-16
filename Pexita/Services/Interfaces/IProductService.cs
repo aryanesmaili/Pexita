@@ -1,12 +1,17 @@
-﻿using Pexita.Data.Entities.Products;
+﻿using Pexita.Data.Entities.Comments;
+using Pexita.Data.Entities.Products;
 namespace Pexita.Services.Interfaces
 {
     public interface IProductService
     {
-        public bool AddProduct(ProductVM product);
-        public List<ProductModel> GetAllProducts();
-        public ProductModel GetProductByID(int id);
-        public ProductModel UpdateProductInfo(int id, ProductVM product);
+        public bool AddProduct(ProductCreateVM product);
+        public List<ProductInfoVM> GetProducts();
+        public List<ProductInfoVM> GetProducts(int count);
+        public ProductInfoVM GetProductByID(int id);
+        public ProductInfoVM UpdateProductInfo(int id, ProductCreateVM product);
         public bool DeleteProduct(int id);
+        public ProductInfoVM ProductModelToInfoVM(ProductModel model);
+        public bool AddCommentToProduct(int ProductID, CommentsModel comment);
+        public bool UpdateProductRate(int ProductID, double rate);
     }
 }

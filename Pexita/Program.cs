@@ -10,9 +10,13 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
 builder.Services.AddDbContext<AppDBContext>
     (options => options.UseSqlServer(builder.Configuration.GetConnectionString("DbOne")));
+
 builder.Services.AddTransient<IProductService, ProductService>();
+builder.Services.AddTransient<IBrandService, BrandService>();
+builder.Services.AddTransient<ITagsService, TagsService>();
 
 var app = builder.Build();
 

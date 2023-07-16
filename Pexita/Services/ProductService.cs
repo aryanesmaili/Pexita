@@ -55,9 +55,9 @@ namespace Pexita.Services
                 _Context.SaveChanges();
                 return true;
             }
-            catch
+            catch (Exception e)
             {
-                return false;
+                throw new Exception(e.Message);
             }
         }
 
@@ -126,9 +126,9 @@ namespace Pexita.Services
                     throw new NotFoundException("No record was Found");
                 }
             }
-            catch
+            catch (Exception e)
             {
-                throw new Exception();
+                throw new Exception(e.Message);
             }
         }
         public ProductInfoVM ProductModelToInfoVM(ProductModel model)
@@ -142,6 +142,7 @@ namespace Pexita.Services
                 Quantity = model.Quantity,
                 Brand = _brandService.BrandModelToInfo(model.Brand),
                 Rate = GetRating(model.Rate!),
+                DateCreated = model.DateAdded,
                 Tags = _tagsService.TagsToVM(model.Tags!),
                 ProductPics = model.ProductPicsURL,
                 IsAvailable = model.IsAvailable,

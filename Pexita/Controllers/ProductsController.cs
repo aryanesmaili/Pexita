@@ -31,6 +31,10 @@ namespace Pexita.Controllers
             {
                 return NotFound();
             }
+            catch(Exception e) 
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, $"there was an error processing your request: {e.Message}, {e.InnerException}");
+            }
         }
         [HttpGet("products/get/{count:int}")]
         public IActionResult GetProducts(int count)
@@ -51,6 +55,10 @@ namespace Pexita.Controllers
             {
                 return NotFound(nameof(count));
             }
+            catch (Exception e)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, $"there was an error processing your request: {e.Message}, {e.InnerException}");
+            }
         }
         [HttpGet("products/{id:int}")]
         public IActionResult GetProductByID(int id)
@@ -63,12 +71,29 @@ namespace Pexita.Controllers
             {
                 return NotFound(nameof(id));
             }
+            catch (Exception e)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, $"there was an error processing your request: {e.Message}, {e.InnerException}");
+
+            }
         }
 
         [HttpPost("product/add")]
         public IActionResult AddProduct([FromBody] ProductCreateVM product)
         {
-            return _productService.AddProduct(product) ? Ok() : BadRequest();
+            try
+            {
+                _productService.AddProduct(product);
+                return Ok();
+            }
+            catch (ArgumentNullException)
+            {
+                return BadRequest($"Arguement null {nameof(product)}");
+            }
+            catch (Exception e)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, $"there was an error processing your request: {e.Message}, {e.InnerException}");
+            }
         }
 
         [HttpPut("product/update/{id}")]
@@ -92,7 +117,7 @@ namespace Pexita.Controllers
             }
             catch (Exception e)
             {
-                return StatusCode(500, $"there was an error processing your request: {e.Message}");
+                return StatusCode(StatusCodes.Status500InternalServerError, $"there was an error processing your request: {e.Message}");
             }
         }
         [HttpDelete("products/delete/{id}")]
@@ -109,7 +134,7 @@ namespace Pexita.Controllers
             }
             catch (Exception e)
             {
-                return StatusCode(500, $"there was an error processing your request: {e.Message}");
+                return StatusCode(StatusCodes.Status500InternalServerError, $"there was an error processing your request: {e.Message}");
             }
         }
 
@@ -126,7 +151,7 @@ namespace Pexita.Controllers
             }
             catch (Exception e)
             {
-                return StatusCode(500, $"there was an error processing your request: {e.Message}");
+                return StatusCode(StatusCodes.Status500InternalServerError, $"there was an error processing your request: {e.Message}");
             }
         }
     }

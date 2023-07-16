@@ -28,7 +28,7 @@ namespace Pexita.Data.Entities.Products
         public required List<TagInfoVM> Tags { get; set; }
         public required string ProductPics{ get; set; }
         public required bool IsAvailable { get; set; }
-
+        public required  DateTime DateCreated { get; set; }
     }
     public class ProductUpdateVM
     {

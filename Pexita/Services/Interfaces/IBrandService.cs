@@ -4,8 +4,9 @@ namespace Pexita.Services.Interfaces
 {
     public interface IBrandService
     {
-        public bool AddBrand();
-        public List<BrandModel> GetAllBrnds();
+        public bool AddBrand(BrandCreateVM createVM);
+        public List<BrandInfoVM> GetBrands();
+        public List<BrandInfoVM> GetBrands(int count);
         public BrandModel GetBrandByID(int id);
         public BrandModel GetBrandByName(string name);
         public BrandInfoVM UpdateBrandInfo(int id, BrandInfoVM model);

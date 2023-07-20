@@ -86,9 +86,13 @@ namespace Pexita.Controllers
                 _productService.AddProduct(product);
                 return Ok();
             }
-            catch (ArgumentNullException)
+            catch (FormatException e)
             {
-                return BadRequest($"Arguement null {nameof(product)}");
+                return BadRequest(e.Message);
+            }
+            catch (ArgumentNullException e)
+            {
+                return BadRequest($"Arguement null {e.Message}");
             }
             catch (Exception e)
             {

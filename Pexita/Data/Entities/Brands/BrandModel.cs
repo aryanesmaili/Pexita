@@ -14,12 +14,13 @@ namespace Pexita.Data.Entities.Brands
         public required string Username { get; set; }
         public required string Password { get; set; }
         public required string Email { get; set; }
+        public required DateTime DateCreated { get; set; }
 
         // Navigation Properties
-        public List<ProductModel> Products { get; set; }
-        public List<OrdersModel> Orders { get; set; }
-        public List<BrandNewsletterModel> BrandNewsLetters { get; set; }
-        public List<ProductNewsLetterModel> ProductNewsLetters { get; set; }
+        public List<ProductModel>? Products { get; set; }
+        public List<OrdersModel>? Orders { get; set; }
+        public List<BrandNewsletterModel>? BrandNewsLetters { get; set; }
+        public List<ProductNewsLetterModel>? ProductNewsLetters { get; set; }
 
     }
 }

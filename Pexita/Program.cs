@@ -2,6 +2,8 @@ using Microsoft.EntityFrameworkCore;
 using Pexita.Data;
 using Pexita.Services.Interfaces;
 using Pexita.Services;
+using AutoMapper;
+using Pexita.Additionals;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -10,6 +12,10 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
+var mapperConfig = new MapperConfiguration(mc => { mc.AddProfile(new AutoMapperConfig()); });
+IMapper mapper = mapperConfig.CreateMapper();
+builder.Services.AddSingleton(mapper);
 
 builder.Services.AddDbContext<AppDBContext>
     (options => options.UseSqlServer(builder.Configuration.GetConnectionString("DbOne")));

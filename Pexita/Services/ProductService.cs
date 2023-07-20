@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc.Filters;
+﻿using AutoMapper;
+using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.CodeAnalysis;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion.Internal;
 using Pexita.Data;
@@ -7,6 +8,7 @@ using Pexita.Data.Entities.Products;
 using Pexita.Data.Entities.Tags;
 using Pexita.Exceptions;
 using Pexita.Services.Interfaces;
+using Pexita.Utility;
 using System.Linq;
 
 namespace Pexita.Services
@@ -15,15 +17,17 @@ namespace Pexita.Services
     {
         private readonly AppDBContext _Context;
         private readonly IBrandService _brandService;
-        private readonly IWebHostEnvironment _webHostEnvironment;
         private readonly ITagsService _tagsService;
+        private readonly PexitaTools _pexitaTools;
+        private readonly IMapper _mapper;
         public ProductService(AppDBContext Context, IBrandService brandService,
-            IWebHostEnvironment webHostEnvironment, ITagsService tagsService)
+            ITagsService tagsService, PexitaTools pexitaTools, IMapper Mapper)
         {
             _Context = Context;
             _brandService = brandService;
-            _webHostEnvironment = webHostEnvironment;
             _tagsService = tagsService;
+            _pexitaTools = pexitaTools;
+            _mapper = Mapper;
         }
         public bool AddProduct(ProductCreateVM product)
         {
@@ -34,57 +38,23 @@ namespace Pexita.Services
                     throw new ArgumentNullException(nameof(product));
                 }
 
-                string identifier = $"{product.Brand}-{product.Title}";
-                ProductModel NewProduct = new()
-                {
-                    Title = product.Title,
-                    Description = product.Description,
-                    Price = product.Price,
-                    Brand = _brandService.GetBrandByName(product.Brand),
-                    Quantity = product.Quantity,
-                    Colors = product.Colors,
-                    Rate = new List<double>(),
-                    ProductPicsURL = SaveProductImages(product.ProductPics, identifier).Result,
-                    DateAdded = DateTime.UtcNow,
-                    IsAvailable = true,
-                    Tags = StringToTags(product.Tags),
-                    Comments = new List<CommentsModel>()
-                };
+                string identifier = $"{product.Brand}/{product.Title}";
+
+                ProductModel NewProduct = _mapper.Map<ProductModel>(product);
 
                 _Context.Products.Add(NewProduct);
                 _Context.SaveChanges();
                 return true;
+            }
+            catch (FormatException fe)
+            {
+                throw new IOException($"saving the given file {fe.Message} failed because of format");
             }
             catch (Exception e)
             {
                 throw new Exception(e.Message);
             }
         }
-
-        private async Task<string> SaveProductImages(List<IFormFile> files, string identifier)
-        {
-            string imagePath = Path.Combine(_webHostEnvironment.WebRootPath, $"/Images/{identifier}");
-            string[] allowedTypes = new[] { "image/jpeg", "image/png" };
-
-            if (!Directory.Exists(imagePath))
-                Directory.CreateDirectory(imagePath);
-
-            for (int i = 0; i < files.Count; i++)
-            {
-                if (!allowedTypes.Contains(files[i].ContentType))
-                    throw new FormatException();
-
-                string uniqueFileName = $"{identifier}_{i:03}{Path.GetExtension(files[i].FileName)}";
-                string filePath = Path.Combine(imagePath, uniqueFileName);
-
-                using (var stream = new FileStream(filePath, FileMode.Create))
-                {
-                    await files[i].CopyToAsync(stream);
-                }
-            }
-            return imagePath;
-        }
-
         public List<ProductInfoVM> GetProducts()
         {
             try
@@ -133,43 +103,7 @@ namespace Pexita.Services
         }
         public ProductInfoVM ProductModelToInfoVM(ProductModel model)
         {
-            ProductInfoVM product = new()
-            {
-                ID = model.ID,
-                Title = model.Title,
-                Description = model.Description,
-                Price = model.Price,
-                Quantity = model.Quantity,
-                Brand = _brandService.BrandModelToInfo(model.Brand),
-                Rate = GetRating(model.Rate!),
-                DateCreated = model.DateAdded,
-                Tags = _tagsService.TagsToVM(model.Tags!),
-                ProductPics = model.ProductPicsURL,
-                IsAvailable = model.IsAvailable,
-            };
-            return product;
-        }
-        private static double GetRating(List<double> Ratings) => Ratings.Average();
-
-        private List<TagModel> StringToTags(string Tag)
-        {
-            if (Tag.Length == 0)
-            {
-                return new List<TagModel>();
-            }
-            var tags = Tag.Split(',');
-            List<TagModel> res = new();
-
-            foreach (string tag in tags)
-            {
-                if (_Context.Tags.FirstOrDefault(t => t.Title == tag) == null)
-                    _Context.Tags.Add(new TagModel() { Title = tag });
-
-                TagModel t = _Context.Tags.Single(t => t.Title == tag);
-                t.TimesUsed++;
-                res.Add(t);
-            }
-            return res;
+            return _mapper.Map<ProductInfoVM>(model);
         }
 
         public ProductInfoVM GetProductByID(int id)
@@ -195,7 +129,7 @@ namespace Pexita.Services
             productModel.Price = product.Price;
             productModel.Brand = _brandService.GetBrandByName(product.Brand);
 
-            productModel.ProductPicsURL = SaveProductImages(product.ProductPics, identifier).GetAwaiter().GetResult();
+            productModel.ProductPicsURL = _pexitaTools.SaveProductImages(product.ProductPics, identifier).GetAwaiter().GetResult();
             productModel.IsAvailable = product.IsAvailable;
 
             try

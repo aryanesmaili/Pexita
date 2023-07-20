@@ -1,27 +1,84 @@
-﻿using Pexita.Data;
+﻿using AutoMapper;
+using Pexita.Data;
 using Pexita.Data.Entities.Brands;
 using Pexita.Services.Interfaces;
+using Pexita.Utility;
 
 namespace Pexita.Services
 {
     public class BrandService : IBrandService
     {
         private readonly AppDBContext _Context;
-        public BrandService(AppDBContext Context)
+        private readonly PexitaTools _pexitaTools;
+        private readonly IMapper _mapper;
+        public BrandService(AppDBContext Context, PexitaTools PexitaTools, IMapper Mapper)
         {
             _Context = Context;
+            _pexitaTools = PexitaTools;
+            _mapper = Mapper;
         }
-
-        public bool AddBrand()
+        // TODO: ADD-MIGRATION BECAUSE OF THE CHANGES YOU MADE TO THE DATABASE SCHEME
+        public bool AddBrand(BrandCreateVM createVM)
         {
-            throw new NotImplementedException();
+            if (createVM == null)
+                throw new ArgumentNullException(nameof(createVM));
+
+            try
+            {
+                string identifier = $"{createVM.Name}/{createVM.Name}";
+
+                BrandModel Brand = _mapper.Map<BrandModel>(createVM);
+
+                _Context.Brands.Add(Brand);
+                _Context.SaveChanges();
+                return true;
+            }
+            catch (FormatException e)
+            {
+                throw new FormatException(e.Message);
+            }
         }
 
-        public List<BrandModel> GetAllBrnds()
+        public List<BrandInfoVM> GetBrands()
         {
-            throw new NotImplementedException();
+            try
+            {
+                List<BrandInfoVM> list = _Context.Brands.Select(BrandModelToInfo).ToList();
+                return list;
+            }
+            catch (ArgumentNullException)
+            {
+                throw new ArgumentNullException($"Brands Table is null or Empty!");
+            }
+            catch (InvalidOperationException e)
+            {
+                throw new InvalidOperationException(e.Message);
+            }
+            catch (Exception e)
+            {
+                throw new Exception(e.Message);
+            }
         }
-
+        public List<BrandInfoVM> GetBrands(int count)
+        {
+            try
+            {
+                List<BrandInfoVM> brands = _Context.Brands.Take(count).Select(BrandModelToInfo).ToList();
+                return brands;
+            }
+            catch (ArgumentNullException)
+            {
+                throw new ArgumentNullException($"Brands Table is null or Empty!");
+            }
+            catch (InvalidOperationException e)
+            {
+                throw new InvalidOperationException(e.Message);
+            }
+            catch (Exception e)
+            {
+                throw new Exception(e.Message);
+            }
+        }
         public BrandModel GetBrandByID(int id)
         {
             throw new NotImplementedException();

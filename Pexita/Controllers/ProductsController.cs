@@ -27,15 +27,16 @@ namespace Pexita.Controllers
                 var result = _productService.GetProducts();
                 return Ok(result);
             }
-            catch (NotFoundException)
+            catch (NotFoundException e)
             {
-                return NotFound();
+                return NotFound(e.Message);
             }
-            catch(Exception e) 
+            catch (Exception e)
             {
                 return StatusCode(StatusCodes.Status500InternalServerError, $"there was an error processing your request: {e.Message}, {e.InnerException}");
             }
         }
+
         [HttpGet("products/get/{count:int}")]
         public IActionResult GetProducts(int count)
         {
@@ -43,23 +44,21 @@ namespace Pexita.Controllers
             {
                 return Ok(_productService.GetProducts(count));
             }
-            catch (ArgumentNullException ex)
-            {
-                return BadRequest(ex.Message);
-            }
+
             catch (ArgumentOutOfRangeException)
             {
-                return BadRequest("Count was more than the records we had");
+                return BadRequest($"Count ({count}) was more than the records we had");
             }
-            catch (NotFoundException)
+            catch (NotFoundException e)
             {
-                return NotFound(nameof(count));
+                return NotFound(e.Message + " " + nameof(count));
             }
             catch (Exception e)
             {
                 return StatusCode(StatusCodes.Status500InternalServerError, $"there was an error processing your request: {e.Message}, {e.InnerException}");
             }
         }
+
         [HttpGet("products/{id:int}")]
         public IActionResult GetProductByID(int id)
         {
@@ -74,7 +73,6 @@ namespace Pexita.Controllers
             catch (Exception e)
             {
                 return StatusCode(StatusCodes.Status500InternalServerError, $"there was an error processing your request: {e.Message}, {e.InnerException}");
-
             }
         }
 
@@ -83,17 +81,24 @@ namespace Pexita.Controllers
         {
             try
             {
+                if (product == null)
+                    throw new ArgumentNullException(nameof(product));
+
                 _productService.AddProduct(product);
                 return Ok();
             }
-            catch (FormatException e)
+
+            catch (FormatException fe)
             {
-                return BadRequest(e.Message);
+                return BadRequest($"saving the given file {fe.Message} failed because of format");
+
             }
+
             catch (ArgumentNullException e)
             {
                 return BadRequest($"Arguement null {e.Message}");
             }
+
             catch (Exception e)
             {
                 return StatusCode(StatusCodes.Status500InternalServerError, $"there was an error processing your request: {e.Message}, {e.InnerException}");
@@ -101,7 +106,7 @@ namespace Pexita.Controllers
         }
 
         [HttpPut("product/update/{id}")]
-        public IActionResult UpdateProduct(int id, [FromBody] ProductCreateVM product)
+        public IActionResult UpdateProduct(int id, [FromBody] ProductUpdateVM product)
         {
             try
             {
@@ -112,6 +117,7 @@ namespace Pexita.Controllers
                 return NotFound();
             }
         }
+
         [HttpPut("product/update/rate/{id:int}")]
         public IActionResult UpdateProductRate(int id, [FromBody] double value)
         {
@@ -119,17 +125,23 @@ namespace Pexita.Controllers
             {
                 return Ok(_productService.UpdateProductRate(id, value));
             }
+
+            catch (NotFoundException)
+            {
+                return NotFound(id);
+            }
             catch (Exception e)
             {
                 return StatusCode(StatusCodes.Status500InternalServerError, $"there was an error processing your request: {e.Message}");
             }
         }
+
         [HttpDelete("products/delete/{id}")]
         public IActionResult DeleteProduct(int id)
         {
             try
             {
-                return _productService.DeleteProduct(id) ? Ok(id) : BadRequest(id);
+                return _productService.DeleteProduct(id) ? NoContent() : BadRequest(id);
 
             }
             catch (NotFoundException)

@@ -1,6 +1,8 @@
 ﻿using AutoMapper;
+using Microsoft.EntityFrameworkCore;
 using Pexita.Data;
 using Pexita.Data.Entities.Brands;
+using Pexita.Exceptions;
 using Pexita.Services.Interfaces;
 using Pexita.Utility;
 
@@ -37,15 +39,17 @@ namespace Pexita.Services
             {
                 throw new FormatException(e.Message);
             }
+           
         }
 
         public List<BrandInfoVM> GetBrands()
         {
             try
             {
-                List<BrandInfoVM> list = _Context.Brands.Select(BrandModelToInfo).ToList();
+                List<BrandInfoVM> list = _Context.Brands.Include(b => b.Products)!.ThenInclude(p => p.Comments).Include(b => b.Products)!.ThenInclude(p => p.Tags).Select(BrandModelToInfo).ToList();
                 return list;
             }
+
             catch (ArgumentNullException)
             {
                 throw new ArgumentNullException($"Brands Table is null or Empty!");
@@ -54,16 +58,14 @@ namespace Pexita.Services
             {
                 throw new InvalidOperationException(e.Message);
             }
-            catch (Exception e)
-            {
-                throw new Exception(e.Message);
-            }
         }
         public List<BrandInfoVM> GetBrands(int count)
         {
             try
             {
-                List<BrandInfoVM> brands = _Context.Brands.Take(count).Select(BrandModelToInfo).ToList();
+                List<BrandInfoVM> brands = _Context.Brands.Include(b => b.Products)!.ThenInclude(p => p.Comments).Include(b => b.Products)!.ThenInclude(p => p.Tags)
+                    .Take(count).Select(BrandModelToInfo)
+                    .ToList();
                 return brands;
             }
             catch (ArgumentNullException)
@@ -79,28 +81,48 @@ namespace Pexita.Services
                 throw new Exception(e.Message);
             }
         }
-        public BrandModel GetBrandByID(int id)
+        public BrandInfoVM GetBrandByID(int id)
         {
-            throw new NotImplementedException();
+            return BrandModelToInfo(_Context.Brands.Include(b => b.Products!).ThenInclude(pc => pc.Tags).FirstOrDefault(b => b.ID == id) ?? throw new NotFoundException());
         }
 
         public BrandModel GetBrandByName(string name)
         {
-            throw new NotImplementedException();
+            return _Context.Brands.FirstOrDefault(x => x.Name == name) ?? throw new NotFoundException();
         }
 
         public bool RemoveBrand(int id)
         {
-            throw new NotImplementedException();
+            try
+            {
+                var brand = _Context.Brands.FirstOrDefault(x => x.ID == id) ?? throw new NotFoundException();
+                _Context.Remove(brand);
+                _Context.SaveChanges();
+                return true;
+            }
+            catch (NotFoundException)
+            {
+                throw new NotFoundException();
+            }
+            catch (InvalidOperationException e)
+            {
+                throw new InvalidOperationException(e.Message);
+            }
         }
 
-        public BrandInfoVM UpdateBrandInfo(int id, BrandInfoVM model)
+        public BrandInfoVM UpdateBrandInfo(int id, BrandUpdateVM model)
         {
-            throw new NotImplementedException();
+            var brand = _Context.Brands.FirstOrDefault(x => x.ID == id) ?? throw new NotFoundException();
+            _mapper.Map(model, brand);
+            _Context.SaveChanges();
+
+            return BrandModelToInfo(brand);
+
         }
+        //TODO : remove throwing exceptions from services and just catch them in controller!
         public BrandInfoVM BrandModelToInfo(BrandModel model)
         {
-            throw new NotImplementedException();
+            return _mapper.Map(model, new BrandInfoVM());
         }
     }
 }

@@ -3,7 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.6.33723.286
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Pexita", "Pexita\Pexita.csproj", "{9FEC36EE-B39E-4B94-BF53-BE84F36B649B}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Pexita", "Pexita\Pexita.csproj", "{9FEC36EE-B39E-4B94-BF53-BE84F36B649B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NunitTest", "NunitTest\NunitTest.csproj", "{372A09B4-DD7B-42D3-8677-B63C0216103A}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,6 +17,10 @@ Global
 		{9FEC36EE-B39E-4B94-BF53-BE84F36B649B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9FEC36EE-B39E-4B94-BF53-BE84F36B649B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{9FEC36EE-B39E-4B94-BF53-BE84F36B649B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{372A09B4-DD7B-42D3-8677-B63C0216103A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{372A09B4-DD7B-42D3-8677-B63C0216103A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{372A09B4-DD7B-42D3-8677-B63C0216103A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{372A09B4-DD7B-42D3-8677-B63C0216103A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

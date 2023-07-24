@@ -8,7 +8,7 @@ namespace Pexita.Services.Interfaces
         public List<ProductInfoVM> GetProducts();
         public List<ProductInfoVM> GetProducts(int count);
         public ProductInfoVM GetProductByID(int id);
-        public ProductInfoVM UpdateProductInfo(int id, ProductCreateVM product);
+        public ProductInfoVM UpdateProductInfo(int id, ProductUpdateVM product);
         public bool DeleteProduct(int id);
         public ProductInfoVM ProductModelToInfoVM(ProductModel model);
         public bool AddCommentToProduct(int ProductID, CommentsModel comment);

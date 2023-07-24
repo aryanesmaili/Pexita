@@ -7,11 +7,10 @@ namespace Pexita.Services.Interfaces
         public bool AddBrand(BrandCreateVM createVM);
         public List<BrandInfoVM> GetBrands();
         public List<BrandInfoVM> GetBrands(int count);
-        public BrandModel GetBrandByID(int id);
+        public BrandInfoVM GetBrandByID(int id);
         public BrandModel GetBrandByName(string name);
-        public BrandInfoVM UpdateBrandInfo(int id, BrandInfoVM model);
+        public BrandInfoVM UpdateBrandInfo(int id, BrandUpdateVM model);
         public bool RemoveBrand(int id);
         public BrandInfoVM BrandModelToInfo(BrandModel model);
-
     }
 }

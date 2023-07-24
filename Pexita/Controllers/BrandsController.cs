@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Pexita.Data.Entities.Brands;
+using Pexita.Exceptions;
 using Pexita.Services.Interfaces;
 
 namespace Pexita.Controllers
@@ -25,15 +26,15 @@ namespace Pexita.Controllers
             {
                 return BadRequest(e.Message);
             }
-            catch (InvalidOperationException e) 
+            catch (InvalidOperationException e)
             {
                 return StatusCode(StatusCodes.Status500InternalServerError, e.Message);
             }
-            catch (Exception e) 
+            catch (Exception e)
             {
                 return BadRequest(e.Message);
             }
-        }        
+        }
         [HttpGet("Brands/Get/{count:int}")]
         public IActionResult GetAllBrands(int count)
         {
@@ -59,13 +60,26 @@ namespace Pexita.Controllers
         [HttpGet("GetBrand/{id}")]
         public IActionResult GetBrands(int id)
         {
-            return Ok();
+            try
+            {
+                return Ok(_brandService.GetBrandByID(id));
+            }
+            catch (NotFoundException)
+            {
+                return NotFound(id);
+            }
+            catch (Exception e)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, e.Message);
+            }
         }
+
         [HttpGet("Login")]
         public IActionResult Login([FromBody] BrandInfoVM brand)
         {
             return Ok();
         }
+
         [HttpPost("AddBrand")]
         public IActionResult AddBrand([FromBody] BrandCreateVM createVM)
         {
@@ -85,15 +99,45 @@ namespace Pexita.Controllers
                 return BadRequest(e.Message);
             }
         }
-        [HttpPut("Edit")]
-        public IActionResult EditBrand(int id, [FromBody] BrandInfoVM brand)
+        [HttpPut("Edit/{id:int}")]
+        public IActionResult EditBrand(int id, [FromBody] BrandUpdateVM brand)
         {
-            return Ok();
+            try
+            {
+                _brandService.UpdateBrandInfo(id, brand);
+                return Ok();
+            }
+            catch (NotFoundException)
+            {
+                return NotFound(nameof(id));
+            }
+            catch (InvalidOperationException e)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, e.Message);
+            }
+            catch (Exception e)
+            {
+                return BadRequest(e.Message);
+            }
         }
-        [HttpDelete("Delete")]
+
+        [HttpDelete("Delete/{id:int}")]
         public IActionResult DeleteBrand(int id)
         {
-            return Ok();
+            try
+            {
+                return _brandService.RemoveBrand(id) ? NoContent() : StatusCode(StatusCodes.Status500InternalServerError);
+            }
+
+            catch (NotFoundException)
+            {
+                return NotFound(id);
+            }
+
+            catch (Exception e)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, e.Message);
+            }
         }
     }
 }

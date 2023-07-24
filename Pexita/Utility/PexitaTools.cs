@@ -37,9 +37,29 @@ namespace Pexita.Utility
             }
             return imagePath;
         }
+        public async Task<string> SaveProductImages(IFormFile file, string identifier)
+        {
+            string imagePath = Path.Combine(_webHostEnvironment.WebRootPath, $"/Images/{identifier}");
+            string[] allowedTypes = new[] { "image/jpeg", "image/png" };
+
+            if (!Directory.Exists(imagePath))
+                Directory.CreateDirectory(imagePath);
+            if (!allowedTypes.Contains(file.ContentType))
+                throw new FormatException($"Format Error occured while saving {file},{file.FileName}");
+
+            string uniqueFileName = $"{identifier}_{DateTime.UtcNow.Ticks}{Path.GetExtension(file.FileName)}";
+            string filePath = Path.Combine(imagePath, uniqueFileName);
+
+            using (var stream = new FileStream(filePath, FileMode.Create))
+            {
+                await file.CopyToAsync(stream);
+            }
+
+            return imagePath;
+        }
         public List<TagModel> StringToTags(string Tag)
         {
-            if (Tag.Length == 0)
+            if (string.IsNullOrEmpty(Tag))
             {
                 return new List<TagModel>();
             }

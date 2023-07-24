@@ -1,6 +1,7 @@
 ﻿using AutoMapper;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.CodeAnalysis;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion.Internal;
 using Pexita.Data;
 using Pexita.Data.Entities.Comments;
@@ -38,38 +39,36 @@ namespace Pexita.Services
                     throw new ArgumentNullException(nameof(product));
                 }
 
-                string identifier = $"{product.Brand}/{product.Title}";
-
                 ProductModel NewProduct = _mapper.Map<ProductModel>(product);
 
                 _Context.Products.Add(NewProduct);
                 _Context.SaveChanges();
                 return true;
             }
-            catch (FormatException fe)
-            {
-                throw new IOException($"saving the given file {fe.Message} failed because of format");
-            }
             catch (Exception e)
             {
                 throw new Exception(e.Message);
             }
         }
+
         public List<ProductInfoVM> GetProducts()
         {
             try
             {
-                List<ProductModel> products = _Context.Products.ToList();
+                List<ProductModel> products = _Context.Products.Include(b => b.Brand).ToList();
                 if (products.Count > 0)
                 {
-
                     List<ProductInfoVM> productsVM = products.Select(ProductModelToInfoVM).ToList();
                     return productsVM;
                 }
                 else
                 {
-                    throw new NotFoundException();
+                    throw new NotFoundException("No Records found in Products Table");
                 }
+            }
+            catch (NotFoundException e) 
+            {
+                throw new NotFoundException(e.Message);
             }
             catch (Exception e)
             {
@@ -118,19 +117,10 @@ namespace Pexita.Services
             }
         }
 
-        public ProductInfoVM UpdateProductInfo(int id, ProductCreateVM product)
+        public ProductInfoVM UpdateProductInfo(int id, ProductUpdateVM product)
         {
             ProductModel productModel = _Context.Products.FirstOrDefault(n => n.ID == id) ?? throw new NotFoundException();
-
-            string identifier = $"{product.Brand}-{product.Title}";
-
-            productModel.Title = product.Title;
-            productModel.Description = product.Description;
-            productModel.Price = product.Price;
-            productModel.Brand = _brandService.GetBrandByName(product.Brand);
-
-            productModel.ProductPicsURL = _pexitaTools.SaveProductImages(product.ProductPics, identifier).GetAwaiter().GetResult();
-            productModel.IsAvailable = product.IsAvailable;
+            _mapper.Map(product, productModel);
 
             try
             {
@@ -138,10 +128,8 @@ namespace Pexita.Services
             }
             catch (Exception ex)
             {
-                // Handle the exception (e.g., log the error, rollback changes, etc.)
                 throw new Exception("An error occurred while saving changes to the database.", ex);
             }
-
             return ProductModelToInfoVM(productModel);
         }
 
@@ -155,11 +143,11 @@ namespace Pexita.Services
                 _Context.SaveChanges();
                 return true;
             }
+
             catch (Exception e)
             {
                 throw new Exception(e.Message);
             }
-
         }
 
         public bool AddCommentToProduct(int ProductID, CommentsModel comment)
@@ -171,10 +159,12 @@ namespace Pexita.Services
                 _Context.SaveChanges();
                 return true;
             }
+
             catch (InvalidOperationException)
             {
                 throw new NotFoundException();
             }
+
             catch (Exception e)
             {
                 throw new Exception(e.Message);
@@ -191,6 +181,7 @@ namespace Pexita.Services
                 _Context.SaveChanges();
                 return true;
             }
+
             catch (InvalidOperationException)
             {
                 throw new NotFoundException();

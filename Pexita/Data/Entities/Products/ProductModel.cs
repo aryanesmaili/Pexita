@@ -16,7 +16,7 @@ namespace Pexita.Data.Entities.Products
         public int? Quantity { get; set; }
         public required bool IsAvailable { get; set; }
         public string? Colors { get; set; }
-        public List<double>? Rate { get; set; }
+        public List<ProductRating> Rating { get; set; }
         public required string ProductPicsURL { get; set; }
         public required DateTime DateAdded { get; set; }
 
@@ -28,5 +28,12 @@ namespace Pexita.Data.Entities.Products
         public List<ProductNewsLetterModel>? NewsLetters { get; set; }
         // Add a collection of CartItems
         public List<CartItems>? CartItems { get; set; }
+    }
+    public class ProductRating
+    {
+        public int ID { get; set; }
+        public int Rating { get; set; }
+        public int ProductID { get; set; }
+        public ProductModel Product { get; set; }
     }
 }

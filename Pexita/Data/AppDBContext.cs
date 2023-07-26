@@ -106,6 +106,10 @@ namespace Pexita.Data
                 .HasForeignKey(ui => ui.UserId)
                 .OnDelete(DeleteBehavior.NoAction);
 
+            modelBuilder.Entity<ProductModel>()
+                .HasMany(p => p.Rating)
+                .WithOne(r => r.Product)
+                .HasForeignKey(r => r.ProductID);
         }
         public DbSet<ProductModel> Products { get; set; }
         public DbSet<BrandModel> Brands { get; set; }

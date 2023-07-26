@@ -1,7 +1,10 @@
-﻿using Microsoft.AspNetCore.Hosting;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Pexita.Data;
 using Pexita.Data.Entities.Tags;
+using System.Text;
+using Pexita.Data.Entities.User;
+using Pexita.Additionals;
+using Pexita.Exceptions;
 
 namespace Pexita.Utility
 {
@@ -77,7 +80,47 @@ namespace Pexita.Utility
             }
             return res;
         }
-        public double GetRating(List<double> Ratings) => Ratings.Average();
+        public double GetRating(List<int> Ratings) => Ratings.Average();
 
+        public string GenerateRandomPassword(int length)
+        {
+            Random random = new();
+            const string chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+            StringBuilder passwordBuilder = new StringBuilder(length);
+
+            for (int i = 0; i < length; i++)
+            {
+                int randomIndex = random.Next(0, chars.Length);
+                char randomChar = chars[randomIndex];
+                passwordBuilder.Append(randomChar);
+            }
+
+            return passwordBuilder.ToString();
+        }
+        public List<Address> ValidateAddresses(int UserID, List<Address> VMAddresses)
+        {
+
+            try
+            {
+                HashSet<Address> addresses = new(VMAddresses);
+
+                UserModel user = _Context.Users.Include(u => u.Addresses).Single(u => u.ID == UserID);
+
+                foreach (var address in addresses) 
+                {
+                    if (user.Addresses.FirstOrDefault(a => a.ID == address.ID) == null)
+                    {
+                        user.Addresses.Add(address);
+                    }
+                }
+                _Context.SaveChanges();
+
+                return user.Addresses.ToList();
+            }
+            catch (InvalidOperationException)
+            {
+                throw new NotFoundException($"User With ID:{UserID} Not Found");
+            }
+        }
     }
 }

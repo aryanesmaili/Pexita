@@ -14,11 +14,12 @@ namespace Pexita.Services.Interfaces
         public UserInfoVM UpdateUser(UserUpdateVM user);
         public bool DeleteUser(int id);
         public UserLoginVM ResetPassword(UserLoginVM loginVM);
-        public UserLoginVM ChangePassword(UserLoginVM loginVM);
-        public List<Address> GetAddresses(int id);
-        public bool AddAddress(Address address);
-        public bool UpdateAddress(Address address);
-        public bool DeleteAddress(int id);
-        public List<CommentsModel> GetComments(int id);
+        public bool ChangePassword(UserLoginVM loginVM);
+        public List<Address> GetAddresses(int UserID);
+        public bool AddAddress(int UserID, Address address);
+        public bool UpdateAddress(int UserID, Address address);
+        public bool DeleteAddress(int UserID, int id);
+        public List<CommentsModel> GetComments(int UserID);
+        public UserInfoVM UserModelToInfoVM(UserModel userModel);
     }
 }

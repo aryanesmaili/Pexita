@@ -119,7 +119,7 @@ namespace Pexita.Controllers
         }
 
         [HttpPut("product/update/rate/{id:int}")]
-        public IActionResult UpdateProductRate(int id, [FromBody] double value)
+        public IActionResult UpdateProductRate(int id, [FromBody] int value)
         {
             try
             {

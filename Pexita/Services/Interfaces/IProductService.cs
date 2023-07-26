@@ -12,6 +12,6 @@ namespace Pexita.Services.Interfaces
         public bool DeleteProduct(int id);
         public ProductInfoVM ProductModelToInfoVM(ProductModel model);
         public bool AddCommentToProduct(int ProductID, CommentsModel comment);
-        public bool UpdateProductRate(int ProductID, double rate);
+        public bool UpdateProductRate(int ProductID, int rate);
     }
 }

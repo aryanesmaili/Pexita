@@ -14,6 +14,8 @@ namespace Pexita.Data.Entities.User
         public string Password { get; set; }
         public string Email { get; set; }
         public List<Address> Addresses { get; set; }
+        public  DateTime DateCreated { get; set; }
+
         //Navigation Properties
         public List<OrdersModel> Orders { get; set; }
         public List<ShoppingCartModel> ShoppingCarts { get; set; }

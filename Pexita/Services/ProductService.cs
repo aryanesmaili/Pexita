@@ -170,13 +170,14 @@ namespace Pexita.Services
                 throw new Exception(e.Message);
             }
         }
-        public bool UpdateProductRate(int ProductID, double rate)
+        public bool UpdateProductRate(int ProductID, int rate)
         {
             try
             {
                 ProductModel product = _Context.Products.Single(product => product.ID == ProductID);
+                ProductRating rating = new() { Rating = rate, Product = product, ProductID = product.ID };
 
-                product.Rate!.Add(rate);
+                product.Rating.Add(rating);
 
                 _Context.SaveChanges();
                 return true;

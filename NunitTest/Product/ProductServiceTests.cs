@@ -19,7 +19,7 @@ namespace NunitTest.Product
     {
         private Mock<AppDBContext> _mockDbContext;
         private FakeBrandService _fakeBrandService;
-        private Mock<ITagsService> _mockTagsService;
+        private FakeTagsService _fakeTagsService;
         private FakePexitaTools _fakePexitaTools;
         private Mock<IMapper> _mockMapper;
         private ProductService _productService;
@@ -28,10 +28,10 @@ namespace NunitTest.Product
         [SetUp]
         public void SetUp()
         {
-            // Arrange - Create mock instances
+            // Arrange
             _mockDbContext = new Mock<AppDBContext>();
             _fakeBrandService = new();
-            _mockTagsService = new Mock<ITagsService>();
+            _fakeTagsService = new FakeTagsService();
             _fakePexitaTools = new FakePexitaTools();
             _mockMapper = new Mock<IMapper>();
             _capturedProducts = new List<ProductModel>();
@@ -39,7 +39,7 @@ namespace NunitTest.Product
             _productService = new ProductService(
                 _mockDbContext.Object,
                 _fakeBrandService,
-                _mockTagsService.Object,
+                _fakeTagsService,
                 _fakePexitaTools,
                 _mockMapper.Object
             );

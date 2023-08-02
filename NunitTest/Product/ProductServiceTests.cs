@@ -44,9 +44,32 @@ namespace NunitTest.Product
                 _mockMapper.Object
             );
 
-            _mockDbContext.Setup(x => x.Products).ReturnsDbSet(_capturedProducts);
+            _ = _mockDbContext.Setup(x => x.Products).ReturnsDbSet(_capturedProducts);
 
-            _ = _mockDbContext.Setup(context => context.Products.Add(It.IsAny<ProductModel>())).Callback<ProductModel>(_capturedProducts.Add);
+             _ = _mockDbContext.Setup(context => context.Products.Add(It.IsAny<ProductModel>())).Callback<ProductModel>(_capturedProducts.Add);
+
+            // Set up the IMapper mock to return the mapped ProductModel
+            _ = _mockMapper.Setup(mapper => mapper.Map<ProductModel>(It.IsAny<ProductCreateVM>()))
+                 .Returns<ProductCreateVM>(src =>
+                 {
+                     // Create a new ProductModel using the provided ProductCreateVM instance
+                     var productModel = new ProductModel
+                     {
+                         // Map properties based on the defined mapping configuration
+                         Title = src.Title,
+                         Description = src.Description,
+                         Price = src.Price,
+                         Quantity = src.Quantity,
+                         Brand = _fakeBrandService.GetBrandByName(src.Brand),
+                         ProductPicsURL = _fakePexitaTools.SaveProductImages(src.ProductPics, $"{src.Brand}/{src.Title}").Result,
+                         DateAdded = DateTime.UtcNow,
+                         IsAvailable = true,
+                         Tags = _fakePexitaTools.StringToTags(src.Tags),
+                         Comments = new List<CommentsModel>(),
+                         Rating = new List<ProductRating>()
+                     };
+                     return productModel;
+                 });
 
         }
 
@@ -79,41 +102,21 @@ namespace NunitTest.Product
                 Colors = "Red, Blue"
             };
 
-            var mappedProductModel = _mockDbContext.Object.Products.First();
-
-            // Set up the IMapper mock to return the mapped ProductModel
-           _mockMapper.Setup(mapper => mapper.Map<ProductModel>(It.IsAny<ProductCreateVM>()))
-                .Returns<ProductCreateVM>(src =>
-                {
-                    // Create a new ProductModel using the provided ProductCreateVM instance
-                    var productModel = new ProductModel
-                    {
-                        // Map properties based on the defined mapping configuration
-                        Title = src.Title,
-                        Description = src.Description,
-                        Price = src.Price,
-                        Quantity = src.Quantity,
-                        Brand = _fakeBrandService.GetBrandByName(src.Brand),
-                        ProductPicsURL = _fakePexitaTools.SaveProductImages(src.ProductPics, $"{src.Brand}/{src.Title}").Result,
-                        DateAdded = DateTime.UtcNow,
-                        IsAvailable = true,
-                        Tags = _fakePexitaTools.StringToTags(src.Tags),
-                        Comments = new List<CommentsModel>(),
-                        Rating = new List<ProductRating>()
-                    };
-                        return productModel;
-                    });
-
-
             // Act
             bool result = _productService.AddProduct(productCreateVM);
+            var addedproduct = _mockDbContext.Object.Products.First();
 
             // Assert
-            Assert.IsTrue(result); // Make sure the method returns true on successful addition
-            Assert.AreEqual(1, _capturedProducts.Count); // Verify that the product was added once
+            Assert.Multiple(() =>
+            {
 
-            // You can perform additional assertions on the capturedProducts list to check its properties
-            // For example, if you have an Id property in ProductModel, you can check that it's not zero or negative.
+                Assert.That(result, Is.True); // Make sure the method returns true on successful addition
+
+                Assert.That(addedproduct, Is.Not.Null);
+
+                Assert.That(_capturedProducts, Has.Count.EqualTo(1)); // Verify that the product was added once
+            });
+
 
             // Verify that SaveChanges was called on the context exactly once
             _mockDbContext.Verify(context => context.SaveChanges(), Times.Once);

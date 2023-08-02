@@ -7,7 +7,7 @@ using Pexita.Data.Entities.Tags;
 
 namespace NunitTest.Product
 {
-    class TestDataHelper
+    class ProductTestDataHelper
     {
         public static List<ProductModel> GetSomeProducts()
         {

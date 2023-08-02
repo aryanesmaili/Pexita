@@ -30,6 +30,7 @@ namespace Pexita.Services
             _pexitaTools = pexitaTools;
             _mapper = Mapper;
         }
+        // Add validation to check if the product already exists!
         public bool AddProduct(ProductCreateVM product)
         {
             try

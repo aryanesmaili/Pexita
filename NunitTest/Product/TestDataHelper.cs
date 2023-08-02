@@ -4,11 +4,6 @@ using Pexita.Data.Entities.Newsletter;
 using Pexita.Data.Entities.Products;
 using Pexita.Data.Entities.ShoppingCart;
 using Pexita.Data.Entities.Tags;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace NunitTest.Product
 {

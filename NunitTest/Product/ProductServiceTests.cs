@@ -40,12 +40,10 @@ namespace NunitTest.Product
                 _mockMapper.Object
             );
 
-            _mockDbContext.Setup(x => x.Products).ReturnsDbSet(TestDataHelper.GetSomeProducts());
+            _mockDbContext.Setup(x => x.Products).ReturnsDbSet(_capturedProducts);
 
-            _mockDbContext.Setup(context => context.Products.Add(It.IsAny<ProductModel>())).Callback<ProductModel>((product) =>
-            {
-                _capturedProducts.Add(product);
-            });
+            _ = _mockDbContext.Setup(context => context.Products.Add(It.IsAny<ProductModel>())).Callback<ProductModel>(_capturedProducts.Add);
+
         }
 
         [TearDown]

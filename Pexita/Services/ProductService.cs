@@ -19,10 +19,10 @@ namespace Pexita.Services
         private readonly AppDBContext _Context;
         private readonly IBrandService _brandService;
         private readonly ITagsService _tagsService;
-        private readonly PexitaTools _pexitaTools;
+        private readonly IPexitaTools _pexitaTools;
         private readonly IMapper _mapper;
         public ProductService(AppDBContext Context, IBrandService brandService,
-            ITagsService tagsService, PexitaTools pexitaTools, IMapper Mapper)
+            ITagsService tagsService, IPexitaTools pexitaTools, IMapper Mapper)
         {
             _Context = Context;
             _brandService = brandService;

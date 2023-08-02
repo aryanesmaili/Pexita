@@ -24,7 +24,7 @@ builder.Services.AddTransient<IProductService, ProductService>();
 builder.Services.AddTransient<IBrandService, BrandService>();
 builder.Services.AddTransient<ITagsService, TagsService>();
 builder.Services.AddTransient<IUserService, UserService>();
-builder.Services.AddTransient<PexitaTools>();
+builder.Services.AddTransient<IPexitaTools, PexitaTools>();
 
 var app = builder.Build();
 

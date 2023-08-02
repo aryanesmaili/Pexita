@@ -12,10 +12,10 @@ namespace Pexita.Services
     public class UserService : IUserService
     {
         private readonly AppDBContext _Context;
-        private readonly PexitaTools _pexitaTools;
+        private readonly IPexitaTools _pexitaTools;
         private readonly IMapper _mapper;
 
-        public UserService(AppDBContext Context, PexitaTools PexitaTools, IMapper Mapper)
+        public UserService(AppDBContext Context, IPexitaTools PexitaTools, IMapper Mapper)
         {
             _Context = Context;
             _pexitaTools = PexitaTools;

@@ -5,10 +5,11 @@ using System.Text;
 using Pexita.Data.Entities.User;
 using Pexita.Additionals;
 using Pexita.Exceptions;
+using Pexita.Services.Interfaces;
 
 namespace Pexita.Utility
 {
-    public class PexitaTools
+    public class PexitaTools : IPexitaTools
     {
         private readonly IWebHostEnvironment _webHostEnvironment;
         private readonly AppDBContext _Context;
@@ -106,7 +107,7 @@ namespace Pexita.Utility
 
                 UserModel user = _Context.Users.Include(u => u.Addresses).Single(u => u.ID == UserID);
 
-                foreach (var address in addresses) 
+                foreach (var address in addresses)
                 {
                     if (user.Addresses.FirstOrDefault(a => a.ID == address.ID) == null)
                     {

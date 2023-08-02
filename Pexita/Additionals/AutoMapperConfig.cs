@@ -18,10 +18,10 @@ namespace Pexita.Additionals
     {
         private readonly IBrandService _brandService;
         private readonly IProductService _productService;
-        private readonly PexitaTools _pexitaTools;
+        private readonly IPexitaTools _pexitaTools;
         private readonly ITagsService _tagsService;
 
-        public AutoMapperConfig(IBrandService brandService, IProductService productService, PexitaTools pexitaTools, ITagsService TagsService)
+        public AutoMapperConfig(IBrandService brandService, IProductService productService, IPexitaTools pexitaTools, ITagsService TagsService)
         {
             _brandService = brandService;
             _productService = productService;

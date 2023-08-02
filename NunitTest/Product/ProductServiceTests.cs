@@ -7,6 +7,10 @@ using Moq;
 using Moq.EntityFrameworkCore;
 using Pexita.Data.Entities.Products;
 using Microsoft.AspNetCore.Http;
+using NunitTest.FakeServices;
+using Pexita.Data.Entities.Tags;
+using System.Security.Policy;
+using Pexita.Data.Entities.Comments;
 
 namespace NunitTest.Product
 {
@@ -14,9 +18,9 @@ namespace NunitTest.Product
     public class ProductServiceTests
     {
         private Mock<AppDBContext> _mockDbContext;
-        private Mock<IBrandService> _mockBrandService;
+        private FakeBrandService _fakeBrandService;
         private Mock<ITagsService> _mockTagsService;
-        private Mock<PexitaTools> _mockPexitaTools;
+        private FakePexitaTools _fakePexitaTools;
         private Mock<IMapper> _mockMapper;
         private ProductService _productService;
         private List<ProductModel> _capturedProducts;
@@ -26,17 +30,17 @@ namespace NunitTest.Product
         {
             // Arrange - Create mock instances
             _mockDbContext = new Mock<AppDBContext>();
-            _mockBrandService = new Mock<IBrandService>();
+            _fakeBrandService = new();
             _mockTagsService = new Mock<ITagsService>();
-            _mockPexitaTools = new Mock<PexitaTools>();
+            _fakePexitaTools = new FakePexitaTools();
             _mockMapper = new Mock<IMapper>();
             _capturedProducts = new List<ProductModel>();
 
             _productService = new ProductService(
                 _mockDbContext.Object,
-                _mockBrandService.Object,
+                _fakeBrandService,
                 _mockTagsService.Object,
-                _mockPexitaTools.Object,
+                _fakePexitaTools,
                 _mockMapper.Object
             );
 
@@ -66,39 +70,47 @@ namespace NunitTest.Product
                 Rate = 4.5,
                 ProductPics = new List<IFormFile>
                 {
-                    // You can add IFormFile instances here as per your test scenario
-                    // For example: new FormFile(Stream.Null, 0, 0, "file1", "product1.jpg"),
-                    //              new FormFile(Stream.Null, 0, 0, "file2", "product1_2.jpg"),
+                    new FormFile(new MemoryStream(Array.Empty<byte>()), 0, 0, "example1", "example1.jpeg"),
+                    new FormFile(new MemoryStream(Array.Empty<byte>()), 0, 0, "example2", "example2.jpeg"),
                 },
+
                 IsAvailable = true,
-                Tags = "Electronics, Gadgets",
+                Tags = "Electronics,Gadgets",
                 Colors = "Red, Blue"
             };
 
-            var mappedProductModel = new ProductModel
-            {
-                Title = "Test Product",
-                Price = 10.99,
-                // Add other properties as needed
-            };
+            var mappedProductModel = _mockDbContext.Object.Products.First();
 
             // Set up the IMapper mock to return the mapped ProductModel
-            _mockMapper.Setup(mapper => mapper.Map<ProductModel>(productCreateVM)).Returns(mappedProductModel);
+           _mockMapper.Setup(mapper => mapper.Map<ProductModel>(It.IsAny<ProductCreateVM>()))
+                .Returns<ProductCreateVM>(src =>
+                {
+                    // Create a new ProductModel using the provided ProductCreateVM instance
+                    var productModel = new ProductModel
+                    {
+                        // Map properties based on the defined mapping configuration
+                        Title = src.Title,
+                        Description = src.Description,
+                        Price = src.Price,
+                        Quantity = src.Quantity,
+                        Brand = _fakeBrandService.GetBrandByName(src.Brand),
+                        ProductPicsURL = _fakePexitaTools.SaveProductImages(src.ProductPics, $"{src.Brand}/{src.Title}").Result,
+                        DateAdded = DateTime.UtcNow,
+                        IsAvailable = true,
+                        Tags = _fakePexitaTools.StringToTags(src.Tags),
+                        Comments = new List<CommentsModel>(),
+                        Rating = new List<ProductRating>()
+                    };
+                        return productModel;
+                    });
 
-            // Set up the DbSet mock to capture the added product
-            var capturedProducts = new List<ProductModel>();
-            _mockDbContext.Setup(context => context.Products.Add(It.IsAny<ProductModel>())).Callback<ProductModel>((product) =>
-            {
-                // Capture the added product
-                capturedProducts.Add(product);
-            });
 
             // Act
             bool result = _productService.AddProduct(productCreateVM);
 
             // Assert
             Assert.IsTrue(result); // Make sure the method returns true on successful addition
-            Assert.AreEqual(1, capturedProducts.Count); // Verify that the product was added once
+            Assert.AreEqual(1, _capturedProducts.Count); // Verify that the product was added once
 
             // You can perform additional assertions on the capturedProducts list to check its properties
             // For example, if you have an Id property in ProductModel, you can check that it's not zero or negative.

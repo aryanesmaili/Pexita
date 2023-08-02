@@ -6,13 +6,13 @@ namespace Pexita.Data.Entities.Comments
     public class CommentsModel
     {
         public int ID { get; set; }
-        public required string Text { get; set; }
-        public required DateTime TimeCreated { get; set; }
+        public string Text { get; set; }
+        public DateTime TimeCreated { get; set; }
 
         //Navigation Properties
-        public  required int? UserID { get; set; }
-        public  required UserModel? User { get; set; }
-        public required int ProductID { get; set; }
-        public required ProductModel Product { get; set; }
+        public int? UserID { get; set; }
+        public UserModel? User { get; set; }
+        public int ProductID { get; set; }
+        public ProductModel Product { get; set; }
     }
 }

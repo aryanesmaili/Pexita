@@ -10,19 +10,19 @@ namespace Pexita.Data.Entities.Products
     public class ProductModel
     {
         public int ID { get; set; }
-        public required string Title { get; set; }
+        public string Title { get; set; }
         public string? Description { get; set; }
         public double? Price { get; set; }
         public int? Quantity { get; set; }
-        public required bool IsAvailable { get; set; }
+        public bool IsAvailable { get; set; }
         public string? Colors { get; set; }
         public List<ProductRating> Rating { get; set; }
-        public required string ProductPicsURL { get; set; }
-        public required DateTime DateAdded { get; set; }
+        public string ProductPicsURL { get; set; }
+        public DateTime DateAdded { get; set; }
 
         //Navigation Properties
         public int BrandID { get; set; }
-        public required BrandModel Brand { get; set; }
+        public BrandModel Brand { get; set; }
         public List<CommentsModel>? Comments { get; set; }
         public List<TagModel>? Tags { get; set; }
         public List<ProductNewsLetterModel>? NewsLetters { get; set; }

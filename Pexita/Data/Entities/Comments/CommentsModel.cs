@@ -7,7 +7,7 @@ namespace Pexita.Data.Entities.Comments
     {
         public int ID { get; set; }
         public string Text { get; set; }
-        public DateTime TimeCreated { get; set; }
+        public DateTime DateCreated { get; set; }
 
         //Navigation Properties
         public int? UserID { get; set; }

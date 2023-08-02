@@ -46,9 +46,10 @@ namespace Pexita.Services
                 _Context.SaveChanges();
                 return true;
             }
+
             catch (Exception e)
             {
-                throw new Exception(e.Message);
+                throw new Exception(e.Message, e.InnerException);
             }
         }
 
@@ -67,10 +68,12 @@ namespace Pexita.Services
                     throw new NotFoundException("No Records found in Products Table");
                 }
             }
+
             catch (NotFoundException e) 
             {
                 throw new NotFoundException(e.Message);
             }
+
             catch (Exception e)
             {
                 throw new Exception(e.Message);

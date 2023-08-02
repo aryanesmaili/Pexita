@@ -20,7 +20,7 @@ namespace NunitTest.FakeServices
 
         public double GetRating(List<int> Ratings)
         {
-            throw new NotImplementedException();
+            return 10;
         }
 
         public async Task<string> SaveProductImages(IFormFile file, string identifier)

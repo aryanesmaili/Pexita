@@ -10,6 +10,5 @@
         public required int ID { get; set; }
         public required string Title { get; set; }
         public int TimesUsed { get; set; }
-
     }
 }

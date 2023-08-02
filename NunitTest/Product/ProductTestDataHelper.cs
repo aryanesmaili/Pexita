@@ -28,7 +28,7 @@ namespace NunitTest.Product
                             new ProductRating { ID = 2, Rating = 5, ProductID = 1 }
                         },
                         ProductPicsURL = "https://example.com/product1.jpg",
-                        DateAdded = DateTime.Now,
+                        DateCreated = DateTime.Now,
                         BrandID = 101, // Assuming BrandID for BrandModel with ID = 101
                         Brand = new BrandModel { ID = 101, Name = "Brand A" },
                         Comments = new List<CommentsModel>
@@ -67,7 +67,7 @@ namespace NunitTest.Product
                             new ProductRating { ID = 4, Rating = 4, ProductID = 2 }
                         },
                         ProductPicsURL = "https://example.com/product2.jpg",
-                        DateAdded = DateTime.Now,
+                        DateCreated = DateTime.Now,
                         BrandID = 102, // Assuming BrandID for BrandModel with ID = 102
                         Brand = new BrandModel { ID = 102, Name = "Brand B" },
                         Comments = new List<CommentsModel>

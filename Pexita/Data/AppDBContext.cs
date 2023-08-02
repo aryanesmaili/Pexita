@@ -13,6 +13,10 @@ namespace Pexita.Data
 {
     public class AppDBContext : DbContext
     {
+        public AppDBContext()
+        {
+               
+        }
         public AppDBContext(DbContextOptions<AppDBContext> options) : base(options)
         {
 
@@ -111,7 +115,7 @@ namespace Pexita.Data
                 .WithOne(r => r.Product)
                 .HasForeignKey(r => r.ProductID);
         }
-        public DbSet<ProductModel> Products { get; set; }
+        public virtual DbSet<ProductModel> Products { get; set; }
         public DbSet<BrandModel> Brands { get; set; }
         public DbSet<CommentsModel> Comments { get; set; }
         public DbSet<OrdersModel> Orders { get; set; }

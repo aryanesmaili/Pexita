@@ -18,7 +18,7 @@ namespace Pexita.Data.Entities.Products
         public string? Colors { get; set; }
         public List<ProductRating> Rating { get; set; }
         public string ProductPicsURL { get; set; }
-        public DateTime DateAdded { get; set; }
+        public DateTime DateCreated { get; set; }
 
         //Navigation Properties
         public int BrandID { get; set; }

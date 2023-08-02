@@ -32,7 +32,7 @@ namespace NunitTest.FakeServices
 
         public List<TagInfoVM> TagsToVM(List<TagModel> tags)
         {
-            throw new NotImplementedException();
+            return tags.Select(x => new TagInfoVM { ID = x.ID, Title = x.Title, TimesUsed = x.TimesUsed }).ToList();
         }
 
         public TagInfoVM UpdateTag(int id, TagCreateVM product)

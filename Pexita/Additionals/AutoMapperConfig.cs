@@ -31,7 +31,7 @@ namespace Pexita.Additionals
             CreateMap<ProductCreateVM, ProductModel>()
                 .ForMember(Product => Product.Brand, opt => opt.MapFrom(src => _brandService.GetBrandByName(src.Brand)))
                 .ForMember(Product => Product.ProductPicsURL, opt => opt.MapFrom(src => _pexitaTools.SaveProductImages(src.ProductPics, $"{src.Brand}/{src.Title}").Result))
-                .ForMember(Product => Product.DateAdded, opt => opt.MapFrom(src => DateTime.UtcNow))
+                .ForMember(Product => Product.DateCreated, opt => opt.MapFrom(src => DateTime.UtcNow))
                 .ForMember(Product => Product.IsAvailable, opt => opt.MapFrom(src => true))
                 .ForMember(Product => Product.Tags, opt => opt.MapFrom(src => _pexitaTools.StringToTags(src.Tags)))
                 .ForMember(Product => Product.Comments, opt => opt.MapFrom(src => new List<CommentsModel>()))

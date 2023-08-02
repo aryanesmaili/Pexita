@@ -1,4 +1,6 @@
 ﻿using Pexita.Data.Entities.Brands;
+using Pexita.Data.Entities.Products;
+using Pexita.Data.Entities.Tags;
 using Pexita.Services.Interfaces;
 using System;
 using System.Collections.Generic;
@@ -17,7 +19,53 @@ namespace NunitTest.FakeServices
 
         public BrandInfoVM BrandModelToInfo(BrandModel model)
         {
-            throw new NotImplementedException();
+            return new BrandInfoVM
+            {
+                ID = 1,
+                Name = "Example Brand",
+                Description = "This is an example brand.",
+                BrandPicURL = "https://example.com/brand-image.jpg",
+                Username = "example_user",
+                Email = "example@example.com",
+                DateCreated = DateTime.UtcNow,
+                Products = new List<ProductInfoVM>
+        {
+            new ProductInfoVM
+            {
+                ID = 101,
+                Title = "Product 1",
+                Description = "Description of Product 1",
+                Price = 29.99,
+                Quantity = 100,
+                Rate = 4.5,
+                Tags = new List<TagInfoVM>
+                {
+                    new TagInfoVM { ID = 1, Title = "Electronics" },
+                    new TagInfoVM { ID = 2, Title = "Gadgets" }
+                },
+                ProductPics = "https://example.com/product1.jpg",
+                IsAvailable = true,
+                DateCreated = DateTime.UtcNow
+            },
+            new ProductInfoVM
+            {
+                ID = 102,
+                Title = "Product 2",
+                Description = "Description of Product 2",
+                Price = 19.99,
+                Quantity = 50,
+                Rate = 3.8,
+                Tags = new List<TagInfoVM>
+                {
+                    new TagInfoVM { ID = 3,Title = "Home" },
+                    new TagInfoVM { ID = 4,Title = "Kitchen" }
+                },
+                ProductPics = "https://example.com/product2.jpg",
+                IsAvailable = false,
+                DateCreated = DateTime.UtcNow
+            }
+        }
+            };
         }
 
         public BrandInfoVM GetBrandByID(int id)
@@ -27,7 +75,7 @@ namespace NunitTest.FakeServices
 
         public BrandModel GetBrandByName(string name)
         {
-            throw new NotImplementedException();
+            return new BrandModel();
         }
 
         public List<BrandInfoVM> GetBrands()

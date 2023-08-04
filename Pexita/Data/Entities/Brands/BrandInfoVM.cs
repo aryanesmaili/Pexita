@@ -25,15 +25,18 @@ namespace Pexita.Data.Entities.Brands
         [Required]
         public List<ProductInfoVM>? Products { get; set; }
     }
+
     public class BrandCreateVM
     {
         public required string Name { get; set; }
         public string? Description { get; set; }
-        public required List<IFormFile> BrandPics { get; set; }
-        public required string Username { get; set; }
-        public required string Password { get; set; }
-        public required string Email { get; set; }
+        public IFormFile BrandPic { get; set; }
+        public string Username { get; set; }
+        public string Password { get; set; }
+        public string ConfirmPassword { get; set; }
+        public string Email { get; set; }
     }
+
     public class BrandUpdateVM
     {
         public required string Name { get; set; }
@@ -41,6 +44,8 @@ namespace Pexita.Data.Entities.Brands
         public IFormFile? BrandPic { get; set; }
         public required string Username { get; set; }
         public required string Password { get; set; }
+        public string ConfirmPassword { get; set; }
+
         public required string Email { get; set; }
     }
 }

@@ -30,6 +30,16 @@ namespace NunitTest.FakeServices
             throw new NotImplementedException();
         }
 
+        public bool IsTag(int id)
+        {
+            throw new NotImplementedException();
+        }
+
+        public bool IsTag(string TagName)
+        {
+            throw new NotImplementedException();
+        }
+
         public List<TagInfoVM> TagsToVM(List<TagModel> tags)
         {
             return tags.Select(x => new TagInfoVM { ID = x.ID, Title = x.Title, TimesUsed = x.TimesUsed }).ToList();

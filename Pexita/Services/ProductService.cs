@@ -1,16 +1,12 @@
 ﻿using AutoMapper;
-using Microsoft.AspNetCore.Mvc.Filters;
+using FluentValidation;
 using Microsoft.CodeAnalysis;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Storage.ValueConversion.Internal;
 using Pexita.Data;
 using Pexita.Data.Entities.Comments;
 using Pexita.Data.Entities.Products;
-using Pexita.Data.Entities.Tags;
 using Pexita.Exceptions;
 using Pexita.Services.Interfaces;
-using Pexita.Utility;
-using System.Linq;
 
 namespace Pexita.Services
 {
@@ -21,16 +17,22 @@ namespace Pexita.Services
         private readonly ITagsService _tagsService;
         private readonly IPexitaTools _pexitaTools;
         private readonly IMapper _mapper;
+        private readonly IValidator<ProductCreateVM> _productValidator;
+        private readonly IValidator<ProductUpdateVM> _productUpdateValidator;
+
         public ProductService(AppDBContext Context, IBrandService brandService,
-            ITagsService tagsService, IPexitaTools pexitaTools, IMapper Mapper)
+            ITagsService tagsService, IPexitaTools pexitaTools, IMapper Mapper,
+            IValidator<ProductCreateVM> productCreatValidator, IValidator<ProductUpdateVM> productUpdateValidator)
         {
             _Context = Context;
             _brandService = brandService;
             _tagsService = tagsService;
             _pexitaTools = pexitaTools;
             _mapper = Mapper;
+            _productValidator = productCreatValidator;
+            _productUpdateValidator = productUpdateValidator;
         }
-        // Add validation to check if the product already exists!
+        // TODO: Add validation to check if the product already exists!
         public bool AddProduct(ProductCreateVM product)
         {
             try
@@ -40,6 +42,8 @@ namespace Pexita.Services
                     throw new ArgumentNullException(nameof(product));
                 }
 
+                _productValidator.Validate(product, options => options.ThrowOnFailures());
+
                 ProductModel NewProduct = _mapper.Map<ProductModel>(product);
 
                 _Context.Products.Add(NewProduct);
@@ -47,6 +51,10 @@ namespace Pexita.Services
                 return true;
             }
 
+            catch (ValidationException e)
+            {
+                throw new ValidationException(e.Message);
+            }
             catch (Exception e)
             {
                 throw new Exception(e.Message, e.InnerException);
@@ -69,7 +77,7 @@ namespace Pexita.Services
                 }
             }
 
-            catch (NotFoundException e) 
+            catch (NotFoundException e)
             {
                 throw new NotFoundException(e.Message);
             }
@@ -124,17 +132,26 @@ namespace Pexita.Services
         public ProductInfoVM UpdateProductInfo(int id, ProductUpdateVM product)
         {
             ProductModel productModel = _Context.Products.FirstOrDefault(n => n.ID == id) ?? throw new NotFoundException();
-            _mapper.Map(product, productModel);
-
             try
             {
-                _Context.SaveChanges();
+                _productUpdateValidator.Validate(product, options => options.ThrowOnFailures());
+                _mapper.Map(product, productModel);
+
+                try
+                {
+                    _Context.SaveChanges();
+                }
+                catch (Exception ex)
+                {
+                    throw new Exception("An error occurred while saving changes to the database.", ex);
+                }
+                return ProductModelToInfoVM(productModel);
             }
-            catch (Exception ex)
+
+            catch (ValidationException e)
             {
-                throw new Exception("An error occurred while saving changes to the database.", ex);
+                throw new ValidationException(e.Message);
             }
-            return ProductModelToInfoVM(productModel);
         }
 
         public bool DeleteProduct(int id)

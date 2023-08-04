@@ -88,6 +88,16 @@ namespace NunitTest.FakeServices
             throw new NotImplementedException();
         }
 
+        public bool IsBrand(int id)
+        {
+            throw new NotImplementedException();
+        }
+
+        public bool IsBrand(string BrandName)
+        {
+            throw new NotImplementedException();
+        }
+
         public bool RemoveBrand(int id)
         {
             throw new NotImplementedException();

@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using Pexita.Data;
 using Pexita.Data.Entities.Brands;
@@ -13,11 +14,16 @@ namespace Pexita.Services
         private readonly AppDBContext _Context;
         private readonly IPexitaTools _pexitaTools;
         private readonly IMapper _mapper;
-        public BrandService(AppDBContext Context, IPexitaTools PexitaTools, IMapper Mapper)
+        private readonly IValidator<BrandCreateVM> _brandCreateValidator;
+        private readonly IValidator<BrandUpdateVM> _brandUpdateValidator;
+        public BrandService(AppDBContext Context, IPexitaTools PexitaTools, IMapper Mapper,
+            IValidator<BrandCreateVM> brandCreateeValidator, IValidator<BrandUpdateVM> brandUpdateValidator)
         {
             _Context = Context;
             _pexitaTools = PexitaTools;
             _mapper = Mapper;
+            _brandUpdateValidator = brandUpdateValidator;
+            _brandCreateValidator = brandCreateeValidator;
         }
 
         public bool AddBrand(BrandCreateVM createVM)
@@ -27,7 +33,7 @@ namespace Pexita.Services
 
             try
             {
-                string identifier = $"{createVM.Name}/{createVM.Name}";
+                _brandCreateValidator.Validate(createVM, options => options.ThrowOnFailures());
 
                 BrandModel Brand = _mapper.Map<BrandModel>(createVM);
 
@@ -35,18 +41,21 @@ namespace Pexita.Services
                 _Context.SaveChanges();
                 return true;
             }
-            catch (FormatException e)
+            catch (ValidationException e)
             {
-                throw new FormatException(e.Message);
+                throw new ValidationException(e.Message);
             }
-           
+           catch(Exception e)
+            {
+                throw new Exception(e.Message, e);
+            }
         }
 
         public List<BrandInfoVM> GetBrands()
         {
             try
             {
-                List<BrandInfoVM> list = _Context.Brands.Include(b => b.Products)!.ThenInclude(p => p.Comments).Include(b => b.Products)!.ThenInclude(p => p.Tags).Select(BrandModelToInfo).ToList();
+                List<BrandInfoVM> list = _Context.Brands.Include(b => b.Products)!.ThenInclude(p => p.Comments).Include(b => b.Products)!.ThenInclude(p => p.Tags).AsNoTracking().Select(BrandModelToInfo).ToList();
                 return list;
             }
 
@@ -63,7 +72,7 @@ namespace Pexita.Services
         {
             try
             {
-                List<BrandInfoVM> brands = _Context.Brands.Include(b => b.Products)!.ThenInclude(p => p.Comments).Include(b => b.Products)!.ThenInclude(p => p.Tags)
+                List<BrandInfoVM> brands = _Context.Brands.Include(b => b.Products)!.ThenInclude(p => p.Comments).Include(b => b.Products)!.ThenInclude(p => p.Tags).AsNoTracking()
                     .Take(count).Select(BrandModelToInfo)
                     .ToList();
                 return brands;
@@ -83,7 +92,7 @@ namespace Pexita.Services
         }
         public BrandInfoVM GetBrandByID(int id)
         {
-            return BrandModelToInfo(_Context.Brands.Include(b => b.Products!).ThenInclude(pc => pc.Tags).FirstOrDefault(b => b.ID == id) ?? throw new NotFoundException());
+            return BrandModelToInfo(_Context.Brands.Include(b => b.Products!).ThenInclude(pc => pc.Tags).AsNoTracking().FirstOrDefault(b => b.ID == id) ?? throw new NotFoundException());
         }
 
         public BrandModel GetBrandByName(string name)
@@ -94,11 +103,21 @@ namespace Pexita.Services
         public BrandInfoVM UpdateBrandInfo(int id, BrandUpdateVM model)
         {
             var brand = _Context.Brands.FirstOrDefault(x => x.ID == id) ?? throw new NotFoundException();
-            _mapper.Map(model, brand);
-            _Context.SaveChanges();
+            try
+            {
+                _brandUpdateValidator.Validate(model, options => options.ThrowOnFailures());
 
-            return BrandModelToInfo(brand);
+                _mapper.Map(model, brand);
+                _Context.SaveChanges();
 
+                return BrandModelToInfo(brand);
+
+            }
+            catch (ValidationException e)
+            {
+
+                throw new ValidationException(e.Message);
+            }
         }
         public bool RemoveBrand(int id)
         {
@@ -123,6 +142,16 @@ namespace Pexita.Services
         public BrandInfoVM BrandModelToInfo(BrandModel model)
         {
             return _mapper.Map(model, new BrandInfoVM());
+        }
+
+        public bool IsBrand(int id)
+        {
+            return _Context.Brands.FirstOrDefault(x => x.ID == id) != null;
+        }
+
+        public bool IsBrand(string BrandName)
+        {
+            return _Context.Brands.FirstOrDefault(x => x.Name == BrandName) != null;
         }
     }
 }

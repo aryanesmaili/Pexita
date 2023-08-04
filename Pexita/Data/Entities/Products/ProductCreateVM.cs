@@ -42,6 +42,5 @@ namespace Pexita.Data.Entities.Products
         public bool IsAvailable { get; set; } = true;
         public string Tags { get; set; }
         public string? Colors { get; set; }
-
     }
 }

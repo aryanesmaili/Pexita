@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using FluentValidation;
+using Microsoft.AspNetCore.Mvc;
 using Pexita.Data.Entities.Brands;
 using Pexita.Exceptions;
 using Pexita.Services.Interfaces;
@@ -94,7 +95,7 @@ namespace Pexita.Controllers
                 return BadRequest($"Arguement null {e.Message}");
             }
 
-            catch (FormatException e)
+            catch (ValidationException e)
             {
                 return BadRequest(e.Message);
             }
@@ -106,6 +107,11 @@ namespace Pexita.Controllers
             {
                 _brandService.UpdateBrandInfo(id, brand);
                 return Ok();
+            }
+
+            catch(ValidationException e)
+            {
+                return BadRequest(e.Message);
             }
             catch (NotFoundException)
             {

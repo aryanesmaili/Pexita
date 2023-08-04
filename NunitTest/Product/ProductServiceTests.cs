@@ -14,6 +14,8 @@ using Pexita.Data.Entities.ShoppingCart;
 using Pexita.Exceptions;
 using Pexita.Services.Interfaces;
 using Microsoft.CodeAnalysis;
+using FluentValidation;
+using Pexita.Utility.Validators;
 
 namespace NunitTest.Product
 {
@@ -28,6 +30,9 @@ namespace NunitTest.Product
         private ProductService _productService;
         private List<ProductModel> _capturedProducts;
         private ProductModel ExampleProduct;
+        private FakeProductvalidation _productCreateValidator;
+        private FakeProductUpdateValidation _productUpdateValidator;
+
         [SetUp]
         public void SetUp()
         {
@@ -38,13 +43,17 @@ namespace NunitTest.Product
             _fakePexitaTools = new FakePexitaTools();
             _mockMapper = new Mock<IMapper>();
             _capturedProducts = new List<ProductModel>();
+            _productCreateValidator = new();
+            _productUpdateValidator = new();
 
             _productService = new ProductService(
                 _mockDbContext.Object,
                 _fakeBrandService,
                 _fakeTagsService,
                 _fakePexitaTools,
-                _mockMapper.Object
+                _mockMapper.Object,
+                _productCreateValidator,
+                _productUpdateValidator
             );
             ExampleProduct = new ProductModel
             {

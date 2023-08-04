@@ -18,19 +18,28 @@ namespace Pexita.Utility
             _webHostEnvironment = webHostEnvironment;
             _Context = Context;
         }
+        public bool PictureFileValidation(IFormFile file, int MaxSizeMB)
+        {
+            string[] allowedTypes = new[] { "image/jpeg", "image/png" };
+
+            if (!allowedTypes.Contains(file.ContentType))
+                return false;
+            if (file.Length > MaxSizeMB * 1024 * 1024)
+                return false;
+
+            return true;
+        }
+
         public async Task<string> SaveProductImages(List<IFormFile> files, string identifier)
         {
             string imagePath = Path.Combine(_webHostEnvironment.WebRootPath, $"/Images/{identifier}");
-            string[] allowedTypes = new[] { "image/jpeg", "image/png" };
 
             if (!Directory.Exists(imagePath))
                 Directory.CreateDirectory(imagePath);
 
             for (int i = 0; i < files.Count; i++)
             {
-                if (!allowedTypes.Contains(files[i].ContentType))
-                    throw new FormatException($"Format Error occured while saving {files[i]},{files[i].FileName}");
-
+               
                 string uniqueFileName = $"{identifier}_{i:03}{Path.GetExtension(files[i].FileName)}";
                 string filePath = Path.Combine(imagePath, uniqueFileName);
 
@@ -44,12 +53,9 @@ namespace Pexita.Utility
         public async Task<string> SaveProductImages(IFormFile file, string identifier)
         {
             string imagePath = Path.Combine(_webHostEnvironment.WebRootPath, $"/Images/{identifier}");
-            string[] allowedTypes = new[] { "image/jpeg", "image/png" };
 
             if (!Directory.Exists(imagePath))
                 Directory.CreateDirectory(imagePath);
-            if (!allowedTypes.Contains(file.ContentType))
-                throw new FormatException($"Format Error occured while saving {file},{file.FileName}");
 
             string uniqueFileName = $"{identifier}_{DateTime.UtcNow.Ticks}{Path.GetExtension(file.FileName)}";
             string filePath = Path.Combine(imagePath, uniqueFileName);
@@ -72,9 +78,6 @@ namespace Pexita.Utility
 
             foreach (string tag in tags)
             {
-                if (_Context.Tags.FirstOrDefault(t => t.Title == tag) == null)
-                    _Context.Tags.Add(new TagModel() { Title = tag });
-
                 TagModel t = _Context.Tags.Single(t => t.Title == tag);
                 t.TimesUsed++;
                 res.Add(t);
@@ -98,6 +101,7 @@ namespace Pexita.Utility
 
             return passwordBuilder.ToString();
         }
+
         public List<Address> ValidateAddresses(int UserID, List<Address> VMAddresses)
         {
 

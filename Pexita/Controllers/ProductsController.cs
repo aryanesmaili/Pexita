@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using FluentValidation;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Pexita.Data.Entities.Comments;
 using Pexita.Data.Entities.Products;
@@ -88,6 +89,10 @@ namespace Pexita.Controllers
                 return Ok();
             }
 
+            catch (ValidationException e)
+            {
+                return BadRequest(e.Message);
+            }
             catch (FormatException fe)
             {
                 return BadRequest($"saving the given file {fe.Message} failed because of format");
@@ -115,6 +120,11 @@ namespace Pexita.Controllers
             catch (NotFoundException)
             {
                 return NotFound();
+            }
+
+            catch (ValidationException e)
+            {
+                return BadRequest(e.Message);
             }
         }
 

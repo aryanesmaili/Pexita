@@ -12,5 +12,8 @@ namespace Pexita.Services.Interfaces
         public BrandInfoVM UpdateBrandInfo(int id, BrandUpdateVM model);
         public bool RemoveBrand(int id);
         public BrandInfoVM BrandModelToInfo(BrandModel model);
+        public bool IsBrand(int id);
+        public bool IsBrand(string BrandName);
+
     }
 }

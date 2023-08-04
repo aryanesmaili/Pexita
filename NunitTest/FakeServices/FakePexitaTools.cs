@@ -23,6 +23,11 @@ namespace NunitTest.FakeServices
             return 10;
         }
 
+        public bool PictureFileValidation(IFormFile file, int MaxSizeMB)
+        {
+            throw new NotImplementedException();
+        }
+
         public async Task<string> SaveProductImages(IFormFile file, string identifier)
         {
             // Simulate some async processing (in this case, none) and then return an empty string

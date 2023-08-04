@@ -47,7 +47,7 @@ namespace Pexita.Additionals
                 .ForMember(PInfo => PInfo.Tags, opt => opt.MapFrom(src => _tagsService.TagsToVM(src.Tags!)));
 
             CreateMap<BrandCreateVM, BrandModel>()
-                .ForMember(Brand => Brand.BrandPicURL, opt => opt.MapFrom(src => _pexitaTools.SaveProductImages(src.BrandPics, $"{src.Name}/{src.Name}")))
+                .ForMember(Brand => Brand.BrandPicURL, opt => opt.MapFrom(src => _pexitaTools.SaveProductImages(src.BrandPic, $"{src.Name}/{src.Name}")))
                 .ForMember(Brand => Brand.DateCreated, opt => opt.MapFrom(src => DateTime.UtcNow))
                 .ForMember(Brand => Brand.Products, opt => opt.MapFrom(src => new List<ProductModel>()))
                 .ForMember(Brand => Brand.Orders, opt => opt.MapFrom(src => new List<OrdersModel>()))

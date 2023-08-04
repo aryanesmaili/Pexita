@@ -11,6 +11,8 @@ namespace Pexita.Services.Interfaces
         public TagInfoVM UpdateTag(int id, TagCreateVM product);
         public bool DeleteTag(int id);
         public  List<TagInfoVM> TagsToVM(List<TagModel> tags);
+        public bool IsTag(int id);
+        public bool IsTag(string TagName);
 
     }
 }

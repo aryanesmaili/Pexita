@@ -114,6 +114,13 @@ namespace Pexita.Data
                 .HasMany(p => p.Rating)
                 .WithOne(r => r.Product)
                 .HasForeignKey(r => r.ProductID);
+
+            modelBuilder.Entity<UserModel>()
+                .HasMany(a => a.Addresses)
+                .WithOne(u => u.User)
+                .HasForeignKey(u => u.UserID)
+                .OnDelete(DeleteBehavior.Cascade);
+                
         }
         public virtual DbSet<ProductModel> Products { get; set; }
         public DbSet<BrandModel> Brands { get; set; }
@@ -124,5 +131,6 @@ namespace Pexita.Data
         public DbSet<ShoppingCartModel> ShoppingCarts { get; set; }
         public DbSet<TagModel> Tags { get; set; }
         public DbSet<UserModel> Users { get; set; }
+        public DbSet<Address> Addresses { get; set; }
     }
 }

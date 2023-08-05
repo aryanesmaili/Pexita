@@ -14,27 +14,17 @@ namespace Pexita.Services
         private readonly AppDBContext _Context;
         private readonly IPexitaTools _pexitaTools;
         private readonly IMapper _mapper;
-        private readonly IValidator<BrandCreateVM> _brandCreateValidator;
-        private readonly IValidator<BrandUpdateVM> _brandUpdateValidator;
-        public BrandService(AppDBContext Context, IPexitaTools PexitaTools, IMapper Mapper,
-            IValidator<BrandCreateVM> brandCreateeValidator, IValidator<BrandUpdateVM> brandUpdateValidator)
+        public BrandService(AppDBContext Context, IPexitaTools PexitaTools, IMapper Mapper)
         {
             _Context = Context;
             _pexitaTools = PexitaTools;
             _mapper = Mapper;
-            _brandUpdateValidator = brandUpdateValidator;
-            _brandCreateValidator = brandCreateeValidator;
         }
 
         public bool AddBrand(BrandCreateVM createVM)
         {
-            if (createVM == null)
-                throw new ArgumentNullException(nameof(createVM));
-
             try
             {
-                _brandCreateValidator.Validate(createVM, options => options.ThrowOnFailures());
-
                 BrandModel Brand = _mapper.Map<BrandModel>(createVM);
 
                 _Context.Brands.Add(Brand);
@@ -105,7 +95,6 @@ namespace Pexita.Services
             var brand = _Context.Brands.FirstOrDefault(x => x.ID == id) ?? throw new NotFoundException();
             try
             {
-                _brandUpdateValidator.Validate(model, options => options.ThrowOnFailures());
 
                 _mapper.Map(model, brand);
                 _Context.SaveChanges();

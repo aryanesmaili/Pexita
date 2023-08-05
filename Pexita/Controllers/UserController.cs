@@ -1,8 +1,10 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using FluentValidation;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Pexita.Data.Entities.User;
 using Pexita.Exceptions;
 using Pexita.Services.Interfaces;
+using Pexita.Utility.Validators;
 using System.Net;
 
 namespace Pexita.Controllers
@@ -12,9 +14,21 @@ namespace Pexita.Controllers
     public class UserController : ControllerBase
     {
         private readonly IUserService _userService;
-        public UserController(IUserService userService)
+        private readonly IValidator<UserCreateVM> _createValidator;
+        private readonly IValidator<UserLoginVM> _loginValidator;
+        private readonly IValidator<UserUpdateVM> _updateValidator;
+        private readonly IValidator<Address> _addressValidator;
+        public UserController(IUserService userService,
+            IValidator<UserCreateVM> CreateValidator,
+            IValidator<UserLoginVM> LoginValidator,
+            IValidator<UserUpdateVM> UpdateValidator,
+            IValidator<Address> addressValidator)
         {
             _userService = userService;
+            _createValidator = CreateValidator;
+            _loginValidator = LoginValidator;
+            _updateValidator = UpdateValidator;
+            _addressValidator = addressValidator;
         }
 
         [HttpGet("Users")]
@@ -63,10 +77,20 @@ namespace Pexita.Controllers
         {
             try
             {
+                bool result = false;
+
                 if (userCreateVM == null)
                     throw new ArgumentNullException($"{nameof(userCreateVM)} is Null");
 
-                return Ok(_userService.Register(userCreateVM));
+                if (_createValidator.Validate(userCreateVM, options => options.ThrowOnFailures()).IsValid)
+                    result = _userService.Register(userCreateVM);
+
+                return Ok();
+            }
+
+            catch (ValidationException e)
+            {
+                throw new ValidationException(e.Message);
             }
 
             catch (NotFoundException e)
@@ -85,10 +109,20 @@ namespace Pexita.Controllers
         {
             try
             {
+                UserInfoVM result = null;
+
                 if (userUpdateVM == null)
                     throw new ArgumentNullException($"{nameof(userUpdateVM)} is Null");
 
-                return Ok(_userService.UpdateUser(userUpdateVM));
+                if (_updateValidator.Validate(userUpdateVM, options => options.ThrowOnFailures()).IsValid)
+                    result = _userService.UpdateUser(userUpdateVM);
+
+                return Ok(result);
+            }
+
+            catch (ValidationException e)
+            {
+                return BadRequest(e.Message);
             }
 
             catch (NotFoundException e)
@@ -107,32 +141,22 @@ namespace Pexita.Controllers
         {
             try
             {
-                if (userLoginVM == null)
-                    throw new ArgumentNullException($"{nameof(userLoginVM)} is Null");
+                UserLoginVM result = null;
 
-                if (string.IsNullOrWhiteSpace(userLoginVM.Password) || userLoginVM.Password.Length > 250)
-                    throw new ArgumentException($"Password is Either null or Empty Or WhiteSpace!");
+                if (_loginValidator.Validate(userLoginVM, options => options.ThrowOnFailures()).IsValid)
+                    result = _userService.ResetPassword(userLoginVM);
 
-                if ((string.IsNullOrWhiteSpace(userLoginVM.UserName) || userLoginVM.UserName.Length > 100)
-                    && (string.IsNullOrWhiteSpace(userLoginVM.Email) || userLoginVM.Email.Length > 100))
-                    throw new ArgumentException($"Username is Either null or Empty Or WhiteSpace!");
+                return Ok(result);
+            }
 
-                return Ok(_userService.ResetPassword(userLoginVM));
+            catch (ValidationException e)
+            {
+                return BadRequest(e.Message);
             }
 
             catch (NotFoundException e)
             {
                 return NotFound(e.Message);
-            }
-
-            catch (ArgumentNullException e)
-            {
-                return BadRequest(e.Message);
-            }
-
-            catch (ArgumentException e)
-            {
-                return BadRequest(e.Message);
             }
         }
 
@@ -141,32 +165,22 @@ namespace Pexita.Controllers
         {
             try
             {
-                if (userLoginVM == null)
-                    throw new ArgumentNullException($"{nameof(userLoginVM)} is Null");
+                bool result = false;
 
-                if (string.IsNullOrWhiteSpace(userLoginVM.Password) || userLoginVM.Password.Length > 250)
-                    throw new ArgumentException($"Password is Either null or Empty Or WhiteSpace!");
+                if (_loginValidator.Validate(userLoginVM, options => options.ThrowOnFailures()).IsValid)
+                    result = _userService.ChangePassword(userLoginVM);
 
-                if ((string.IsNullOrWhiteSpace(userLoginVM.UserName) || userLoginVM.UserName.Length > 100)
-                    && (string.IsNullOrWhiteSpace(userLoginVM.Email) || userLoginVM.Email.Length > 100))
-                    throw new ArgumentException($"Username is Either null or Empty Or WhiteSpace!");
+                return Ok(result);
+            }
 
-                return Ok(_userService.ChangePassword(userLoginVM));
+            catch (ValidationException e)
+            {
+                return BadRequest(e.Message);
             }
 
             catch (NotFoundException e)
             {
                 return NotFound(e.Message);
-            }
-
-            catch (ArgumentNullException e)
-            {
-                return BadRequest(e.Message);
-            }
-
-            catch (ArgumentException e)
-            {
-                return BadRequest(e.Message);
             }
         }
 
@@ -201,19 +215,14 @@ namespace Pexita.Controllers
         {
             try
             {
+                bool result = false;
                 if (address == null)
                     throw new ArgumentNullException($"{nameof(address)} is Null");
 
-                if (string.IsNullOrWhiteSpace(address.Province) || address.Province.Length > 100)
-                    throw new ArgumentException($"{nameof(address)} Province is not valid");
+                if (_addressValidator.Validate(address, options => options.ThrowOnFailures()).IsValid)
+                    result = _userService.AddAddress(id, address);
 
-                if (string.IsNullOrWhiteSpace(address.City) || address.City.Length > 100)
-                    throw new ArgumentException($"{nameof(address)} City is not valid");
-
-                if (string.IsNullOrWhiteSpace(address.Text) || address.Text.Length > 250)
-                    throw new ArgumentException($"{nameof(address)} Text is not Valid!");
-
-                return Ok(_userService.AddAddress(id, address));
+                return Ok(false);
 
             }
 

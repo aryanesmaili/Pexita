@@ -18,12 +18,15 @@ namespace Pexita.Utility.Validators
             RuleFor(b => b.Name).NotEmpty().MaximumLength(20)
                 .WithMessage("Brand Name Cannot be Empty Or More than 20 Characters");
 
+            RuleFor(bt => bt.Name).Must(x => !_brandService.IsBrand(x));
+
             RuleFor(b => b.BrandPic).NotEmpty()
                 .Must(file => _pexitaTools.PictureFileValidation(file, 10));
 
             RuleFor(b => b.ConfirmPassword).NotEmpty();
 
-            RuleFor(b => b.Password).NotEmpty().Equal(b => b.ConfirmPassword);
+            RuleFor(b => b.Password).NotEmpty().Equal(b => b.ConfirmPassword)
+                .MinimumLength(5).MaximumLength(32);
 
             RuleFor(b => b.Email).NotEmpty().EmailAddress();
         }
@@ -46,7 +49,8 @@ namespace Pexita.Utility.Validators
 
             RuleFor(b => b.ConfirmPassword).NotEmpty().MaximumLength(32);
 
-            RuleFor(b => b.Password).NotEmpty().MaximumLength(20).Equal(b => b.ConfirmPassword);
+            RuleFor(b => b.Password).NotEmpty().Equal(b => b.ConfirmPassword)
+                   .MinimumLength(5).MaximumLength(32);
 
             RuleFor(b => b.Email).NotEmpty().EmailAddress();
         }

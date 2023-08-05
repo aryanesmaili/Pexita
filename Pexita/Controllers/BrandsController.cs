@@ -11,10 +11,17 @@ namespace Pexita.Controllers
     public class BrandsController : ControllerBase
     {
         private readonly IBrandService _brandService;
-        public BrandsController(IBrandService brandService)
+        private readonly IValidator<BrandCreateVM> _brandCreateValidator;
+        private readonly IValidator<BrandUpdateVM> _brandUpdateValidator;
+        public BrandsController(IBrandService brandService,
+            IValidator<BrandCreateVM> brandCreateValidator,
+            IValidator<BrandUpdateVM> brandUpdateValidator)
         {
             _brandService = brandService;
+            _brandCreateValidator = brandCreateValidator;
+            _brandUpdateValidator = brandUpdateValidator;
         }
+
         [HttpGet("Brands")]
         public IActionResult GetAllBrands()
         {
@@ -86,7 +93,11 @@ namespace Pexita.Controllers
         {
             try
             {
-                _brandService.AddBrand(createVM);
+                if (createVM == null)
+                    throw new ArgumentNullException(nameof(createVM));
+
+                if (_brandCreateValidator.Validate(createVM, optionss => optionss.ThrowOnFailures()).IsValid)
+                    _brandService.AddBrand(createVM);
                 return Ok();
             }
 
@@ -105,11 +116,12 @@ namespace Pexita.Controllers
         {
             try
             {
-                _brandService.UpdateBrandInfo(id, brand);
+                if (_brandUpdateValidator.Validate(brand, options => options.ThrowOnFailures()).IsValid)
+                    _brandService.UpdateBrandInfo(id, brand);
                 return Ok();
             }
 
-            catch(ValidationException e)
+            catch (ValidationException e)
             {
                 return BadRequest(e.Message);
             }

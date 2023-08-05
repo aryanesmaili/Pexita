@@ -17,33 +17,21 @@ namespace Pexita.Services
         private readonly ITagsService _tagsService;
         private readonly IPexitaTools _pexitaTools;
         private readonly IMapper _mapper;
-        private readonly IValidator<ProductCreateVM> _productValidator;
-        private readonly IValidator<ProductUpdateVM> _productUpdateValidator;
 
         public ProductService(AppDBContext Context, IBrandService brandService,
-            ITagsService tagsService, IPexitaTools pexitaTools, IMapper Mapper,
-            IValidator<ProductCreateVM> productCreatValidator, IValidator<ProductUpdateVM> productUpdateValidator)
+            ITagsService tagsService, IPexitaTools pexitaTools, IMapper Mapper)
         {
             _Context = Context;
             _brandService = brandService;
             _tagsService = tagsService;
             _pexitaTools = pexitaTools;
             _mapper = Mapper;
-            _productValidator = productCreatValidator;
-            _productUpdateValidator = productUpdateValidator;
         }
-        // TODO: Add validation to check if the product already exists!
+
         public bool AddProduct(ProductCreateVM product)
         {
             try
             {
-                if (product == null)
-                {
-                    throw new ArgumentNullException(nameof(product));
-                }
-
-                _productValidator.Validate(product, options => options.ThrowOnFailures());
-
                 ProductModel NewProduct = _mapper.Map<ProductModel>(product);
 
                 _Context.Products.Add(NewProduct);
@@ -134,7 +122,6 @@ namespace Pexita.Services
             ProductModel productModel = _Context.Products.FirstOrDefault(n => n.ID == id) ?? throw new NotFoundException();
             try
             {
-                _productUpdateValidator.Validate(product, options => options.ThrowOnFailures());
                 _mapper.Map(product, productModel);
 
                 try
@@ -208,6 +195,12 @@ namespace Pexita.Services
             {
                 throw new NotFoundException();
             }
+        }
+
+        public bool IsProductAlready(string BrandName, string ProductTitle)
+        {
+            return _Context.Brands.Include(bp => bp.Products).AsNoTracking().FirstOrDefault(x => x.Name == BrandName)
+                        .Products!.FirstOrDefault(x => x.Title == ProductTitle) != null;
         }
     }
 }

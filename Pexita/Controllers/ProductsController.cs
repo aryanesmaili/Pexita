@@ -14,10 +14,16 @@ namespace Pexita.Controllers
     public class ProductsController : ControllerBase
     {
         private readonly IProductService _productService;
+        private readonly IValidator<ProductCreateVM> _productCreateValidator;
+        private readonly IValidator<ProductUpdateVM> _productUpdateValidator;
 
-        public ProductsController(IProductService productService)
+        public ProductsController(IProductService productService, IValidator<ProductCreateVM> productCreateValidator
+            , IValidator<ProductUpdateVM> productUpdateValidator)
         {
             _productService = productService;
+            _productCreateValidator = productCreateValidator;
+            _productUpdateValidator = productUpdateValidator;
+
         }
 
         [HttpGet("products")]
@@ -85,7 +91,9 @@ namespace Pexita.Controllers
                 if (product == null)
                     throw new ArgumentNullException(nameof(product));
 
-                _productService.AddProduct(product);
+                if (_productCreateValidator.Validate(product, options => options.ThrowOnFailures()).IsValid)
+                    _productService.AddProduct(product);
+
                 return Ok();
             }
 
@@ -93,10 +101,10 @@ namespace Pexita.Controllers
             {
                 return BadRequest(e.Message);
             }
+
             catch (FormatException fe)
             {
                 return BadRequest($"saving the given file {fe.Message} failed because of format");
-
             }
 
             catch (ArgumentNullException e)
@@ -115,8 +123,12 @@ namespace Pexita.Controllers
         {
             try
             {
-                return Ok(_productService.UpdateProductInfo(id, product));
+                ProductInfoVM update = null;
+                if (_productUpdateValidator.Validate(product, options => options.ThrowOnFailures()).IsValid)
+                    update = _productService.UpdateProductInfo(id, product);
+                return Ok(update);
             }
+
             catch (NotFoundException)
             {
                 return NotFound();

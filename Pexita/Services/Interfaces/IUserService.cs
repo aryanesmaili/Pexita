@@ -21,5 +21,9 @@ namespace Pexita.Services.Interfaces
         public bool DeleteAddress(int UserID, int id);
         public List<CommentsModel> GetComments(int UserID);
         public UserInfoVM UserModelToInfoVM(UserModel userModel);
+        public bool IsUser(int id);
+        public bool IsUser(string Username);
+        public bool IsEmailInUse(string Email);
+        public bool IsAddressAlready(string text);
     }
 }

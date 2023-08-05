@@ -11,14 +11,22 @@ namespace Pexita.Utility.Validators
         private readonly IBrandService _brandService;
         private readonly ITagsService _tagsService;
         private readonly IPexitaTools _pexitaTools;
-        public ProductCreateValidation(IBrandService BrandService, ITagsService tagsService, IPexitaTools pexitaTools)
+        private readonly IProductService _productService;
+        public ProductCreateValidation(IBrandService BrandService,
+            ITagsService tagsService, IPexitaTools pexitaTools,
+            IProductService productService)
         {
             _brandService = BrandService;
             _tagsService = tagsService;
             _pexitaTools = pexitaTools;
+            _productService = productService;
 
             RuleFor(x => x.Title).NotEmpty().MaximumLength(50)
                 .WithMessage("Title {PropertyName} Cannot be Empty Or More Than 30 Characters");
+
+            RuleFor(x => x.Title).Must((product, title) => {
+                return !_productService.IsProductAlready(product.Brand, title);
+            }).WithMessage("Product already exists for this brand with title : {PropertyName}");
 
             RuleFor(x => x.Quantity).NotEmpty().GreaterThanOrEqualTo(0)
                 .When(x => x.IsAvailable);

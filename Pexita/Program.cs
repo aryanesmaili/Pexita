@@ -28,6 +28,7 @@ builder.Services.AddTransient<IValidator<ProductUpdateVM>, ProductUpdateValidati
 builder.Services.AddTransient<IValidator<BrandCreateVM>, BrandCreateValidation>();
 builder.Services.AddTransient<IValidator<BrandUpdateVM>, BrandUpdateValidation>();
 
+
 builder.Services.AddTransient<IProductService, ProductService>();
 builder.Services.AddTransient<IBrandService, BrandService>();
 builder.Services.AddTransient<ITagsService, TagsService>();

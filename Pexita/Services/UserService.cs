@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using Pexita.Data;
 using Pexita.Data.Entities.Comments;
@@ -29,6 +30,7 @@ namespace Pexita.Services
                 .Include(u => u.Addresses)
                 .Include(u => u.BrandNewsletters)
                 .Include(u => u.ProductNewsletters)
+                .AsNoTracking()
                 .ToList();
             if (users.Count == 0)
             {
@@ -44,6 +46,7 @@ namespace Pexita.Services
                 .Include(u => u.Addresses)
                 .Include(u => u.BrandNewsletters)
                 .Include(u => u.ProductNewsletters)
+                .AsNoTracking()
                 .Take(Count)
                 .ToList();
 
@@ -57,7 +60,10 @@ namespace Pexita.Services
 
         public UserInfoVM GetUserByID(int UserID)
         {
-            UserModel user = _Context.Users.Include(u => u.Orders).Include(u => u.Addresses).Include(u => u.BrandNewsletters).Include(u => u.ProductNewsletters)
+            UserModel user = _Context.Users
+                .Include(u => u.Orders).Include(u => u.Addresses)
+                .Include(u => u.BrandNewsletters).Include(u => u.ProductNewsletters)
+                .AsNoTracking()
                 .FirstOrDefault(u => u.ID == UserID) ?? throw new NotFoundException($"User With ID:{UserID} Not Found");
 
             return UserModelToInfoVM(user);
@@ -65,7 +71,11 @@ namespace Pexita.Services
 
         public UserInfoVM GetUserByUserName(string userName)
         {
-            UserModel user = _Context.Users.Include(u => u.Orders).Include(u => u.Addresses).Include(u => u.BrandNewsletters).Include(u => u.ProductNewsletters)
+            UserModel user = _Context.Users
+                .Include(u => u.Orders).Include(u => u.Addresses)
+                .Include(u => u.BrandNewsletters)
+                .Include(u => u.ProductNewsletters)
+                .AsNoTracking()
                 .FirstOrDefault(u => u.Username == userName) ?? throw new NotFoundException($"User With Username:{userName} Not Found");
 
             return UserModelToInfoVM(user);
@@ -88,6 +98,11 @@ namespace Pexita.Services
                 _Context.SaveChanges();
 
                 return true;
+            }
+
+            catch (ValidationException e)
+            {
+                throw new ValidationException(e.Message);
             }
 
             catch (InvalidOperationException)
@@ -120,6 +135,11 @@ namespace Pexita.Services
                 return new UserLoginVM { Password = user.Password, Email = userLoginVM.Email, UserName = userLoginVM.UserName };
             }
 
+            catch (ValidationException e)
+            {
+                throw new ValidationException(e.Message);
+            }
+
             catch (InvalidOperationException)
             {
                 throw new NotFoundException();
@@ -131,21 +151,28 @@ namespace Pexita.Services
             }
         }
 
-        public UserInfoVM UpdateUser(UserUpdateVM user)
+        public UserInfoVM UpdateUser(UserUpdateVM userUpdateVM)
         {
             try
             {
-                UserModel User = _Context.Users.Single(u => u.ID == user.ID);
 
-                _mapper.Map(user, User);
+                UserModel User = _Context.Users.Single(u => u.ID == userUpdateVM.ID);
+
+                _mapper.Map(userUpdateVM, User);
 
                 _Context.SaveChanges();
 
                 return UserModelToInfoVM(User);
             }
+
+            catch (ValidationException e)
+            {
+                throw new ValidationException(e.Message);
+            }
+
             catch (InvalidOperationException)
             {
-                throw new NotFoundException($"User With ID:{user.ID} Not Found");
+                throw new NotFoundException($"User With ID:{userUpdateVM.ID} Not Found");
             }
         }
 
@@ -168,15 +195,16 @@ namespace Pexita.Services
             throw new NotImplementedException();
         }
 
-        public bool Register(UserCreateVM user)
+        public bool Register(UserCreateVM userCreateVM)
         {
-            UserModel User = _mapper.Map<UserModel>(user);
+            UserModel User = _mapper.Map<UserModel>(userCreateVM);
 
             _Context.Users.Add(User);
 
             _Context.SaveChanges();
 
             return true;
+
         }
 
         public List<Address> GetAddresses(int UserID)
@@ -228,6 +256,26 @@ namespace Pexita.Services
         {
             UserModel user = _Context.Users.Include(u => u.Comments).FirstOrDefault(u => u.ID == UserID) ?? throw new NotFoundException($"User With ID:{UserID} Not Found");
             return user.Comments.ToList();
+        }
+
+        public bool IsUser(int id)
+        {
+            return _Context.Users.FirstOrDefault(u => u.ID == id) != null;
+        }
+
+        public bool IsUser(string Username)
+        {
+            return _Context.Users.FirstOrDefault(u => u.Username == Username) != null;
+        }
+
+        public bool IsEmailInUse(string Email)
+        {
+            return _Context.Users.FirstOrDefault(_u => _u.Email == Email) != null;
+        }
+
+        public bool IsAddressAlready(string text)
+        {
+            return _Context.Addresses.FirstOrDefault(x => x.Text == text) != null;
         }
     }
 }

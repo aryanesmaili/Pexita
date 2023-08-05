@@ -31,5 +31,7 @@ namespace Pexita.Data.Entities.User
         public string Province { get; set; }
         public string City { get; set; }
         public string Text { get; set; }
+        public string PhoneNumber { get; set; }
+        public string PostalCode { get; set; }
     }
 }

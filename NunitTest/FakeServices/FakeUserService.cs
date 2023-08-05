@@ -61,6 +61,21 @@ namespace NunitTest.FakeServices
             throw new NotImplementedException();
         }
 
+        public bool IsEmailInUse(string Email)
+        {
+            throw new NotImplementedException();
+        }
+
+        public bool IsUser(int id)
+        {
+            throw new NotImplementedException();
+        }
+
+        public bool IsUser(string Username)
+        {
+            throw new NotImplementedException();
+        }
+
         public bool Login(UserLoginVM user)
         {
             throw new NotImplementedException();

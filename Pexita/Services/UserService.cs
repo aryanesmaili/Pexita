@@ -190,8 +190,21 @@ namespace Pexita.Services
             return _mapper.Map<UserInfoVM>(userModel);
         }
 
-        public bool Login(UserLoginVM user)
+        public bool Login(UserLoginVM userLoginVM)
         {
+            UserModel user = null;
+
+            if (!string.IsNullOrEmpty(userLoginVM.UserName))
+                user = _Context.Users.FirstOrDefault(u => u.Username == userLoginVM.UserName) ?? throw new NotFoundException();
+
+            else if (string.IsNullOrEmpty(userLoginVM.Email))
+                user = _Context.Users.FirstOrDefault(u => u.Email == userLoginVM.Email) ?? throw new NotFoundException();
+
+            if (user != null)
+            {
+                string HashedDBPassword = user.Password;
+            }
+
             throw new NotImplementedException();
         }
 
@@ -273,9 +286,5 @@ namespace Pexita.Services
             return _Context.Users.FirstOrDefault(_u => _u.Email == Email) != null;
         }
 
-        public bool IsAddressAlready(string text)
-        {
-            return _Context.Addresses.FirstOrDefault(x => x.Text == text) != null;
-        }
     }
 }

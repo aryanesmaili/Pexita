@@ -24,6 +24,5 @@ namespace Pexita.Services.Interfaces
         public bool IsUser(int id);
         public bool IsUser(string Username);
         public bool IsEmailInUse(string Email);
-        public bool IsAddressAlready(string text);
     }
 }

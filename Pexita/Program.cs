@@ -34,6 +34,7 @@ builder.Services.AddTransient<IBrandService, BrandService>();
 builder.Services.AddTransient<ITagsService, TagsService>();
 builder.Services.AddTransient<IUserService, UserService>();
 builder.Services.AddTransient<IPexitaTools, PexitaTools>();
+builder.Services.AddTransient<IIranAPI, IranAPI>();
 
 var app = builder.Build();
 

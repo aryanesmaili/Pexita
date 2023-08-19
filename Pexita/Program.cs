@@ -21,7 +21,7 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddAutoMapper(typeof(AutoMapperConfig));
 
 builder.Services.AddDbContext<AppDBContext>
-    (options => options.UseSqlServer(builder.Configuration.GetConnectionString("DbOne")));
+    (options => options.UseSqlServer(builder.Configuration.GetConnectionString("DbTwo")));
 
 builder.Services.AddTransient<IValidator<ProductCreateVM>, ProductCreateValidation>();
 builder.Services.AddTransient<IValidator<ProductUpdateVM>, ProductUpdateValidation>();

@@ -8,6 +8,8 @@ namespace Pexita.Data.Entities.Orders
     public class OrdersModel
     {
         public int ID { get; set; }
+        public string Name { get; set; }
+
         public DateTime DateIssued { get; set; }
         public OrderStatus Status { get; set; }
         public enum OrderStatus

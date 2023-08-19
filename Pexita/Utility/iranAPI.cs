@@ -17,9 +17,9 @@
 
                 if (response.IsSuccessStatusCode)
                 {
-                    List<State> result = await response.Content.ReadFromJsonAsync<List<State>>();
+                    List<State>? result = await response.Content.ReadFromJsonAsync<List<State>>();
 
-                    State state = result != null ? result.FirstOrDefault(x => x.Name == StateName) : null;
+                    State? state = result?.FirstOrDefault(x => x.Name == StateName);
 
                     return state != null;
                 }
@@ -35,9 +35,9 @@
 
                 if (response.IsSuccessStatusCode)
                 {
-                    List<City> result = await response.Content.ReadFromJsonAsync<List<City>>();
+                    List<City>? result = await response.Content.ReadFromJsonAsync<List<City>>();
 
-                    City isCity = result != null ? result.FirstOrDefault(x => x.Name == CityName) : null;
+                    City? isCity = result?.FirstOrDefault(x => x.Name == CityName);
 
                     return isCity != null;
                 }

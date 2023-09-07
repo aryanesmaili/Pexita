@@ -1,5 +1,6 @@
 ﻿using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
+using Pexita.Additionals.Exceptions;
 using Pexita.Data.Entities.Brands;
 using Pexita.Exceptions;
 using Pexita.Services.Interfaces;

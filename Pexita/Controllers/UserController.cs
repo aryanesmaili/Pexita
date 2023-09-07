@@ -1,8 +1,8 @@
 ﻿using FluentValidation;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Pexita.Additionals.Exceptions;
 using Pexita.Data.Entities.User;
-using Pexita.Exceptions;
 using Pexita.Services.Interfaces;
 using Pexita.Utility.Validators;
 using System.Net;

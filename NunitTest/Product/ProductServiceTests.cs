@@ -11,11 +11,11 @@ using Pexita.Data.Entities.Comments;
 using Pexita.Data.Entities.Brands;
 using Pexita.Data.Entities.Newsletter;
 using Pexita.Data.Entities.ShoppingCart;
-using Pexita.Exceptions;
 using Pexita.Services.Interfaces;
 using Microsoft.CodeAnalysis;
 using FluentValidation;
 using Pexita.Utility.Validators;
+using Pexita.Additionals.Exceptions;
 
 namespace NunitTest.Product
 {

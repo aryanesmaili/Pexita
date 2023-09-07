@@ -2,10 +2,10 @@
 using FluentValidation;
 using Microsoft.CodeAnalysis;
 using Microsoft.EntityFrameworkCore;
+using Pexita.Additionals.Exceptions;
 using Pexita.Data;
 using Pexita.Data.Entities.Comments;
 using Pexita.Data.Entities.Products;
-using Pexita.Exceptions;
 using Pexita.Services.Interfaces;
 
 namespace Pexita.Services

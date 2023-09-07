@@ -1,6 +1,7 @@
 ﻿using FluentValidation;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Pexita.Additionals.Exceptions;
 using Pexita.Data.Entities.Comments;
 using Pexita.Data.Entities.Products;
 using Pexita.Exceptions;
@@ -16,16 +17,14 @@ namespace Pexita.Controllers
         private readonly IProductService _productService;
         private readonly IValidator<ProductCreateVM> _productCreateValidator;
         private readonly IValidator<ProductUpdateVM> _productUpdateValidator;
-
         public ProductsController(IProductService productService, IValidator<ProductCreateVM> productCreateValidator
             , IValidator<ProductUpdateVM> productUpdateValidator)
         {
             _productService = productService;
             _productCreateValidator = productCreateValidator;
             _productUpdateValidator = productUpdateValidator;
-
         }
-
+        
         [HttpGet("products")]
         public IActionResult GetAllProducts()
         {

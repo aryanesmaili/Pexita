@@ -23,6 +23,8 @@ namespace Pexita.Services
         private readonly AppDBContext _Context;
         private readonly IMapper _mapper;
 
+        public 
+
         public PaymentSystemService(string APIKey, string CallbackAddress, bool isTest, AppDBContext Context, IMapper mapper)
         {
             _apiKey = APIKey;
@@ -245,7 +247,7 @@ namespace Pexita.Services
 
         public PaymentRequest(string Order_id, int Amount, string? Name, string? PhoneNumber, string? Email, string? Description, string CallBackAddress)
         {
-            this.OrderId = Order_id;
+            OrderId = Order_id;
             this.Amount = Amount;
             this.Description = Description;
         }

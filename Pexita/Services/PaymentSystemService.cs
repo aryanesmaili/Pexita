@@ -32,57 +32,27 @@ namespace Pexita.Services
             _mapper = mapper;
         }
 
-
-        public async Task<bool> PaymentOutcomeValidation(PaymentOutcomeValidationResponse idpayResponse)
-        {
-            PaymentModel payment = _Context.Payments.Single(i => i.TransactionID == idpayResponse.TransactionID);
-            payment = _mapper.Map<PaymentModel>(idpayResponse);
-            using (HttpClient Client = new())
-            {
-                Client.DefaultRequestHeaders.Add("X-API-Key", _apiKey);
-
-                if (_isTest)
-                {
-                    Client.DefaultRequestHeaders.Add("X-SANDBOX", "1");
-                }
-                Dictionary<string, string> rawBody = new()
-                {
-                    {"id", payment.TransactionID!},
-                    {"order_id", payment.PaymentOrderID!}
-                };
-                string body = JsonSerializer.Serialize(rawBody);
-                HttpContent content = new StringContent(body, Encoding.UTF8, "application/json");
-
-                HttpResponseMessage response = await Client.PostAsync(_paymentVerificationAPI, content);
-                if (response.IsSuccessStatusCode)
-                {
-                    var verifydate = JsonSerializer.Deserialize<Dictionary<string, string>>(await response.Content.ReadAsStreamAsync())!["verify"];
-                    payment.PaymentVerificationDate = DateTimeOffset.FromUnixTimeSeconds(long.Parse(verifydate)).DateTime;
-                }
-                else
-                {
-                    var errorResponse = JsonSerializer.Deserialize<PaymentErrorResponse>(await response.Content.ReadAsStreamAsync());
-                    PaymentExceptionManager(response.StatusCode, errorResponse!);
-                }
-            }
-            _Context.SaveChanges();
-            return true;
-        }
-
+        /// <summary>
+        /// Sends a payment request to the IDPay API and returns the payment link if successful.
+        /// </summary>
+        /// <param name="paymentRequest">The payment request object containing details such as order ID, amount, and user information.</param>
+        /// <returns>A task representing the asynchronous operation, containing the payment link if the request was successful.</returns>
         public async Task<string> SendPaymentRequest(PaymentRequest paymentRequest)
         {
-            using (HttpClient Client = new())
+            // Create a new HttpClient instance to communicate with the IDPay API.
+            using (HttpClient client = new())
             {
-                // Add APIKey to the header of the request
-                Client.DefaultRequestHeaders.Add("X-API-Key", _apiKey);
+                // Add API key to the request headers.
+                client.DefaultRequestHeaders.Add("X-API-Key", _apiKey);
 
-                // If we're testing, we want to go into Sandbox mode
+                // If in test mode, add a header to indicate sandbox mode.
                 if (_isTest)
                 {
-                    Client.DefaultRequestHeaders.Add("X-SANDBOX", "1");
+                    client.DefaultRequestHeaders.Add("X-SANDBOX", "1");
                 }
 
-                Dictionary<string, dynamic> rawReq = new()
+                // Prepare the request body as a JSON object.
+                Dictionary<string, dynamic> requestBody = new()
                 {
                     { "order_id", paymentRequest.OrderId },
                     { "amount", paymentRequest.Amount },
@@ -92,21 +62,21 @@ namespace Pexita.Services
                     { "desc", paymentRequest.Description ?? "" },
                     { "callback", _CallbackAddress}
                 };
-                // Serialize the PaymentRequest object to JSON to send it
-                string body = JsonSerializer.Serialize(rawReq);
+                string requestBodyJson = JsonSerializer.Serialize(requestBody);
 
-                // Creating the whole request 
-                HttpContent content = new StringContent(body, Encoding.UTF8, "application/json");
+                // Create the HTTP content from the request body.
+                HttpContent content = new StringContent(requestBodyJson, Encoding.UTF8, "application/json");
 
-                // Sending the request to IDPay
-                HttpResponseMessage response = await Client.PostAsync(_requestNewTransactionAPI, content);
+                // Send a POST request to the IDPay API to create a new transaction.
+                HttpResponseMessage response = await client.PostAsync(_requestNewTransactionAPI, content);
 
-                // Check Request Status
-                if (response.StatusCode == HttpStatusCode.Created) // 201   // means transaction has succesfully been created 
+                // Check the status code of the response.
+                if (response.StatusCode == HttpStatusCode.Created) // 201   // means transaction has successfully been created 
                 {
+                    // Deserialize the response JSON to extract the payment creation success details.
                     PaymentCreationSuccessResponse? deserializedResponse = await JsonSerializer.DeserializeAsync<PaymentCreationSuccessResponse>(await response.Content.ReadAsStreamAsync());
 
-                    // DB Operation to save id and link to database 
+                    // Create a new PaymentModel object to store the payment details in the database.
                     PaymentModel payment = new()
                     {
                         PaymentOrderID = paymentRequest.OrderId,
@@ -116,22 +86,89 @@ namespace Pexita.Services
                         DateIssued = DateTime.UtcNow,
                         ShoppingCartID = paymentRequest.ShoppingCartID,
                         ShoppingCart = paymentRequest.ShoppingCart,
-
                     };
 
-                    // returning the link to controllers to redirect user to payment link
+                    // Return the payment link to redirect the user to the payment page.
                     return deserializedResponse.Link;
                 }
-                // In Case it goes wrong:
                 else
                 {
+                    // If the request was not successful, deserialize the error response and handle it.
                     var errorResponse = JsonSerializer.Deserialize<PaymentErrorResponse>(await response.Content.ReadAsStreamAsync());
                     PaymentExceptionManager(response.StatusCode, errorResponse!);
+
+                    // Throw an exception with the error message.
                     throw new Exception($"{response.StatusCode}: {errorResponse.Message}");
                 }
             }
-
         }
+
+
+        /// <summary>
+        /// Validates the outcome of a payment based on the response received from the IDPay API.
+        /// </summary>
+        /// <param name="idpayResponse">The response received from the IDPay API.</param>
+        /// <returns>A task representing the asynchronous operation, indicating whether the validation was successful.</returns>
+        public async Task<bool> PaymentOutcomeValidation(PaymentOutcomeValidationResponse idpayResponse)
+        {
+            // Retrieve the payment record from the database based on the transaction ID.
+            PaymentModel payment = _Context.Payments.Single(i => i.TransactionID == idpayResponse.TransactionID);
+
+            // Map the properties from the IDPay response to the PaymentModel entity.
+            payment = _mapper.Map<PaymentModel>(idpayResponse);
+
+            // Additional verification logic can be added here before approving the payment.
+
+            // Create a new HttpClient instance to communicate with the IDPay API.
+            using (HttpClient client = new())
+            {
+                // Set the API key in the request headers.
+                client.DefaultRequestHeaders.Add("X-API-Key", _apiKey);
+
+                // If in test mode, add a header to indicate sandbox mode.
+                if (_isTest)
+                {
+                    client.DefaultRequestHeaders.Add("X-SANDBOX", "1");
+                }
+
+                // Prepare the request body as a JSON object.
+                Dictionary<string, string> requestBody = new()
+                {
+                    {"id", payment.TransactionID!},
+                    {"order_id", payment.PaymentOrderID!}
+                };
+                string requestBodyJson = JsonSerializer.Serialize(requestBody);
+                HttpContent content = new StringContent(requestBodyJson, Encoding.UTF8, "application/json");
+
+                // Send a POST request to the payment verification API endpoint.
+                HttpResponseMessage response = await client.PostAsync(_paymentVerificationAPI, content);
+
+                // Check if the request was successful.
+                if (response.IsSuccessStatusCode)
+                {
+                    // Deserialize the response JSON to extract the verification date.
+                    var responseData = JsonSerializer.Deserialize<Dictionary<string, string>>(await response.Content.ReadAsStreamAsync())!;
+                    string verificationDateUnixString = responseData["verify"];
+
+                    // Convert the verification date from Unix timestamp to DateTime and update the payment record.
+                    payment.PaymentVerificationDate = DateTimeOffset.FromUnixTimeSeconds(long.Parse(verificationDateUnixString)).DateTime;
+                }
+                else
+                {
+                    // If the request was not successful, deserialize the error response and handle it.
+                    var errorResponse = JsonSerializer.Deserialize<PaymentErrorResponse>(await response.Content.ReadAsStreamAsync());
+                    PaymentExceptionManager(response.StatusCode, errorResponse!);
+                }
+            }
+
+            // Save changes to the database.
+            _Context.SaveChanges();
+
+            // Return true to indicate that the payment outcome validation was successful.
+            return true;
+        }
+
+
         static int ExtractNumberFromString(string input)
         {
             string pattern = @"\d+"; // \d matches any digit, and + matches one or more occurrences

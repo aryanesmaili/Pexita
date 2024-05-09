@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Pexita.Data;
 
@@ -11,13 +12,15 @@ using Pexita.Data;
 namespace Pexita.Migrations
 {
     [DbContext(typeof(AppDBContext))]
-    partial class AppDBContextModelSnapshot : ModelSnapshot
+    [Migration("20230711231806_fix")]
+    partial class fix
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "7.0.9")
+                .HasAnnotation("ProductVersion", "7.0.5")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -32,9 +35,6 @@ namespace Pexita.Migrations
 
                     b.Property<string>("BrandPicURL")
                         .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("DateCreated")
-                        .HasColumnType("datetime2");
 
                     b.Property<string>("Description")
                         .HasColumnType("nvarchar(max)");
@@ -67,9 +67,6 @@ namespace Pexita.Migrations
                         .HasColumnType("int");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ID"));
-
-                    b.Property<DateTime>("DateCreated")
-                        .HasColumnType("datetime2");
 
                     b.Property<int>("ProductID")
                         .HasColumnType("int");
@@ -223,9 +220,10 @@ namespace Pexita.Migrations
                         .HasColumnType("int");
 
                     b.Property<string>("Colors")
+                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<DateTime>("DateCreated")
+                    b.Property<DateTime>("DateAdded")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("Description")
@@ -237,12 +235,15 @@ namespace Pexita.Migrations
                     b.Property<double?>("Price")
                         .HasColumnType("float");
 
-                    b.Property<string>("ProductPicsURL")
+                    b.Property<string>("ProductPicURL")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<int?>("Quantity")
+                    b.Property<int>("Quantity")
                         .HasColumnType("int");
+
+                    b.Property<double?>("Rate")
+                        .HasColumnType("float");
 
                     b.Property<string>("Title")
                         .IsRequired()
@@ -253,27 +254,6 @@ namespace Pexita.Migrations
                     b.HasIndex("BrandID");
 
                     b.ToTable("Products");
-                });
-
-            modelBuilder.Entity("Pexita.Data.Entities.Products.ProductRating", b =>
-                {
-                    b.Property<int>("ID")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ID"));
-
-                    b.Property<int>("ProductID")
-                        .HasColumnType("int");
-
-                    b.Property<int>("Rating")
-                        .HasColumnType("int");
-
-                    b.HasKey("ID");
-
-                    b.HasIndex("ProductID");
-
-                    b.ToTable("ProductRating");
                 });
 
             modelBuilder.Entity("Pexita.Data.Entities.ShoppingCart.CartItems", b =>
@@ -323,7 +303,7 @@ namespace Pexita.Migrations
                     b.ToTable("ShoppingCarts");
                 });
 
-            modelBuilder.Entity("Pexita.Data.Entities.Tags.TagModel", b =>
+            modelBuilder.Entity("Pexita.Data.Entities.Tags.TagsModel", b =>
                 {
                     b.Property<int>("ID")
                         .ValueGeneratedOnAdd()
@@ -355,14 +335,6 @@ namespace Pexita.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("PhoneNumber")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("PostalCode")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<string>("Province")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -378,7 +350,7 @@ namespace Pexita.Migrations
 
                     b.HasIndex("UserID");
 
-                    b.ToTable("Addresses");
+                    b.ToTable("Address");
                 });
 
             modelBuilder.Entity("Pexita.Data.Entities.User.UserModel", b =>
@@ -388,9 +360,6 @@ namespace Pexita.Migrations
                         .HasColumnType("int");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ID"));
-
-                    b.Property<DateTime>("DateCreated")
-                        .HasColumnType("datetime2");
 
                     b.Property<string>("Email")
                         .IsRequired()
@@ -417,7 +386,7 @@ namespace Pexita.Migrations
                     b.ToTable("Users");
                 });
 
-            modelBuilder.Entity("ProductModelTagModel", b =>
+            modelBuilder.Entity("ProductModelTagsModel", b =>
                 {
                     b.Property<int>("ProductsID")
                         .HasColumnType("int");
@@ -429,7 +398,7 @@ namespace Pexita.Migrations
 
                     b.HasIndex("TagsID");
 
-                    b.ToTable("ProductModelTagModel");
+                    b.ToTable("ProductModelTagsModel");
                 });
 
             modelBuilder.Entity("Pexita.Data.Entities.Comments.CommentsModel", b =>
@@ -547,17 +516,6 @@ namespace Pexita.Migrations
                     b.Navigation("Brand");
                 });
 
-            modelBuilder.Entity("Pexita.Data.Entities.Products.ProductRating", b =>
-                {
-                    b.HasOne("Pexita.Data.Entities.Products.ProductModel", "Product")
-                        .WithMany("Rating")
-                        .HasForeignKey("ProductID")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Product");
-                });
-
             modelBuilder.Entity("Pexita.Data.Entities.ShoppingCart.CartItems", b =>
                 {
                     b.HasOne("Pexita.Data.Entities.Products.ProductModel", "Product")
@@ -597,7 +555,7 @@ namespace Pexita.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("ProductModelTagModel", b =>
+            modelBuilder.Entity("ProductModelTagsModel", b =>
                 {
                     b.HasOne("Pexita.Data.Entities.Products.ProductModel", null)
                         .WithMany()
@@ -605,7 +563,7 @@ namespace Pexita.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Pexita.Data.Entities.Tags.TagModel", null)
+                    b.HasOne("Pexita.Data.Entities.Tags.TagsModel", null)
                         .WithMany()
                         .HasForeignKey("TagsID")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -630,8 +588,6 @@ namespace Pexita.Migrations
                     b.Navigation("Comments");
 
                     b.Navigation("NewsLetters");
-
-                    b.Navigation("Rating");
                 });
 
             modelBuilder.Entity("Pexita.Data.Entities.ShoppingCart.ShoppingCartModel", b =>

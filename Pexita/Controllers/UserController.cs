@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Pexita.Additionals.Exceptions;
 using Pexita.Data.Entities.User;
+using Pexita.Exceptions;
 using Pexita.Services.Interfaces;
 using Pexita.Utility.Validators;
 using System.Net;
@@ -12,7 +13,7 @@ namespace Pexita.Controllers
     [Route("api/[controller]")]
     [ApiController]
     public class UserController : ControllerBase
-    {
+    { 
         private readonly IUserService _userService;
         private readonly IValidator<UserCreateVM> _createValidator;
         private readonly IValidator<UserLoginVM> _loginValidator;

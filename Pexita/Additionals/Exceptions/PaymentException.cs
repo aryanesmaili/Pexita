@@ -98,6 +98,7 @@
         {
             public AmountLessThanMinimumException(int minAmount) : base($"Your Transaction Amount Cannot Be Less Than {minAmount}")
             {
+
             }
         }
 
@@ -124,7 +125,7 @@
 
         public class CallbackDomainMismatchException : Exception
         {
-            public CallbackDomainMismatchException(string domain) : base($"Your Request Is Sent From {domain} which is not Listed in the Service")
+            public CallbackDomainMismatchException() : base($"Your Request Is Sent From a domain which is not Listed in the Service")
             {
             }
         }

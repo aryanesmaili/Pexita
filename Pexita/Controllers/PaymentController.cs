@@ -29,5 +29,14 @@ namespace Pexita.Controllers
         {
             return Ok();
         }
+        [HttpPost("Payments/callback")]
+        public IActionResult PaymentOutcome()
+        {
+            // find the corresponding payment record
+
+            // update it's values
+            // return the response
+            return Ok();
+        }
     }
 }

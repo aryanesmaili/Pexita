@@ -6,9 +6,11 @@ using Pexita.Data.Entities.Brands;
 using Pexita.Data.Entities.Comments;
 using Pexita.Data.Entities.Newsletter;
 using Pexita.Data.Entities.Orders;
+using Pexita.Data.Entities.Payment;
 using Pexita.Data.Entities.Products;
 using Pexita.Data.Entities.ShoppingCart;
 using Pexita.Data.Entities.User;
+using Pexita.Services;
 using Pexita.Services.Interfaces;
 using Pexita.Utility;
 
@@ -73,6 +75,28 @@ namespace Pexita.Additionals
                 .ForMember(u => u.ProductNewsletters, opt => opt.MapFrom(src => new List<ProductNewsLetterModel>()))
                 .ForMember(u => u.Comments, opt => opt.MapFrom(src => new List<CommentsModel>()));
 
+            Dictionary<int, bool> transactionStatus = new()
+            {
+                {1, false},
+                {2, false},
+                {3, false},
+                {4, false},
+                {5, false},
+                {6, false},
+                {7, false},
+                {8, false},
+                {10,false},
+                {100, true},
+                {101, true },
+                {200, true }
+            };
+
+            CreateMap<PaymentOutcomeValidationResponse, PaymentModel>()
+                .ForMember(p => p.IDPayTrackID, opt => opt.MapFrom(src => src.TrackID))
+                .ForMember(p => p.CardNo, opt => opt.MapFrom(src => src.CardNo))
+                .ForMember(p => p.HashedCardNo, opt => opt.MapFrom(src => src.HashedCardNo))
+                .ForMember(p => p.DateTimePaid, opt => opt.MapFrom(src => DateTimeOffset.FromUnixTimeSeconds(src.TransactionTime).DateTime))
+                .ForMember(p => p.Successfull, opt => opt.MapFrom(src => transactionStatus[src.Status]));
         }
     }
 }

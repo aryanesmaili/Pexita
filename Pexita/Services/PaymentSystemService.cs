@@ -1,7 +1,14 @@
-﻿using Pexita.Data;
+﻿using AutoMapper;
+using NuGet.Packaging.Signing;
+using Pexita.Data;
+using Pexita.Data.Entities.Payment;
 using Pexita.Data.Entities.ShoppingCart;
+using System.Net;
+using System.Security;
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
+using static Pexita.Additionals.Exceptions.PaymentException;
 
 namespace Pexita.Services
 {
@@ -9,20 +16,62 @@ namespace Pexita.Services
     {
         private readonly string _apiKey;
         private readonly bool _isTest;
-        private const string _requestAPIAddress = "https://api.idpay.ir/v1.1/payment";
+        private const string _requestNewTransactionAPI = "https://api.idpay.ir/v1.1/payment";
+        private const string _paymentVerificationAPI = "https://api.idpay.ir/v1.1/payment/verify";
+        private const string _paymentInquiry = "https://api.idpay.ir/v1.1/payment/inquiry";
         private readonly string _CallbackAddress;
         private readonly AppDBContext _Context;
-        public PaymentSystemService(string APIKey, string CallbackAddress, bool isTest, AppDBContext Context)
+        private readonly IMapper _mapper;
+
+        public PaymentSystemService(string APIKey, string CallbackAddress, bool isTest, AppDBContext Context, IMapper mapper)
         {
             _apiKey = APIKey;
             _isTest = isTest;
             _CallbackAddress = CallbackAddress;
             _Context = Context;
+            _mapper = mapper;
         }
 
-        public async Task<PaymentErrorResponse> SendPaymentRequest(PaymentRequest paymentRequest)
+
+        public async Task<bool> PaymentOutcomeValidation(PaymentOutcomeValidationResponse idpayResponse)
         {
-            using (HttpClient Client = new HttpClient())
+            PaymentModel payment = _Context.Payments.Single(i => i.TransactionID == idpayResponse.TransactionID);
+            payment = _mapper.Map<PaymentModel>(idpayResponse);
+            using (HttpClient Client = new())
+            {
+                Client.DefaultRequestHeaders.Add("X-API-Key", _apiKey);
+
+                if (_isTest)
+                {
+                    Client.DefaultRequestHeaders.Add("X-SANDBOX", "1");
+                }
+                Dictionary<string, string> rawBody = new()
+                {
+                    {"id", payment.TransactionID!},
+                    {"order_id", payment.PaymentOrderID!}
+                };
+                string body = JsonSerializer.Serialize(rawBody);
+                HttpContent content = new StringContent(body, Encoding.UTF8, "application/json");
+
+                HttpResponseMessage response = await Client.PostAsync(_paymentVerificationAPI, content);
+                if (response.IsSuccessStatusCode)
+                {
+                    var verifydate = JsonSerializer.Deserialize<Dictionary<string, string>>(await response.Content.ReadAsStreamAsync())!["verify"];
+                    payment.PaymentVerificationDate = DateTimeOffset.FromUnixTimeSeconds(long.Parse(verifydate)).DateTime;
+                }
+                else
+                {
+                    var errorResponse = JsonSerializer.Deserialize<PaymentErrorResponse>(await response.Content.ReadAsStreamAsync());
+                    PaymentExceptionManager(response.StatusCode, errorResponse!);
+                }
+            }
+            _Context.SaveChanges();
+            return true;
+        }
+
+        public async Task<string> SendPaymentRequest(PaymentRequest paymentRequest)
+        {
+            using (HttpClient Client = new())
             {
                 // Add APIKey to the header of the request
                 Client.DefaultRequestHeaders.Add("X-API-Key", _apiKey);
@@ -33,32 +82,117 @@ namespace Pexita.Services
                     Client.DefaultRequestHeaders.Add("X-SANDBOX", "1");
                 }
 
+                Dictionary<string, dynamic> rawReq = new()
+                {
+                    { "order_id", paymentRequest.OrderId },
+                    { "amount", paymentRequest.Amount },
+                    { "name", paymentRequest.ShoppingCart.User.Username },
+                    { "phone", paymentRequest.ShoppingCart.User.PhoneNumber },
+                    { "mail", paymentRequest.ShoppingCart.User.Email },
+                    { "desc", paymentRequest.Description ?? "" },
+                    { "callback", _CallbackAddress}
+                };
                 // Serialize the PaymentRequest object to JSON to send it
-                string body = JsonSerializer.Serialize(paymentRequest);
+                string body = JsonSerializer.Serialize(rawReq);
 
                 // Creating the whole request 
                 HttpContent content = new StringContent(body, Encoding.UTF8, "application/json");
 
-                try
+                // Sending the request to IDPay
+                HttpResponseMessage response = await Client.PostAsync(_requestNewTransactionAPI, content);
+
+                // Check Request Status
+                if (response.StatusCode == HttpStatusCode.Created) // 201   // means transaction has succesfully been created 
                 {
-                    // Sending the request to IDPay
-                    HttpResponseMessage response = await Client.PostAsync(_requestAPIAddress, content);
-                    
-                    // Check Request Status
-                    if (response.IsSuccessStatusCode)
+                    PaymentCreationSuccessResponse? deserializedResponse = await JsonSerializer.DeserializeAsync<PaymentCreationSuccessResponse>(await response.Content.ReadAsStreamAsync());
+
+                    // DB Operation to save id and link to database 
+                    PaymentModel payment = new()
                     {
+                        PaymentOrderID = paymentRequest.OrderId,
+                        PaymentLink = deserializedResponse!.Link,
+                        Amount = paymentRequest.Amount,
+                        TransactionID = deserializedResponse!.Id,
+                        DateIssued = DateTime.UtcNow,
+                        ShoppingCartID = paymentRequest.ShoppingCartID,
+                        ShoppingCart = paymentRequest.ShoppingCart,
 
-                    }
+                    };
 
+                    // returning the link to controllers to redirect user to payment link
+                    return deserializedResponse.Link;
                 }
-
-                catch (Exception)
+                // In Case it goes wrong:
+                else
                 {
-                    throw;
+                    var errorResponse = JsonSerializer.Deserialize<PaymentErrorResponse>(await response.Content.ReadAsStreamAsync());
+                    PaymentExceptionManager(response.StatusCode, errorResponse!);
+                    throw new Exception($"{response.StatusCode}: {errorResponse.Message}");
                 }
             }
-        }
 
+        }
+        static int ExtractNumberFromString(string input)
+        {
+            string pattern = @"\d+"; // \d matches any digit, and + matches one or more occurrences
+            Match match = Regex.Match(input, pattern);
+            return int.Parse(match.Value);
+        }
+        private static void PaymentExceptionManager(HttpStatusCode response, PaymentErrorResponse innerResponse)
+        {
+            if (response == HttpStatusCode.NotAcceptable) // 406
+            {
+                switch (innerResponse!.Code)
+                {
+                    case 34:
+                        int minimumAcceptable = ExtractNumberFromString(innerResponse.Message);
+                        throw new AmountLessThanMinimumException(minimumAcceptable);
+                    case 35:
+                        int maximumAcceptable = ExtractNumberFromString(innerResponse.Message);
+                        throw new AmountExceedsMaximumException(maximumAcceptable);
+                    case 36:
+                        throw new AmountExceedsLimitException();
+                    case 38:
+                        throw new CallbackDomainMismatchException();
+                    case 39:
+                        throw new InvalidCallbackAddressException();
+                    default:
+                        throw new UnexpectedErrorException();
+                }
+            }
+            else if (response == HttpStatusCode.Forbidden)
+            {
+                switch (innerResponse!.Code)
+                {
+                    case 11:
+                        throw new UserBlockedException();
+                    case 12:
+                        throw new ApiKeyNotFoundException();
+                    case 13:
+                        string pattern = @"\b(?:\d{1,3}\.){3}\d{1,3}\b"; // This pattern matches the typical format of an IPv4 address
+                        string ipAddress = Regex.Match(innerResponse.Message, pattern).Value;
+                        throw new IpMismatchException(ipAddress);
+                    case 14:
+                        throw new WebServiceNotApprovedException();
+                    case 21:
+                        throw new BankAccountNotApprovedException();
+                    case 24:
+                        throw new BankAccountInactiveException();
+                    default:
+                        throw new UnexpectedErrorException();
+                }
+            }
+            else if (response == HttpStatusCode.MethodNotAllowed)
+            {
+                throw new TransactionNotCreatedException();
+
+            }
+            else
+            {
+                throw new UnexpectedErrorException();
+            }
+
+        }
         public static string GenerateOrderID(int BrandID, int ProductID, int UserID, DateTime Datetime)
         {
             return $"{BrandID}{ProductID}{UserID}{Datetime}";
@@ -66,31 +200,42 @@ namespace Pexita.Services
     }
     public class PaymentRequest
     {
-        public required string Order_id { get; set; }
+        public required string OrderId { get; set; }
         public required int Amount { get; set; }
-        public string? Name { get; set; }
-        public string? PhoneNumber { get; set; }
-        public string? Email { get; set; }
         public string? Description { get; set; }
-        public required string CallBackAddress { get; set; }
+        public required int ShoppingCartID { get; set; }
+        public required ShoppingCartModel ShoppingCart { get; set; }
 
         public PaymentRequest(string Order_id, int Amount, string? Name, string? PhoneNumber, string? Email, string? Description, string CallBackAddress)
         {
-            this.Order_id = Order_id;
+            this.OrderId = Order_id;
             this.Amount = Amount;
-            this.Name = Name;
-            this.PhoneNumber = PhoneNumber;
-            this.Email = Email;
             this.Description = Description;
-            this.CallBackAddress = CallBackAddress;
         }
     }
 
     public class PaymentErrorResponse
     {
-        public string Status { get; set; }
         public int Code { get; set; }
-        public string? Message { get; set; }
+        public string Message { get; set; }
+    }
+    public class PaymentCreationSuccessResponse
+    {
+        public string Id { get; set; }
+        public required string Link { get; set; }
+
+    }
+    public class PaymentOutcomeValidationResponse
+    {
+        public required int Status { get; set; }
+        public required int TrackID { get; set; }
+        public required string TransactionID { get; set; } // Already in the DB record
+        public required string OrderID { get; set; } // Already in the DB record
+        public required int Amount { get; set; }
+        public required string CardNo { get; set; }
+        public required string HashedCardNo { get; set; }
+        public required long TransactionTime { get; set; }
+
     }
 
 }

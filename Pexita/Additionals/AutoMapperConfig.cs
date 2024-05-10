@@ -52,7 +52,7 @@ namespace Pexita.Additionals
                 .ForMember(Brand => Brand.BrandPicURL, opt => opt.MapFrom(src => _pexitaTools.SaveProductImages(src.BrandPic, $"{src.Name}/{src.Name}")))
                 .ForMember(Brand => Brand.DateCreated, opt => opt.MapFrom(src => DateTime.UtcNow))
                 .ForMember(Brand => Brand.Products, opt => opt.MapFrom(src => new List<ProductModel>()))
-                .ForMember(Brand => Brand.Orders, opt => opt.MapFrom(src => new List<OrdersModel>()))
+                .ForMember(Brand => Brand.BrandOrders, opt => opt.MapFrom(src => new List<BrandOrder>()))
                 .ForMember(Brand => Brand.BrandNewsLetters, opt => opt.MapFrom(src => new List<BrandNewsletterModel>()))
                 .ForMember(Brand => Brand.ProductNewsLetters, opt => opt.MapFrom(src => new List<ProductNewsLetterModel>()));
 

@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Pexita.Additionals.Exceptions;
 using Pexita.Data;
 using Pexita.Data.Entities.Brands;
+using Pexita.Exceptions;
 using Pexita.Services.Interfaces;
 using Pexita.Utility;
 

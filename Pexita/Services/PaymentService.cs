@@ -2,6 +2,8 @@
 using Microsoft.EntityFrameworkCore;
 using NuGet.Packaging.Signing;
 using Pexita.Data;
+using Pexita.Data.Entities.Brands;
+using Pexita.Data.Entities.Orders;
 using Pexita.Data.Entities.Payment;
 using Pexita.Data.Entities.ShoppingCart;
 using Pexita.Services.Interfaces;
@@ -173,12 +175,69 @@ namespace Pexita.Services
                     PaymentExceptionManager(response.StatusCode, errorResponse!);
                 }
             }
+            // Create a new Order with this new succesful payment
+            OrdersModel order = new()
+            {
+                DateIssued = payment.DateTimePaid!.Value,
+                Status = OrdersModel.OrderStatus.Preparing,
+                Payment = payment,
+                PaymentID = payment.ID,
+                UserId = payment.ShoppingCart!.User.ID,
+                ShoppingCart = payment.ShoppingCart,
+                ShoppingCartID = payment.ShoppingCart.ID,
+                User = payment.ShoppingCart.User,
+            };
+            order.BrandOrders = GetBrandsFromCart(order, payment.ShoppingCart);
+            _Context.Orders.Add(order);
 
             // Save changes to the database.
             _Context.SaveChanges();
 
             // Return true to indicate that the payment outcome validation was successful.
             return true;
+        }
+        public async Task<bool> ToggleOrderToSent(int orderID)
+        {
+            var order = await _Context.Orders.SingleAsync(order => order.ID == orderID);
+            order.Status = OrdersModel.OrderStatus.Sent;
+            _Context.SaveChanges();
+            return true;
+        }
+        private List<BrandOrder> GetBrandsFromCart(OrdersModel order, ShoppingCartModel shoppingCart)
+        {
+            // Initialize a list to store brand orders
+            List<BrandOrder> brandOrders = new();
+
+            // Retrieve the IDs of brands associated with products in the shopping cart
+            List<int> brandIDs = shoppingCart.CartItems.Select(ci => ci.Product!.BrandID).ToList();
+
+            // Retrieve the brands from the database based on the IDs
+            var brands = _Context.Brands.Where(brand => brandIDs.Contains(brand.ID)).ToList();
+
+            // Iterate through each brand and create a brand order for the order
+            foreach (var brandItem in brands)
+            {
+                // Create a new brand order instance
+                BrandOrder brandOrder = new()
+                {
+                    Brand = brandItem,            // Set the brand associated with the brand order
+                    Order = order,                // Set the order associated with the brand order
+                    BrandID = brandItem.ID,       // Set the ID of the brand
+                    OrderID = order.ID           // Set the ID of the order
+                };
+
+                // Add the brand order to the list of brand orders
+                brandOrders.Add(brandOrder);
+            }
+
+            // Add all brand orders to the context
+            _Context.BrandOrder.AddRange(brandOrders);
+
+            // Save changes to the database
+            _Context.SaveChanges();
+
+            // Return the list of brand orders created
+            return brandOrders;
         }
         static int ExtractNumberFromString(string input)
         {

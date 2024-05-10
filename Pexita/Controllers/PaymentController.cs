@@ -58,5 +58,18 @@ namespace Pexita.Controllers
             }
 
         }
+        [HttpPost("Orders/toggleSent")]
+        public async Task<IActionResult> ToggleSent([FromBody] int id)
+        {
+            try
+            {
+                await _paymentService.ToggleOrderToSent(id);
+                return Ok();
+            }
+            catch (Exception e)
+            {
+                return BadRequest(e.Message);
+            }
+        }
     }
 }

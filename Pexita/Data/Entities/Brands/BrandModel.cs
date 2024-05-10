@@ -18,9 +18,17 @@ namespace Pexita.Data.Entities.Brands
 
         // Navigation Properties
         public List<ProductModel>? Products { get; set; }
-        public List<OrdersModel>? Orders { get; set; }
+        public List<BrandOrder>? BrandOrders { get; set; }
         public List<BrandNewsletterModel>? BrandNewsLetters { get; set; }
         public List<ProductNewsLetterModel>? ProductNewsLetters { get; set; }
 
+    }
+    public class BrandOrder
+    {
+        public int BrandID { get; set; }
+        public BrandModel Brand { get; set; }
+
+        public int OrderID { get; set; }
+        public OrdersModel Order { get; set; }
     }
 }

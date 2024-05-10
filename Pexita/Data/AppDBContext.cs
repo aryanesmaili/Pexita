@@ -25,10 +25,19 @@ namespace Pexita.Data
                 .HasForeignKey(ui => ui.UserID)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            modelBuilder.Entity<BrandModel>()
-                .HasMany(o => o.Orders)
-                .WithOne(b => b.Brand)
-                .HasForeignKey(bi => bi.BrandID)
+            modelBuilder.Entity<BrandOrder>()
+                .HasKey(bo => new { bo.BrandID, bo.OrderID });
+
+            modelBuilder.Entity<BrandOrder>()
+                .HasOne(bo => bo.Brand)
+                .WithMany(b => b.BrandOrders)
+                .HasForeignKey(bo => bo.BrandID)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            modelBuilder.Entity<BrandOrder>()
+                .HasOne(bo => bo.Order)
+                .WithMany(o => o.BrandOrders)
+                .HasForeignKey(bo => bo.OrderID)
                 .OnDelete(DeleteBehavior.SetNull);
 
             modelBuilder.Entity<ProductModel>()
@@ -128,5 +137,6 @@ namespace Pexita.Data
         public DbSet<TagModel> Tags { get; set; }
         public DbSet<UserModel> Users { get; set; }
         public DbSet<Address> Addresses { get; set; }
+        public DbSet<BrandOrder> BrandOrder { get; set; }
     }
 }

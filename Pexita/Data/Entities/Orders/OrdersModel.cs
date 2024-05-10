@@ -8,8 +8,6 @@ namespace Pexita.Data.Entities.Orders
     public class OrdersModel
     {
         public int ID { get; set; }
-        public string Name { get; set; }
-
         public DateTime DateIssued { get; set; }
         public OrderStatus Status { get; set; }
         public enum OrderStatus
@@ -22,9 +20,7 @@ namespace Pexita.Data.Entities.Orders
         public UserModel User { get; set; }
         public int PaymentID { get; set; }
         public PaymentModel Payment { get; set; }
-        public int? BrandID { get; set; }
-        public BrandModel? Brand { get; set; }
-
+        public List<BrandOrder>? BrandOrders { get; set; }
         // Add a reference to ShoppingCartModel
         public int ShoppingCartID { get; set; }
         public ShoppingCartModel ShoppingCart { get; set; }

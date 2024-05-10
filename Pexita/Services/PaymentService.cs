@@ -1,8 +1,10 @@
 ﻿using AutoMapper;
+using Microsoft.EntityFrameworkCore;
 using NuGet.Packaging.Signing;
 using Pexita.Data;
 using Pexita.Data.Entities.Payment;
 using Pexita.Data.Entities.ShoppingCart;
+using Pexita.Services.Interfaces;
 using System.Net;
 using System.Security;
 using System.Text;
@@ -12,7 +14,7 @@ using static Pexita.Additionals.Exceptions.PaymentException;
 
 namespace Pexita.Services
 {
-    public class PaymentSystemService
+    public class PaymentService : IPaymentService
     {
         private readonly string _apiKey;
         private readonly bool _isTest;
@@ -23,9 +25,18 @@ namespace Pexita.Services
         private readonly AppDBContext _Context;
         private readonly IMapper _mapper;
 
-        public 
 
-        public PaymentSystemService(string APIKey, string CallbackAddress, bool isTest, AppDBContext Context, IMapper mapper)
+        public async Task<List<PaymentModel>> GetPayments()
+        {
+            return await _Context.Payments.ToListAsync();
+        }
+
+        public async Task<PaymentModel> GetPayment(int id)
+        {
+            return await _Context.Payments.SingleAsync(p => p.ID == id);
+        }
+
+        public PaymentService(string APIKey, string CallbackAddress, bool isTest, AppDBContext Context, IMapper mapper)
         {
             _apiKey = APIKey;
             _isTest = isTest;
@@ -169,8 +180,6 @@ namespace Pexita.Services
             // Return true to indicate that the payment outcome validation was successful.
             return true;
         }
-
-
         static int ExtractNumberFromString(string input)
         {
             string pattern = @"\d+"; // \d matches any digit, and + matches one or more occurrences
@@ -232,7 +241,7 @@ namespace Pexita.Services
             }
 
         }
-        public static string GenerateOrderID(int BrandID, int ProductID, int UserID, DateTime Datetime)
+        private static string GenerateOrderID(int BrandID, int ProductID, int UserID, DateTime Datetime)
         {
             return $"{BrandID}{ProductID}{UserID}{Datetime}";
         }

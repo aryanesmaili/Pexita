@@ -35,6 +35,7 @@ builder.Services.AddTransient<ITagsService, TagsService>();
 builder.Services.AddTransient<IUserService, UserService>();
 builder.Services.AddTransient<IPexitaTools, PexitaTools>();
 builder.Services.AddTransient<IIranAPI, IranAPI>();
+builder.Services.AddTransient<IPaymentService, PaymentService>();
 
 var app = builder.Build();
 

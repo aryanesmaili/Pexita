@@ -3,9 +3,8 @@ using Pexita.Data;
 using Pexita.Data.Entities.Tags;
 using System.Text;
 using Pexita.Data.Entities.User;
-using Pexita.Additionals;
-using Pexita.Exceptions;
 using Pexita.Services.Interfaces;
+using Pexita.Utility.Exceptions;
 
 namespace Pexita.Utility
 {

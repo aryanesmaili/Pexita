@@ -1,4 +1,5 @@
 ﻿using Pexita.Data.Entities.Brands;
+using Pexita.Data.Entities.Comments;
 using Pexita.Data.Entities.Tags;
 
 namespace Pexita.Data.Entities.Products
@@ -15,6 +16,11 @@ namespace Pexita.Data.Entities.Products
         public bool IsAvailable { get; set; } = true;
         public string Tags { get; set; }
         public string? Colors { get; set; }
+    }
+    public class UpdateProductRateDTO
+    {
+        public int ProductID { get; set; }
+        public int ProductRating { get; set; }
     }
     public class ProductInfoVM
     {
@@ -42,5 +48,10 @@ namespace Pexita.Data.Entities.Products
         public bool IsAvailable { get; set; } = true;
         public string Tags { get; set; }
         public string? Colors { get; set; }
+    }
+    public class ProductCommentDTO
+    {
+        public int ProductID { get; set; }
+        public CommentsModel Comment { get; set; }
     }
 }

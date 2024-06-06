@@ -1,8 +1,11 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using FluentValidation;
+using FluentValidation.Results;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Pexita.Services;
 using Pexita.Services.Interfaces;
-using static Pexita.Additionals.Exceptions.PaymentException;
+using static Pexita.Utility.Exceptions.PaymentException;
 
 namespace Pexita.Controllers
 {
@@ -11,9 +14,12 @@ namespace Pexita.Controllers
     public class PaymentController : ControllerBase
     {
         private readonly IPaymentService _paymentService;
-        public PaymentController(IPaymentService paymentService)
+        private readonly IValidator<PaymentRequest> _validator;
+
+        public PaymentController(IPaymentService paymentService, IValidator<PaymentRequest> validator)
         {
             _paymentService = paymentService;
+            _validator = validator;
         }
 
         [HttpGet("Payments")]
@@ -33,8 +39,13 @@ namespace Pexita.Controllers
         {
             try
             {
+                if (request == null)
+                    throw new ArgumentNullException(nameof(request));
+
+                await _validator.ValidateAndThrowAsync(request);
                 string paymentLink = await _paymentService.SendPaymentRequest(request);
                 return Redirect(paymentLink);
+
             }
 
             catch (Exception e)

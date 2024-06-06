@@ -24,7 +24,8 @@ namespace Pexita.Utility.Validators
             RuleFor(x => x.Title).NotEmpty().MaximumLength(50)
                 .WithMessage("Title {PropertyName} Cannot be Empty Or More Than 30 Characters");
 
-            RuleFor(x => x.Title).Must((product, title) => {
+            RuleFor(x => x.Title).Must((product, title) =>
+            {
                 return !_productService.IsProductAlready(product.Brand, title);
             }).WithMessage("Product already exists for this brand with title : {PropertyName}");
 
@@ -45,6 +46,17 @@ namespace Pexita.Utility.Validators
             RuleForEach(x => x.ProductPics).NotEmpty().Must(file => _pexitaTools.PictureFileValidation(file, 10));
 
             RuleFor(x => x.Price).GreaterThanOrEqualTo(0);
+        }
+    }
+    public class ProductUpdateRateValidation : AbstractValidator<UpdateProductRateDTO>
+    {
+        public ProductUpdateRateValidation()
+        {
+            RuleFor(x => x.ProductID).NotEmpty().NotNull();
+
+            RuleFor(x => x.ProductRating)
+                .GreaterThanOrEqualTo(0).WithErrorCode("400").WithMessage("Rate cannot be less than zeroes")
+                .LessThanOrEqualTo(5).WithErrorCode("400").WithMessage("Rate cannot be more than 5");
         }
     }
     public class ProductUpdateValidation : AbstractValidator<ProductUpdateVM>
@@ -83,5 +95,30 @@ namespace Pexita.Utility.Validators
             RuleFor(x => x.Price).GreaterThanOrEqualTo(0);
         }
 
+    }
+    public class ProductCommentValidation : AbstractValidator<ProductCommentDTO>
+    {
+        private readonly ProductService _productService;
+        private readonly UserService userService;
+
+        public ProductCommentValidation(ProductService productService, UserService userService)
+        {
+            this.userService = userService;
+            _productService = productService;
+
+            RuleFor(x => x.ProductID).NotEmpty().NotNull();
+
+            RuleFor(x => x.Comment).NotEmpty().NotNull();
+
+            RuleFor(x => x.Comment.ProductID).Must(x => productService.GetProductByID(x) != null);
+            RuleFor(x => x.Comment.Product).NotNull().NotEmpty();
+
+
+            RuleFor(x => x.Comment.UserID).NotEmpty().Must(x => userService!.GetUserByID(x!.Value) != null);
+            RuleFor(x => x.Comment.User).NotEmpty().NotNull();
+
+            RuleFor(x => x.Comment.Text).NotEmpty().NotNull();
+            RuleFor(x => x.Comment.DateCreated).NotEmpty().NotNull();
+        }
     }
 }

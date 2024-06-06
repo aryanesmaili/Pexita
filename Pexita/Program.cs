@@ -2,12 +2,10 @@ using Microsoft.EntityFrameworkCore;
 using Pexita.Data;
 using Pexita.Services.Interfaces;
 using Pexita.Services;
-using Pexita.Additionals;
 using Pexita.Utility;
-using Pexita.Utility.Validators;
+using FluentValidation.AspNetCore;
 using FluentValidation;
-using Pexita.Data.Entities.Products;
-using Pexita.Data.Entities.Brands;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -23,11 +21,9 @@ builder.Services.AddAutoMapper(typeof(AutoMapperConfig));
 builder.Services.AddDbContext<AppDBContext>
     (options => options.UseSqlServer(builder.Configuration.GetConnectionString("DbTwo")));
 
-builder.Services.AddTransient<IValidator<ProductCreateVM>, ProductCreateValidation>();
-builder.Services.AddTransient<IValidator<ProductUpdateVM>, ProductUpdateValidation>();
-builder.Services.AddTransient<IValidator<BrandCreateVM>, BrandCreateValidation>();
-builder.Services.AddTransient<IValidator<BrandUpdateVM>, BrandUpdateValidation>();
-
+// automatically adds all validators of this project to DI pool.
+var assembly = typeof(Program).Assembly;
+builder.Services.AddValidatorsFromAssembly(assembly);
 
 builder.Services.AddTransient<IProductService, ProductService>();
 builder.Services.AddTransient<IBrandService, BrandService>();

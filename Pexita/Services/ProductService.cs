@@ -2,12 +2,11 @@
 using FluentValidation;
 using Microsoft.CodeAnalysis;
 using Microsoft.EntityFrameworkCore;
-using Pexita.Additionals.Exceptions;
 using Pexita.Data;
 using Pexita.Data.Entities.Comments;
 using Pexita.Data.Entities.Products;
-using Pexita.Exceptions;
 using Pexita.Services.Interfaces;
+using Pexita.Utility.Exceptions;
 
 namespace Pexita.Services
 {
@@ -159,12 +158,12 @@ namespace Pexita.Services
             }
         }
 
-        public bool AddCommentToProduct(int ProductID, CommentsModel comment)
+        public bool AddCommentToProduct(ProductCommentDTO commentDTO)
         {
             try
             {
-                ProductModel Product = _Context.Products.Single(product => product.ID == ProductID);
-                Product.Comments!.Add(comment);
+                ProductModel Product = _Context.Products.Single(product => product.ID == commentDTO.ProductID);
+                Product.Comments!.Add(commentDTO.Comment);
                 _Context.SaveChanges();
                 return true;
             }
@@ -179,12 +178,12 @@ namespace Pexita.Services
                 throw new Exception(e.Message);
             }
         }
-        public bool UpdateProductRate(int ProductID, int rate)
+        public bool UpdateProductRate(UpdateProductRateDTO rateDTO)
         {
             try
             {
-                ProductModel product = _Context.Products.Single(product => product.ID == ProductID);
-                ProductRating rating = new() { Rating = rate, Product = product, ProductID = product.ID };
+                ProductModel product = _Context.Products.Single(product => product.ID == rateDTO.ProductID);
+                ProductRating rating = new() { Rating = rateDTO.ProductRating, Product = product, ProductID = product.ID };
 
                 product.Rating.Add(rating);
 
@@ -200,7 +199,7 @@ namespace Pexita.Services
 
         public bool IsProductAlready(string BrandName, string ProductTitle)
         {
-            return _Context.Brands.Include(bp => bp.Products).AsNoTracking().FirstOrDefault(x => x.Name == BrandName)
+            return _Context.Brands.Include(bp => bp.Products).AsNoTracking().FirstOrDefault(x => x.Name == BrandName)?
                         .Products!.FirstOrDefault(x => x.Title == ProductTitle) != null;
         }
     }

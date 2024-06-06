@@ -1,9 +1,8 @@
 ﻿using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
-using Pexita.Additionals.Exceptions;
 using Pexita.Data.Entities.Brands;
-using Pexita.Exceptions;
 using Pexita.Services.Interfaces;
+using Pexita.Utility.Exceptions;
 
 namespace Pexita.Controllers
 {
@@ -83,22 +82,23 @@ namespace Pexita.Controllers
             }
         }
 
-        [HttpGet("Login")]
+        [HttpPost("Login")]
         public IActionResult Login([FromBody] BrandInfoVM brand)
         {
             return Ok();
         }
 
         [HttpPost("AddBrand")]
-        public IActionResult AddBrand([FromBody] BrandCreateVM createVM)
+        public async Task<IActionResult> AddBrand([FromBody] BrandCreateVM createVM)
         {
             try
             {
                 if (createVM == null)
                     throw new ArgumentNullException(nameof(createVM));
 
-                if (_brandCreateValidator.Validate(createVM, optionss => optionss.ThrowOnFailures()).IsValid)
-                    _brandService.AddBrand(createVM);
+                await _brandCreateValidator.ValidateAndThrowAsync(createVM);
+
+                _brandService.AddBrand(createVM);
                 return Ok();
             }
 
@@ -113,12 +113,13 @@ namespace Pexita.Controllers
             }
         }
         [HttpPut("Edit/{id:int}")]
-        public IActionResult EditBrand(int id, [FromBody] BrandUpdateVM brand)
+        public async Task<IActionResult> EditBrand(int id, [FromBody] BrandUpdateVM brand)
         {
             try
             {
-                if (_brandUpdateValidator.Validate(brand, options => options.ThrowOnFailures()).IsValid)
-                    _brandService.UpdateBrandInfo(id, brand);
+                await _brandUpdateValidator.ValidateAndThrowAsync(brand);
+
+                _brandService.UpdateBrandInfo(id, brand);
                 return Ok();
             }
 

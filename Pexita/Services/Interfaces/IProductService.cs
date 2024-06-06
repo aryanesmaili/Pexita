@@ -11,8 +11,9 @@ namespace Pexita.Services.Interfaces
         public ProductInfoVM UpdateProductInfo(int id, ProductUpdateVM product);
         public bool DeleteProduct(int id);
         public ProductInfoVM ProductModelToInfoVM(ProductModel model);
-        public bool AddCommentToProduct(int ProductID, CommentsModel comment);
-        public bool UpdateProductRate(int ProductID, int rate);
+        public bool AddCommentToProduct(ProductCommentDTO commentDTO);
+        public bool UpdateProductRate(UpdateProductRateDTO rateDTO);
         public bool IsProductAlready(string BrandName, string ProductTitle);
     }
 }
+

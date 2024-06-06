@@ -1,24 +1,21 @@
 ﻿using FluentValidation;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Pexita.Additionals.Exceptions;
 using Pexita.Data.Entities.User;
-using Pexita.Exceptions;
 using Pexita.Services.Interfaces;
-using Pexita.Utility.Validators;
-using System.Net;
+using Pexita.Utility.Exceptions;
 
 namespace Pexita.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
     public class UserController : ControllerBase
-    { 
+    {
         private readonly IUserService _userService;
         private readonly IValidator<UserCreateVM> _createValidator;
         private readonly IValidator<UserLoginVM> _loginValidator;
         private readonly IValidator<UserUpdateVM> _updateValidator;
         private readonly IValidator<Address> _addressValidator;
+
         public UserController(IUserService userService,
             IValidator<UserCreateVM> CreateValidator,
             IValidator<UserLoginVM> LoginValidator,
@@ -74,7 +71,7 @@ namespace Pexita.Controllers
         }
 
         [HttpPost("User/Register")]
-        public IActionResult Register([FromForm] UserCreateVM userCreateVM)
+        public async Task<IActionResult> Register([FromForm] UserCreateVM userCreateVM)
         {
             try
             {
@@ -83,8 +80,8 @@ namespace Pexita.Controllers
                 if (userCreateVM == null)
                     throw new ArgumentNullException($"{nameof(userCreateVM)} is Null");
 
-                if (_createValidator.Validate(userCreateVM, options => options.ThrowOnFailures()).IsValid)
-                    result = _userService.Register(userCreateVM);
+                await _createValidator.ValidateAndThrowAsync(userCreateVM);
+                result = _userService.Register(userCreateVM);
 
                 return Ok();
             }
@@ -106,17 +103,17 @@ namespace Pexita.Controllers
         }
 
         [HttpPut("User/Edit")]
-        public IActionResult UpdateUser([FromBody] UserUpdateVM userUpdateVM)
+        public async Task<IActionResult> UpdateUser([FromBody] UserUpdateVM userUpdateVM)
         {
             try
             {
-                UserInfoVM result = null;
+                UserInfoVM? result = null;
 
                 if (userUpdateVM == null)
                     throw new ArgumentNullException($"{nameof(userUpdateVM)} is Null");
 
-                if (_updateValidator.Validate(userUpdateVM, options => options.ThrowOnFailures()).IsValid)
-                    result = _userService.UpdateUser(userUpdateVM);
+                await _updateValidator.ValidateAndThrowAsync(userUpdateVM);
+                result = _userService.UpdateUser(userUpdateVM);
 
                 return Ok(result);
             }
@@ -138,14 +135,14 @@ namespace Pexita.Controllers
         }
 
         [HttpPut("User/ResetPassword")]
-        public IActionResult ResetPassword([FromBody] UserLoginVM userLoginVM)
+        public async Task<IActionResult> ResetPassword([FromBody] UserLoginVM userLoginVM)
         {
             try
             {
-                UserLoginVM result = null;
+                UserLoginVM? result = null;
 
-                if (_loginValidator.Validate(userLoginVM, options => options.ThrowOnFailures()).IsValid)
-                    result = _userService.ResetPassword(userLoginVM);
+                await _loginValidator.ValidateAndThrowAsync(userLoginVM);
+                result = _userService.ResetPassword(userLoginVM);
 
                 return Ok(result);
             }
@@ -162,14 +159,14 @@ namespace Pexita.Controllers
         }
 
         [HttpPut("User/ChangePassword")]
-        public IActionResult ChangePassword([FromBody] UserLoginVM userLoginVM)
+        public async Task<IActionResult> ChangePassword([FromBody] UserLoginVM userLoginVM)
         {
             try
             {
                 bool result = false;
 
-                if (_loginValidator.Validate(userLoginVM, options => options.ThrowOnFailures()).IsValid)
-                    result = _userService.ChangePassword(userLoginVM);
+                await _loginValidator.ValidateAndThrowAsync(userLoginVM);
+                result = _userService.ChangePassword(userLoginVM);
 
                 return Ok(result);
             }
@@ -258,16 +255,21 @@ namespace Pexita.Controllers
         }
 
         [HttpDelete("User/Address/Delete/{id:int}")]
-        public IActionResult RemoveAddress(int id, [FromBody] Address address)
+        public async Task<IActionResult> RemoveAddress(int id, [FromBody] Address address)
         {
             try
             {
+                await _addressValidator.ValidateAndThrowAsync(address);
                 return Ok(_userService.DeleteAddress(id, address.ID));
             }
 
             catch (NotFoundException e)
             {
                 return NotFound(e.Message);
+            }
+            catch (Exception e)
+            {
+                return BadRequest(e.Message);
             }
         }
 

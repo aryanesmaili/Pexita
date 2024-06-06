@@ -12,9 +12,8 @@ using Pexita.Data.Entities.ShoppingCart;
 using Pexita.Data.Entities.User;
 using Pexita.Services;
 using Pexita.Services.Interfaces;
-using Pexita.Utility;
 
-namespace Pexita.Additionals
+namespace Pexita.Utility
 {
     public class AutoMapperConfig : Profile
     {

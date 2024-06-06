@@ -1,11 +1,8 @@
 ﻿using FluentValidation;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Pexita.Additionals.Exceptions;
+using Pexita.Utility.Exceptions;
 using Pexita.Data.Entities.Comments;
 using Pexita.Data.Entities.Products;
-using Pexita.Exceptions;
-using Pexita.Services;
 using Pexita.Services.Interfaces;
 
 namespace Pexita.Controllers
@@ -17,14 +14,19 @@ namespace Pexita.Controllers
         private readonly IProductService _productService;
         private readonly IValidator<ProductCreateVM> _productCreateValidator;
         private readonly IValidator<ProductUpdateVM> _productUpdateValidator;
+        private readonly IValidator<UpdateProductRateDTO> _productRateValidator;
+        private readonly IValidator<ProductCommentDTO> _productCommentValidator;
+
         public ProductsController(IProductService productService, IValidator<ProductCreateVM> productCreateValidator
-            , IValidator<ProductUpdateVM> productUpdateValidator)
+            , IValidator<ProductUpdateVM> productUpdateValidator, IValidator<UpdateProductRateDTO> productRateValidator, IValidator<ProductCommentDTO> productCommentValidator)
         {
             _productService = productService;
             _productCreateValidator = productCreateValidator;
             _productUpdateValidator = productUpdateValidator;
+            _productRateValidator = productRateValidator;
+            _productCommentValidator = productCommentValidator;
         }
-        
+
         [HttpGet("products")]
         public IActionResult GetAllProducts()
         {
@@ -83,15 +85,16 @@ namespace Pexita.Controllers
         }
 
         [HttpPost("product/add")]
-        public IActionResult AddProduct([FromBody] ProductCreateVM product)
+        public async Task<IActionResult> AddProduct([FromBody] ProductCreateVM product)
         {
             try
             {
                 if (product == null)
                     throw new ArgumentNullException(nameof(product));
 
-                if (_productCreateValidator.Validate(product, options => options.ThrowOnFailures()).IsValid)
-                    _productService.AddProduct(product);
+                await _productCreateValidator.ValidateAndThrowAsync(product);
+
+                _productService.AddProduct(product);
 
                 return Ok();
             }
@@ -118,13 +121,15 @@ namespace Pexita.Controllers
         }
 
         [HttpPut("product/update/{id}")]
-        public IActionResult UpdateProduct(int id, [FromBody] ProductUpdateVM product)
+        public async Task<IActionResult> UpdateProduct(int id, [FromBody] ProductUpdateVM product)
         {
             try
             {
-                ProductInfoVM update = null;
-                if (_productUpdateValidator.Validate(product, options => options.ThrowOnFailures()).IsValid)
-                    update = _productService.UpdateProductInfo(id, product);
+                ProductInfoVM? update = null;
+
+                await _productUpdateValidator.ValidateAndThrowAsync(product);
+
+                update = _productService.UpdateProductInfo(id, product);
                 return Ok(update);
             }
 
@@ -139,17 +144,23 @@ namespace Pexita.Controllers
             }
         }
 
+
         [HttpPut("product/update/rate/{id:int}")]
-        public IActionResult UpdateProductRate(int id, [FromBody] int value)
+        public async Task<IActionResult> UpdateProductRate([FromBody] UpdateProductRateDTO rateDTO)
         {
             try
             {
-                return Ok(_productService.UpdateProductRate(id, value));
+                await _productRateValidator.ValidateAndThrowAsync(rateDTO);
+                return Ok(_productService.UpdateProductRate(rateDTO));
             }
 
             catch (NotFoundException)
             {
-                return NotFound(id);
+                return NotFound(rateDTO.ProductID);
+            }
+            catch (ValidationException e)
+            {
+                return BadRequest($"{e.Message}");
             }
             catch (Exception e)
             {
@@ -176,15 +187,17 @@ namespace Pexita.Controllers
         }
 
         [HttpPost("/product/Comments/Add/{id:int}")]
-        public IActionResult AddCommentToProduct(int id, [FromBody] CommentsModel Comment)
+        public async Task<IActionResult> AddCommentToProduct(ProductCommentDTO commentDTO)
         {
             try
             {
-                return Ok(_productService.AddCommentToProduct(id, Comment));
+                await _productCommentValidator.ValidateAndThrowAsync(commentDTO);
+
+                return Ok(_productService.AddCommentToProduct(commentDTO));
             }
             catch (NotFoundException)
             {
-                return NotFound($"Entity was not found : {nameof(id)}");
+                return NotFound($"Entity was not found : {nameof(commentDTO.ProductID)}");
             }
             catch (Exception e)
             {

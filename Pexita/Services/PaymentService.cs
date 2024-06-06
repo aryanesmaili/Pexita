@@ -12,7 +12,7 @@ using System.Security;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using static Pexita.Additionals.Exceptions.PaymentException;
+using static Pexita.Utility.Exceptions.PaymentException;
 
 namespace Pexita.Services
 {

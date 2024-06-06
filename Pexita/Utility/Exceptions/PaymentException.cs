@@ -1,4 +1,4 @@
-﻿namespace Pexita.Additionals.Exceptions
+﻿namespace Pexita.Utility.Exceptions
 {
     public class PaymentException : Exception
     {

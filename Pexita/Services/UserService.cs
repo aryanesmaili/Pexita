@@ -4,9 +4,8 @@ using Microsoft.EntityFrameworkCore;
 using Pexita.Data;
 using Pexita.Data.Entities.Comments;
 using Pexita.Data.Entities.User;
-using Pexita.Exceptions;
 using Pexita.Services.Interfaces;
-using Pexita.Utility;
+using Pexita.Utility.Exceptions;
 
 namespace Pexita.Services
 {

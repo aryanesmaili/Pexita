@@ -4,6 +4,7 @@ using Pexita.Utility.Exceptions;
 using Pexita.Data.Entities.Comments;
 using Pexita.Data.Entities.Products;
 using Pexita.Services.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 
 namespace Pexita.Controllers
 {
@@ -84,6 +85,7 @@ namespace Pexita.Controllers
             }
         }
 
+        [Authorize(Policy = "Brand")]
         [HttpPost("product/add")]
         public async Task<IActionResult> AddProduct([FromBody] ProductCreateVM product)
         {
@@ -119,7 +121,7 @@ namespace Pexita.Controllers
                 return StatusCode(StatusCodes.Status500InternalServerError, $"there was an error processing your request: {e.Message}, {e.InnerException}");
             }
         }
-
+        [Authorize(Policy = "Brand")]
         [HttpPut("product/update/{id}")]
         public async Task<IActionResult> UpdateProduct(int id, [FromBody] ProductUpdateVM product)
         {
@@ -144,7 +146,7 @@ namespace Pexita.Controllers
             }
         }
 
-
+        [Authorize(Policy = "OnlyUsers")]
         [HttpPut("product/update/rate/{id:int}")]
         public async Task<IActionResult> UpdateProductRate([FromBody] UpdateProductRateDTO rateDTO)
         {
@@ -167,7 +169,7 @@ namespace Pexita.Controllers
                 return StatusCode(StatusCodes.Status500InternalServerError, $"there was an error processing your request: {e.Message}");
             }
         }
-
+        [Authorize(Policy ="Brand")]
         [HttpDelete("products/delete/{id}")]
         public IActionResult DeleteProduct(int id)
         {
@@ -185,7 +187,7 @@ namespace Pexita.Controllers
                 return StatusCode(StatusCodes.Status500InternalServerError, $"there was an error processing your request: {e.Message}");
             }
         }
-
+        [Authorize(Policy ="AllUsers")]
         [HttpPost("/product/Comments/Add/{id:int}")]
         public async Task<IActionResult> AddCommentToProduct(ProductCommentDTO commentDTO)
         {

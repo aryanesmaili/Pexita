@@ -1,4 +1,5 @@
 ﻿using FluentValidation;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Pexita.Data.Entities.User;
 using Pexita.Services.Interfaces;
@@ -28,6 +29,7 @@ namespace Pexita.Controllers
             _updateValidator = UpdateValidator;
             _addressValidator = addressValidator;
         }
+
 
         [HttpGet("Users")]
         public IActionResult GetUsers()
@@ -69,8 +71,31 @@ namespace Pexita.Controllers
 
             }
         }
+        [HttpPost("Auth/Login")]
+        public async Task<IActionResult> Login(UserLoginVM loginVM)
+        {
+            try
+            {
+                var token = await _userService.Login(loginVM);
+                return Ok(token);
+            }
 
-        [HttpPost("User/Register")]
+            catch (NotAuthorizedException e)
+            {
+                return Unauthorized(e.Message);
+            }
+            catch (NotFoundException e)
+            {
+                return NotFound(nameof(loginVM.UserName));
+            }
+
+            catch (Exception e)
+            {
+                return BadRequest(e.Message);
+            }
+
+        }
+        [HttpPost("Auth/Register")]
         public async Task<IActionResult> Register([FromForm] UserCreateVM userCreateVM)
         {
             try
@@ -81,7 +106,7 @@ namespace Pexita.Controllers
                     throw new ArgumentNullException($"{nameof(userCreateVM)} is Null");
 
                 await _createValidator.ValidateAndThrowAsync(userCreateVM);
-                result = _userService.Register(userCreateVM);
+                result = await _userService.Register(userCreateVM);
 
                 return Ok();
             }
@@ -101,7 +126,7 @@ namespace Pexita.Controllers
                 return BadRequest(e.Message);
             }
         }
-
+        [Authorize(Policy ="AllUsers")]
         [HttpPut("User/Edit")]
         public async Task<IActionResult> UpdateUser([FromBody] UserUpdateVM userUpdateVM)
         {
@@ -133,7 +158,7 @@ namespace Pexita.Controllers
                 return BadRequest(e.Message);
             }
         }
-
+        [Authorize(Policy = "AllUsers")]
         [HttpPut("User/ResetPassword")]
         public async Task<IActionResult> ResetPassword([FromBody] UserLoginVM userLoginVM)
         {
@@ -157,7 +182,7 @@ namespace Pexita.Controllers
                 return NotFound(e.Message);
             }
         }
-
+        [Authorize(Policy = "AllUsers")]
         [HttpPut("User/ChangePassword")]
         public async Task<IActionResult> ChangePassword([FromBody] UserLoginVM userLoginVM)
         {
@@ -181,7 +206,7 @@ namespace Pexita.Controllers
                 return NotFound(e.Message);
             }
         }
-
+        [Authorize(Policy = "AllUsers")]
         [HttpDelete("User/Delete/{id:int}")]
         public IActionResult DeleteUser(int id)
         {
@@ -194,7 +219,7 @@ namespace Pexita.Controllers
                 return NotFound($"User with ID:{id} not Found");
             }
         }
-
+        [Authorize(Policy = "AllUsers")]
         [HttpGet("User/Addresses/{id:int}")]
         public IActionResult GetAddresses(int id)
         {
@@ -207,7 +232,7 @@ namespace Pexita.Controllers
                 return NotFound($"User with ID:{id} not Found");
             }
         }
-
+        [Authorize(Policy = "AllUsers")]
         [HttpPost("User/Addresses/{id:int}")]
         public IActionResult AddAddress(int id, [FromBody] Address address)
         {
@@ -239,7 +264,7 @@ namespace Pexita.Controllers
                 return BadRequest(e.Message);
             }
         }
-
+        [Authorize(Policy = "AllUsers")]
         [HttpPut("User/Address/Edit/{id:int}")]
         public IActionResult UpdateAddress(int id, [FromBody] Address address)
         {
@@ -253,7 +278,7 @@ namespace Pexita.Controllers
                 return NotFound(e.Message);
             }
         }
-
+        [Authorize(Policy = "AllUsers")]
         [HttpDelete("User/Address/Delete/{id:int}")]
         public async Task<IActionResult> RemoveAddress(int id, [FromBody] Address address)
         {

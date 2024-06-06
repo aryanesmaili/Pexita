@@ -1,5 +1,6 @@
 ﻿using FluentValidation;
 using FluentValidation.Results;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
@@ -22,23 +23,27 @@ namespace Pexita.Controllers
             _validator = validator;
         }
 
+        [Authorize(Policy = "AllUsers")]
         [HttpGet("Payments")]
         public IActionResult GetPayments()
         {
             return Ok(_paymentService.GetPayments());
         }
 
+        [Authorize(Policy = "AllUsers")]
         [HttpGet("Payments/get/{id:int}")]
         public IActionResult GetPayment(int id)
         {
             return Ok(_paymentService.GetPayment(id));
         }
 
+        [Authorize(Policy = "AllUsers")]
         [HttpPost("Payments/new")]
         public async Task<IActionResult> CreateNewPaymentRequest([FromBody] PaymentRequest request)
         {
             try
             {
+                // add a check so that a user can only check their own payments not everyones'
                 if (request == null)
                     throw new ArgumentNullException(nameof(request));
 
@@ -54,7 +59,7 @@ namespace Pexita.Controllers
             }
 
         }
-
+        [Authorize]
         [HttpPost("Payments/callback")]
         public IActionResult PaymentOutcome([FromBody] PaymentOutcomeValidationResponse response)
         {
@@ -69,6 +74,8 @@ namespace Pexita.Controllers
             }
 
         }
+
+        [Authorize(Policy = "AdminOnly")]
         [HttpPost("Orders/toggleSent")]
         public async Task<IActionResult> ToggleSent([FromBody] int id)
         {

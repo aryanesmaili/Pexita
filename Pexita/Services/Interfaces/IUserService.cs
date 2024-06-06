@@ -5,8 +5,8 @@ namespace Pexita.Services.Interfaces
 {
     public interface IUserService
     {
-        public bool Register(UserCreateVM user);
-        public bool Login(UserLoginVM user);
+        public Task<bool> Register(UserCreateVM user);
+        public Task<string> Login(UserLoginVM user);
         public List<UserInfoVM> GetUsers();
         public List<UserInfoVM> GetUsers(int Count);
         public UserInfoVM GetUserByID(int id);

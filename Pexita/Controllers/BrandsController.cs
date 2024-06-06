@@ -1,4 +1,5 @@
 ﻿using FluentValidation;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Pexita.Data.Entities.Brands;
 using Pexita.Services.Interfaces;
@@ -82,12 +83,7 @@ namespace Pexita.Controllers
             }
         }
 
-        [HttpPost("Login")]
-        public IActionResult Login([FromBody] BrandInfoVM brand)
-        {
-            return Ok();
-        }
-
+        [Authorize(Policy = "Brand")]
         [HttpPost("AddBrand")]
         public async Task<IActionResult> AddBrand([FromBody] BrandCreateVM createVM)
         {
@@ -112,6 +108,8 @@ namespace Pexita.Controllers
                 return BadRequest(e.Message);
             }
         }
+
+        [Authorize(Policy = "Brand")]
         [HttpPut("Edit/{id:int}")]
         public async Task<IActionResult> EditBrand(int id, [FromBody] BrandUpdateVM brand)
         {
@@ -141,6 +139,7 @@ namespace Pexita.Controllers
             }
         }
 
+        [Authorize(Policy = "Brand")]
         [HttpDelete("Delete/{id:int}")]
         public IActionResult DeleteBrand(int id)
         {

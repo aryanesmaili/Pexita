@@ -1,7 +1,4 @@
 ﻿using AutoMapper;
-using Microsoft.AspNetCore.Mvc.ApplicationModels;
-using Microsoft.Build.Framework;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Pexita.Data.Entities.Brands;
 using Pexita.Data.Entities.Comments;
 using Pexita.Data.Entities.Newsletter;
@@ -12,6 +9,7 @@ using Pexita.Data.Entities.ShoppingCart;
 using Pexita.Data.Entities.User;
 using Pexita.Services;
 using Pexita.Services.Interfaces;
+using BCrypt.Net;
 
 namespace Pexita.Utility
 {
@@ -72,7 +70,8 @@ namespace Pexita.Utility
                 .ForMember(u => u.ShoppingCarts, opt => opt.MapFrom(src => new List<ShoppingCartModel>()))
                 .ForMember(u => u.BrandNewsletters, opt => opt.MapFrom(src => new List<BrandNewsletterModel>()))
                 .ForMember(u => u.ProductNewsletters, opt => opt.MapFrom(src => new List<ProductNewsLetterModel>()))
-                .ForMember(u => u.Comments, opt => opt.MapFrom(src => new List<CommentsModel>()));
+                .ForMember(u => u.Comments, opt => opt.MapFrom(src => new List<CommentsModel>()))
+                .ForMember(u => u.Password, opt => opt.MapFrom(src => BCrypt.Net.BCrypt.HashPassword(src.Password)));
 
             Dictionary<int, bool> transactionStatus = new()
             {

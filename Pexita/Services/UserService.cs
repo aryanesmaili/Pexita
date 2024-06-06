@@ -1,11 +1,16 @@
 ﻿using AutoMapper;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using Pexita.Data;
+using Pexita.Data.Entities.Authentication;
 using Pexita.Data.Entities.Comments;
 using Pexita.Data.Entities.User;
 using Pexita.Services.Interfaces;
 using Pexita.Utility.Exceptions;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Text;
 
 namespace Pexita.Services
 {
@@ -14,12 +19,14 @@ namespace Pexita.Services
         private readonly AppDBContext _Context;
         private readonly IPexitaTools _pexitaTools;
         private readonly IMapper _mapper;
+        private readonly JwtSettings _jwtSettings;
 
-        public UserService(AppDBContext Context, IPexitaTools PexitaTools, IMapper Mapper)
+        public UserService(AppDBContext Context, IPexitaTools PexitaTools, IMapper Mapper, JwtSettings jwtSettings)
         {
             _Context = Context;
             _pexitaTools = PexitaTools;
             _mapper = Mapper;
+            _jwtSettings = jwtSettings;
         }
 
         public List<UserInfoVM> GetUsers()
@@ -189,26 +196,47 @@ namespace Pexita.Services
             return _mapper.Map<UserInfoVM>(userModel);
         }
 
-        public bool Login(UserLoginVM userLoginVM)
+        public async Task<string> Login(UserLoginVM userLoginVM)
         {
-            UserModel user = null;
+            UserModel? user = null;
 
             if (!string.IsNullOrEmpty(userLoginVM.UserName))
-                user = _Context.Users.FirstOrDefault(u => u.Username == userLoginVM.UserName) ?? throw new NotFoundException();
+                user = await _Context.Users.FirstOrDefaultAsync(u => u.Username == userLoginVM.UserName) ?? throw new NotFoundException();
 
             else if (string.IsNullOrEmpty(userLoginVM.Email))
-                user = _Context.Users.FirstOrDefault(u => u.Email == userLoginVM.Email) ?? throw new NotFoundException();
+                user = await _Context.Users.FirstOrDefaultAsync(u => u.Email == userLoginVM.Email) ?? throw new NotFoundException();
 
-            if (user != null)
+            if (user == null && !BCrypt.Net.BCrypt.Verify(userLoginVM.Password, user?.Password))
             {
-                string HashedDBPassword = user.Password;
+                throw new NotAuthorizedException("Username or Password is not correct");
             }
 
-            throw new NotImplementedException();
+            var tokenHandler = new JwtSecurityTokenHandler();
+            var key = Encoding.ASCII.GetBytes(_jwtSettings.SecretKey);
+
+            var tokenDescriptor = new SecurityTokenDescriptor
+            {
+                Subject = new ClaimsIdentity(new[]
+                {
+                    new Claim(ClaimTypes.Name, userLoginVM.UserName),
+                    new Claim(ClaimTypes.Role, user.Role),
+                    new Claim(ClaimTypes.Email, userLoginVM.Email),
+                }),
+                Expires = DateTime.UtcNow.AddMinutes(_jwtSettings.ExpiresInMinutes),
+                SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature),
+                Issuer = _jwtSettings.Issuer,
+                Audience = _jwtSettings.Audience,
+            };
+
+            var token = tokenHandler.CreateToken(tokenDescriptor);
+            return tokenHandler.WriteToken(token);
         }
 
-        public bool Register(UserCreateVM userCreateVM)
+        public async Task<bool> Register(UserCreateVM userCreateVM)
         {
+            if (await _Context.Users.AnyAsync(u => u.Username == userCreateVM.Username))
+                return false;
+
             UserModel User = _mapper.Map<UserModel>(userCreateVM);
 
             _Context.Users.Add(User);

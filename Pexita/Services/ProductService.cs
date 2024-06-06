@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Pexita.Data;
 using Pexita.Data.Entities.Comments;
 using Pexita.Data.Entities.Products;
+using Pexita.Data.Entities.User;
 using Pexita.Services.Interfaces;
 using Pexita.Utility.Exceptions;
 
@@ -17,15 +18,17 @@ namespace Pexita.Services
         private readonly ITagsService _tagsService;
         private readonly IPexitaTools _pexitaTools;
         private readonly IMapper _mapper;
+        private readonly IUserService _userService;
 
         public ProductService(AppDBContext Context, IBrandService brandService,
-            ITagsService tagsService, IPexitaTools pexitaTools, IMapper Mapper)
+            ITagsService tagsService, IPexitaTools pexitaTools, IMapper Mapper, IUserService userService)
         {
             _Context = Context;
             _brandService = brandService;
             _tagsService = tagsService;
             _pexitaTools = pexitaTools;
             _mapper = Mapper;
+            _userService = userService;
         }
 
         public bool AddProduct(ProductCreateVM product)
@@ -105,11 +108,11 @@ namespace Pexita.Services
             return _mapper.Map<ProductInfoVM>(model);
         }
 
-        public ProductInfoVM GetProductByID(int id)
+        public async Task<ProductInfoVM> GetProductByID(int id)
         {
             try
             {
-                return ProductModelToInfoVM(_Context.Products.Single(n => n.ID == id));
+                return ProductModelToInfoVM(await _Context.Products.SingleAsync(n => n.ID == id));
             }
             catch (InvalidOperationException)
             {
@@ -117,16 +120,17 @@ namespace Pexita.Services
             }
         }
 
-        public ProductInfoVM UpdateProductInfo(int id, ProductUpdateVM product)
+        public async Task<ProductInfoVM> UpdateProductInfo(int id, ProductUpdateVM product, string requestingUsername)
         {
-            ProductModel productModel = _Context.Products.FirstOrDefault(n => n.ID == id) ?? throw new NotFoundException();
+            ProductModel productModel = await _Context.Products.SingleAsync(n => n.ID == id) ?? throw new NotFoundException();
             try
             {
-                _mapper.Map(product, productModel);
+                if (_userService.IsAdmin(requestingUsername))
+                    _mapper.Map(product, productModel);
 
                 try
                 {
-                    _Context.SaveChanges();
+                    await _Context.SaveChangesAsync();
                 }
                 catch (Exception ex)
                 {
@@ -141,14 +145,21 @@ namespace Pexita.Services
             }
         }
 
-        public bool DeleteProduct(int id)
+        public async Task<bool> DeleteProduct(int id, string requestingUsername)
         {
             try
             {
-                ProductModel Product = _Context.Products.FirstOrDefault(product => product.ID == id) ?? throw new NotFoundException();
+                UserModel user = await _Context.Users.SingleAsync(x => x.Username == requestingUsername);
+                bool isAdmin = user.Role == "admin";
+                if (!isAdmin || user.Username != requestingUsername)
+                {
+                    throw new NotAuthorizedException();
+                }
+
+                ProductModel Product = await _Context.Products.FirstOrDefaultAsync(product => product.ID == id) ?? throw new NotFoundException();
 
                 _Context.Products.Remove(Product);
-                _Context.SaveChanges();
+                await _Context.SaveChangesAsync();
                 return true;
             }
 
@@ -158,13 +169,20 @@ namespace Pexita.Services
             }
         }
 
-        public bool AddCommentToProduct(ProductCommentDTO commentDTO)
+        public async Task<bool> AddCommentToProduct(ProductCommentDTO commentDTO, string requestingUsername)
         {
             try
             {
-                ProductModel Product = _Context.Products.Single(product => product.ID == commentDTO.ProductID);
+                UserModel user = await _Context.Users.SingleAsync(x => x.Username == requestingUsername);
+                bool isAdmin = user.Role == "admin";
+                if (!isAdmin || user.Username != requestingUsername)
+                {
+                    throw new NotAuthorizedException();
+                }
+
+                ProductModel Product = await _Context.Products.SingleAsync(product => product.ID == commentDTO.ProductID);
                 Product.Comments!.Add(commentDTO.Comment);
-                _Context.SaveChanges();
+                await _Context.SaveChangesAsync();
                 return true;
             }
 
@@ -178,16 +196,23 @@ namespace Pexita.Services
                 throw new Exception(e.Message);
             }
         }
-        public bool UpdateProductRate(UpdateProductRateDTO rateDTO)
+        public async Task<bool> UpdateProductRate(UpdateProductRateDTO rateDTO, string requestingUsername)
         {
             try
             {
-                ProductModel product = _Context.Products.Single(product => product.ID == rateDTO.ProductID);
+                UserModel user = await _Context.Users.SingleAsync(x => x.Username == requestingUsername);
+                bool isAdmin = user.Role == "admin";
+                if (!isAdmin || user.Username != requestingUsername)
+                {
+                    throw new NotAuthorizedException();
+                }
+
+                ProductModel product = await _Context.Products.SingleAsync(product => product.ID == rateDTO.ProductID);
                 ProductRating rating = new() { Rating = rateDTO.ProductRating, Product = product, ProductID = product.ID };
 
                 product.Rating.Add(rating);
 
-                _Context.SaveChanges();
+                await _Context.SaveChangesAsync();
                 return true;
             }
 
@@ -202,5 +227,6 @@ namespace Pexita.Services
             return _Context.Brands.Include(bp => bp.Products).AsNoTracking().FirstOrDefault(x => x.Name == BrandName)?
                         .Products!.FirstOrDefault(x => x.Title == ProductTitle) != null;
         }
+
     }
 }

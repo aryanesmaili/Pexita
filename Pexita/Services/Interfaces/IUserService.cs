@@ -9,20 +9,21 @@ namespace Pexita.Services.Interfaces
         public Task<string> Login(UserLoginVM user);
         public List<UserInfoVM> GetUsers();
         public List<UserInfoVM> GetUsers(int Count);
-        public UserInfoVM GetUserByID(int id);
+        public Task<UserInfoVM> GetUserByID(int id);
         public UserInfoVM GetUserByUserName(string userName);
-        public UserInfoVM UpdateUser(UserUpdateVM user);
-        public bool DeleteUser(int id);
-        public UserLoginVM ResetPassword(UserLoginVM loginVM);
-        public bool ChangePassword(UserLoginVM loginVM);
-        public List<Address> GetAddresses(int UserID);
-        public bool AddAddress(int UserID, Address address);
-        public bool UpdateAddress(int UserID, Address address);
-        public bool DeleteAddress(int UserID, int id);
-        public List<CommentsModel> GetComments(int UserID);
+        public Task<UserInfoVM> UpdateUser(UserUpdateVM user, string requestingUsername);
+        public Task<bool> DeleteUser(int id, string requestingUsername);
+        public Task<UserLoginVM> ResetPassword(UserLoginVM loginVM, string requestingUsername);
+        public Task<bool> ChangePassword(UserLoginVM loginVM, string requestingUsername);
+        public Task<List<Address>> GetAddresses(int UserID, string requestingUsername);
+        public Task<bool> AddAddress(int UserID, Address address, string requestingUsername);
+        public Task<bool> UpdateAddress(int UserID, Address address, string requestingUsername);
+        public Task<bool> DeleteAddress(int UserID, int id, string requestingUsername);
+        public Task<List<CommentsModel>> GetComments(int UserID);
         public UserInfoVM UserModelToInfoVM(UserModel userModel);
-        public bool IsUser(int id);
-        public bool IsUser(string Username);
-        public bool IsEmailInUse(string Email);
+        public Task<bool> IsUser(int id);
+        public Task<bool> IsUser(string Username);
+        public Task<bool> IsEmailInUse(string Email);
+        public Task<bool> IsAdmin(string Username);
     }
 }

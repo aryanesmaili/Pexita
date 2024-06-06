@@ -16,18 +16,21 @@ namespace Pexita.Controllers
         private readonly IValidator<UserLoginVM> _loginValidator;
         private readonly IValidator<UserUpdateVM> _updateValidator;
         private readonly IValidator<Address> _addressValidator;
+        private readonly IHttpContextAccessor _contextAccessor;
 
         public UserController(IUserService userService,
             IValidator<UserCreateVM> CreateValidator,
             IValidator<UserLoginVM> LoginValidator,
             IValidator<UserUpdateVM> UpdateValidator,
-            IValidator<Address> addressValidator)
+            IValidator<Address> addressValidator,
+            IHttpContextAccessor contextAccessor)
         {
             _userService = userService;
             _createValidator = CreateValidator;
             _loginValidator = LoginValidator;
             _updateValidator = UpdateValidator;
             _addressValidator = addressValidator;
+            _contextAccessor = contextAccessor;
         }
 
 
@@ -130,6 +133,7 @@ namespace Pexita.Controllers
         [HttpPut("User/Edit")]
         public async Task<IActionResult> UpdateUser([FromBody] UserUpdateVM userUpdateVM)
         {
+            var requestingUsername = _contextAccessor.HttpContext!.User?.Identity?.Name;
             try
             {
                 UserInfoVM? result = null;
@@ -138,7 +142,7 @@ namespace Pexita.Controllers
                     throw new ArgumentNullException($"{nameof(userUpdateVM)} is Null");
 
                 await _updateValidator.ValidateAndThrowAsync(userUpdateVM);
-                result = _userService.UpdateUser(userUpdateVM);
+                result = await _userService.UpdateUser(userUpdateVM, requestingUsername);
 
                 return Ok(result);
             }
@@ -162,12 +166,14 @@ namespace Pexita.Controllers
         [HttpPut("User/ResetPassword")]
         public async Task<IActionResult> ResetPassword([FromBody] UserLoginVM userLoginVM)
         {
+            var requestingUsername = _contextAccessor.HttpContext!.User?.Identity?.Name;
+
             try
             {
                 UserLoginVM? result = null;
 
                 await _loginValidator.ValidateAndThrowAsync(userLoginVM);
-                result = _userService.ResetPassword(userLoginVM);
+                result = await _userService.ResetPassword(userLoginVM, requestingUsername);
 
                 return Ok(result);
             }
@@ -186,12 +192,15 @@ namespace Pexita.Controllers
         [HttpPut("User/ChangePassword")]
         public async Task<IActionResult> ChangePassword([FromBody] UserLoginVM userLoginVM)
         {
+            var requestingUsername = _contextAccessor.HttpContext!.User?.Identity?.Name;
+
             try
             {
+
                 bool result = false;
 
                 await _loginValidator.ValidateAndThrowAsync(userLoginVM);
-                result = _userService.ChangePassword(userLoginVM);
+                result = await _userService.ChangePassword(userLoginVM, requestingUsername);
 
                 return Ok(result);
             }
@@ -208,11 +217,13 @@ namespace Pexita.Controllers
         }
         [Authorize(Policy = "AllUsers")]
         [HttpDelete("User/Delete/{id:int}")]
-        public IActionResult DeleteUser(int id)
+        public async Task<IActionResult> DeleteUser(int id)
         {
+            var requestingUsername = _contextAccessor.HttpContext!.User?.Identity?.Name;
+
             try
             {
-                return _userService.DeleteUser(id) ? Ok() : StatusCode(StatusCodes.Status500InternalServerError);
+                return await _userService.DeleteUser(id, requestingUsername) ? Ok() : StatusCode(StatusCodes.Status500InternalServerError);
             }
             catch (NotFoundException)
             {
@@ -221,11 +232,13 @@ namespace Pexita.Controllers
         }
         [Authorize(Policy = "AllUsers")]
         [HttpGet("User/Addresses/{id:int}")]
-        public IActionResult GetAddresses(int id)
+        public async Task<IActionResult> GetAddresses(int id)
         {
+            var requestingUsername = _contextAccessor.HttpContext!.User?.Identity?.Name;
+
             try
             {
-                return Ok(_userService.GetAddresses(id));
+                return Ok(await _userService.GetAddresses(id, requestingUsername));
             }
             catch (NotFoundException)
             {
@@ -234,8 +247,10 @@ namespace Pexita.Controllers
         }
         [Authorize(Policy = "AllUsers")]
         [HttpPost("User/Addresses/{id:int}")]
-        public IActionResult AddAddress(int id, [FromBody] Address address)
+        public async Task<IActionResult> AddAddress(int id, [FromBody] Address address)
         {
+            var requestingUsername = _contextAccessor.HttpContext!.User?.Identity?.Name;
+
             try
             {
                 bool result = false;
@@ -243,7 +258,7 @@ namespace Pexita.Controllers
                     throw new ArgumentNullException($"{nameof(address)} is Null");
 
                 if (_addressValidator.Validate(address, options => options.ThrowOnFailures()).IsValid)
-                    result = _userService.AddAddress(id, address);
+                    result = await _userService.AddAddress(id, address, requestingUsername);
 
                 return Ok(false);
 
@@ -266,11 +281,13 @@ namespace Pexita.Controllers
         }
         [Authorize(Policy = "AllUsers")]
         [HttpPut("User/Address/Edit/{id:int}")]
-        public IActionResult UpdateAddress(int id, [FromBody] Address address)
+        public async Task<IActionResult> UpdateAddress(int id, [FromBody] Address address)
         {
+            var requestingUsername = _contextAccessor.HttpContext!.User?.Identity?.Name;
+
             try
             {
-                return Ok(_userService.UpdateAddress(id, address));
+                return Ok(await _userService.UpdateAddress(id, address, requestingUsername));
             }
 
             catch (NotFoundException e)
@@ -282,10 +299,12 @@ namespace Pexita.Controllers
         [HttpDelete("User/Address/Delete/{id:int}")]
         public async Task<IActionResult> RemoveAddress(int id, [FromBody] Address address)
         {
+            var requestingUsername = _contextAccessor.HttpContext!.User?.Identity?.Name;
+
             try
             {
                 await _addressValidator.ValidateAndThrowAsync(address);
-                return Ok(_userService.DeleteAddress(id, address.ID));
+                return Ok(await _userService.DeleteAddress(id, address.ID, requestingUsername));
             }
 
             catch (NotFoundException e)

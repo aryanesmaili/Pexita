@@ -8,7 +8,7 @@ namespace Pexita.Services.Interfaces
         public Task<PaymentModel> GetPayment(int id);
 
         public Task<bool> PaymentOutcomeValidation(PaymentOutcomeValidationResponse idpayResponse);
-        public Task<string> SendPaymentRequest(PaymentRequest paymentRequest);
-        public Task<bool> ToggleOrderToSent(int orderID);
+        public Task<string> SendPaymentRequest(PaymentRequest paymentRequest, string requestingUsername);
+        public Task<bool> ToggleOrderToSent(int orderID, string requestingUsername);
     }
 }

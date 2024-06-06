@@ -17,15 +17,17 @@ namespace Pexita.Controllers
         private readonly IValidator<ProductUpdateVM> _productUpdateValidator;
         private readonly IValidator<UpdateProductRateDTO> _productRateValidator;
         private readonly IValidator<ProductCommentDTO> _productCommentValidator;
+        private readonly IHttpContextAccessor _contextAccessor;
 
         public ProductsController(IProductService productService, IValidator<ProductCreateVM> productCreateValidator
-            , IValidator<ProductUpdateVM> productUpdateValidator, IValidator<UpdateProductRateDTO> productRateValidator, IValidator<ProductCommentDTO> productCommentValidator)
+            , IValidator<ProductUpdateVM> productUpdateValidator, IValidator<UpdateProductRateDTO> productRateValidator, IValidator<ProductCommentDTO> productCommentValidator, IHttpContextAccessor contextAccessor)
         {
             _productService = productService;
             _productCreateValidator = productCreateValidator;
             _productUpdateValidator = productUpdateValidator;
             _productRateValidator = productRateValidator;
             _productCommentValidator = productCommentValidator;
+            _contextAccessor = contextAccessor;
         }
 
         [HttpGet("products")]
@@ -125,13 +127,14 @@ namespace Pexita.Controllers
         [HttpPut("product/update/{id}")]
         public async Task<IActionResult> UpdateProduct(int id, [FromBody] ProductUpdateVM product)
         {
+            var requestingUsername = _contextAccessor.HttpContext!.User?.Identity?.Name;
             try
             {
                 ProductInfoVM? update = null;
 
                 await _productUpdateValidator.ValidateAndThrowAsync(product);
 
-                update = _productService.UpdateProductInfo(id, product);
+                update = await _productService.UpdateProductInfo(id, product, requestingUsername);
                 return Ok(update);
             }
 
@@ -150,10 +153,11 @@ namespace Pexita.Controllers
         [HttpPut("product/update/rate/{id:int}")]
         public async Task<IActionResult> UpdateProductRate([FromBody] UpdateProductRateDTO rateDTO)
         {
+            string requestingUsername = _contextAccessor.HttpContext!.User?.Identity?.Name!;
             try
             {
                 await _productRateValidator.ValidateAndThrowAsync(rateDTO);
-                return Ok(_productService.UpdateProductRate(rateDTO));
+                return Ok(_productService.UpdateProductRate(rateDTO, requestingUsername));
             }
 
             catch (NotFoundException)
@@ -171,11 +175,13 @@ namespace Pexita.Controllers
         }
         [Authorize(Policy ="Brand")]
         [HttpDelete("products/delete/{id}")]
-        public IActionResult DeleteProduct(int id)
+        public async Task<IActionResult> DeleteProduct(int id)
         {
+            string requestingUsername = _contextAccessor.HttpContext!.User?.Identity?.Name!;
+
             try
             {
-                return _productService.DeleteProduct(id) ? NoContent() : BadRequest(id);
+                return await _productService.DeleteProduct(id, requestingUsername) ? NoContent() : BadRequest(id);
 
             }
             catch (NotFoundException)
@@ -191,11 +197,13 @@ namespace Pexita.Controllers
         [HttpPost("/product/Comments/Add/{id:int}")]
         public async Task<IActionResult> AddCommentToProduct(ProductCommentDTO commentDTO)
         {
+            string requestingUsername = _contextAccessor.HttpContext!.User?.Identity?.Name!;
+
             try
             {
                 await _productCommentValidator.ValidateAndThrowAsync(commentDTO);
 
-                return Ok(_productService.AddCommentToProduct(commentDTO));
+                return Ok(_productService.AddCommentToProduct(commentDTO, requestingUsername));
             }
             catch (NotFoundException)
             {

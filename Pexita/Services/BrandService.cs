@@ -3,6 +3,7 @@ using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using Pexita.Data;
 using Pexita.Data.Entities.Brands;
+using Pexita.Data.Entities.User;
 using Pexita.Services.Interfaces;
 using Pexita.Utility.Exceptions;
 
@@ -13,11 +14,13 @@ namespace Pexita.Services
         private readonly AppDBContext _Context;
         private readonly IPexitaTools _pexitaTools;
         private readonly IMapper _mapper;
-        public BrandService(AppDBContext Context, IPexitaTools PexitaTools, IMapper Mapper)
+        private readonly IUserService _userService;
+        public BrandService(AppDBContext Context, IPexitaTools PexitaTools, IMapper Mapper, IUserService userService)
         {
             _Context = Context;
             _pexitaTools = PexitaTools;
             _mapper = Mapper;
+            _userService = userService;
         }
 
         public bool AddBrand(BrandCreateVM createVM)
@@ -25,7 +28,7 @@ namespace Pexita.Services
             try
             {
                 BrandModel Brand = _mapper.Map<BrandModel>(createVM);
-
+                
                 _Context.Brands.Add(Brand);
                 _Context.SaveChanges();
                 return true;
@@ -34,7 +37,7 @@ namespace Pexita.Services
             {
                 throw new ValidationException(e.Message);
             }
-           catch(Exception e)
+            catch (Exception e)
             {
                 throw new Exception(e.Message, e);
             }
@@ -44,7 +47,12 @@ namespace Pexita.Services
         {
             try
             {
-                List<BrandInfoVM> list = _Context.Brands.Include(b => b.Products)!.ThenInclude(p => p.Comments).Include(b => b.Products)!.ThenInclude(p => p.Tags).AsNoTracking().Select(BrandModelToInfo).ToList();
+                List<BrandInfoVM> list = _Context.Brands
+                    .Include(b => b.Products)!.ThenInclude(p => p.Comments)
+                    .Include(b => b.Products)!.ThenInclude(p => p.Tags)
+                    .AsNoTracking()
+                    .Select(BrandModelToInfo)
+                    .ToList();
                 return list;
             }
 
@@ -61,7 +69,10 @@ namespace Pexita.Services
         {
             try
             {
-                List<BrandInfoVM> brands = _Context.Brands.Include(b => b.Products)!.ThenInclude(p => p.Comments).Include(b => b.Products)!.ThenInclude(p => p.Tags).AsNoTracking()
+                List<BrandInfoVM> brands = _Context.Brands
+                    .Include(b => b.Products)!.ThenInclude(p => p.Comments)
+                    .Include(b => b.Products)!.ThenInclude(p => p.Tags)
+                    .AsNoTracking()
                     .Take(count).Select(BrandModelToInfo)
                     .ToList();
                 return brands;
@@ -79,24 +90,33 @@ namespace Pexita.Services
                 throw new Exception(e.Message);
             }
         }
-        public BrandInfoVM GetBrandByID(int id)
+        public async Task<BrandInfoVM> GetBrandByID(int id)
         {
-            return BrandModelToInfo(_Context.Brands.Include(b => b.Products!).ThenInclude(pc => pc.Tags).AsNoTracking().FirstOrDefault(b => b.ID == id) ?? throw new NotFoundException());
+            return BrandModelToInfo(await _Context.Brands
+                .Include(b => b.Products!).ThenInclude(pc => pc.Tags)
+                .AsNoTracking()
+                .FirstOrDefaultAsync(b => b.ID == id) ?? throw new NotFoundException());
         }
 
-        public BrandModel GetBrandByName(string name)
+        public async Task<BrandModel> GetBrandByName(string name)
         {
-            return _Context.Brands.FirstOrDefault(x => x.Name == name) ?? throw new NotFoundException();
+            return await _Context.Brands.FirstOrDefaultAsync(x => x.Name == name) ?? throw new NotFoundException();
         }
 
-        public BrandInfoVM UpdateBrandInfo(int id, BrandUpdateVM model)
+        public async Task<BrandInfoVM> UpdateBrandInfo(int id, BrandUpdateVM model, string requestingUsername)
         {
-            var brand = _Context.Brands.FirstOrDefault(x => x.ID == id) ?? throw new NotFoundException();
             try
             {
+                UserModel user = await _Context.Users.SingleAsync(x => x.Username == requestingUsername);
+                bool isAdmin = user.Role == "admin";
+                if (!isAdmin || user.Username != requestingUsername)
+                {
+                    throw new NotAuthorizedException();
+                }
+                var brand = await _Context.Brands.FirstOrDefaultAsync(x => x.ID == id) ?? throw new NotFoundException();
 
                 _mapper.Map(model, brand);
-                _Context.SaveChanges();
+                await _Context.SaveChangesAsync();
 
                 return BrandModelToInfo(brand);
 
@@ -107,13 +127,20 @@ namespace Pexita.Services
                 throw new ValidationException(e.Message);
             }
         }
-        public bool RemoveBrand(int id)
+        public async Task<bool> RemoveBrand(int id, string requestingUsername)
         {
             try
             {
-                var brand = _Context.Brands.FirstOrDefault(x => x.ID == id) ?? throw new NotFoundException();
+                UserModel user = await _Context.Users.SingleAsync(x => x.Username == requestingUsername);
+                bool isAdmin = user.Role == "admin";
+                if (!isAdmin || user.Username != requestingUsername)
+                {
+                    throw new NotAuthorizedException();
+                }
+
+                var brand = await _Context.Brands.FirstOrDefaultAsync(x => x.ID == id) ?? throw new NotFoundException();
                 _Context.Remove(brand);
-                _Context.SaveChanges();
+                await _Context.SaveChangesAsync();
                 return true;
             }
             catch (NotFoundException)
@@ -132,14 +159,14 @@ namespace Pexita.Services
             return _mapper.Map(model, new BrandInfoVM());
         }
 
-        public bool IsBrand(int id)
+        public async Task<bool> IsBrand(int id)
         {
-            return _Context.Brands.FirstOrDefault(x => x.ID == id) != null;
+            return await _Context.Brands.FirstOrDefaultAsync(x => x.ID == id) != null;
         }
 
-        public bool IsBrand(string BrandName)
+        public async Task<bool> IsBrand(string BrandName)
         {
-            return _Context.Brands.FirstOrDefault(x => x.Name == BrandName) != null;
+            return await _Context.Brands.FirstOrDefaultAsync(x => x.Name == BrandName) != null;
         }
     }
 }

@@ -7,12 +7,12 @@ namespace Pexita.Services.Interfaces
         public bool AddProduct(ProductCreateVM product);
         public List<ProductInfoVM> GetProducts();
         public List<ProductInfoVM> GetProducts(int count);
-        public ProductInfoVM GetProductByID(int id);
-        public ProductInfoVM UpdateProductInfo(int id, ProductUpdateVM product);
-        public bool DeleteProduct(int id);
+        public Task<ProductInfoVM> GetProductByID(int id);
+        public Task<ProductInfoVM> UpdateProductInfo(int id, ProductUpdateVM product, string requestingUsername);
+        public Task<bool> DeleteProduct(int id, string requestingUsername);
         public ProductInfoVM ProductModelToInfoVM(ProductModel model);
-        public bool AddCommentToProduct(ProductCommentDTO commentDTO);
-        public bool UpdateProductRate(UpdateProductRateDTO rateDTO);
+        public Task<bool> AddCommentToProduct(ProductCommentDTO commentDTO, string requestingUsername);
+        public Task<bool> UpdateProductRate(UpdateProductRateDTO rateDTO, string requestingUsername);
         public bool IsProductAlready(string BrandName, string ProductTitle);
     }
 }

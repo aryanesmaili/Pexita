@@ -6,7 +6,9 @@ using Pexita.Data.Entities.Brands;
 using Pexita.Data.Entities.Orders;
 using Pexita.Data.Entities.Payment;
 using Pexita.Data.Entities.ShoppingCart;
+using Pexita.Data.Entities.User;
 using Pexita.Services.Interfaces;
+using Pexita.Utility.Exceptions;
 using System.Net;
 using System.Security;
 using System.Text;
@@ -52,8 +54,15 @@ namespace Pexita.Services
         /// </summary>
         /// <param name="paymentRequest">The payment request object containing details such as order ID, amount, and user information.</param>
         /// <returns>A task representing the asynchronous operation, containing the payment link if the request was successful.</returns>
-        public async Task<string> SendPaymentRequest(PaymentRequest paymentRequest)
+        public async Task<string> SendPaymentRequest(PaymentRequest paymentRequest, string requestingUsername)
         {
+            UserModel user = await _Context.Users.SingleAsync(x => x.Username == requestingUsername);
+            bool isAdmin = user.Role == "admin";
+            if (!isAdmin || user.Username != requestingUsername)
+            {
+                throw new NotAuthorizedException();
+            }
+
             // Create a new HttpClient instance to communicate with the IDPay API.
             using (HttpClient client = new())
             {
@@ -196,8 +205,15 @@ namespace Pexita.Services
             // Return true to indicate that the payment outcome validation was successful.
             return true;
         }
-        public async Task<bool> ToggleOrderToSent(int orderID)
+        public async Task<bool> ToggleOrderToSent(int orderID, string requestingUsername)
         {
+            UserModel user = await _Context.Users.SingleAsync(x => x.Username == requestingUsername);
+            bool isAdmin = user.Role == "admin";
+            if (!isAdmin || user.Username != requestingUsername)
+            {
+                throw new NotAuthorizedException();
+            }
+
             var order = await _Context.Orders.SingleAsync(order => order.ID == orderID);
             order.Status = OrdersModel.OrderStatus.Sent;
             _Context.SaveChanges();

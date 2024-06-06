@@ -64,13 +64,13 @@ namespace Pexita.Services
             return users.Select(UserModelToInfoVM).ToList();
         }
 
-        public UserInfoVM GetUserByID(int UserID)
+        public async Task<UserInfoVM> GetUserByID(int UserID)
         {
-            UserModel user = _Context.Users
+            UserModel user = await _Context.Users
                 .Include(u => u.Orders).Include(u => u.Addresses)
                 .Include(u => u.BrandNewsletters).Include(u => u.ProductNewsletters)
                 .AsNoTracking()
-                .FirstOrDefault(u => u.ID == UserID) ?? throw new NotFoundException($"User With ID:{UserID} Not Found");
+                .FirstOrDefaultAsync(u => u.ID == UserID) ?? throw new NotFoundException($"User With ID:{UserID} Not Found");
 
             return UserModelToInfoVM(user);
         }
@@ -88,20 +88,27 @@ namespace Pexita.Services
         }
 
 
-        public bool ChangePassword(UserLoginVM userLoginVM)
+        public async Task<bool> ChangePassword(UserLoginVM userLoginVM, string requestingUsername)
         {
             try
             {
+                UserModel reqUser = await _Context.Users.SingleAsync(x => x.Username == requestingUsername);
+                bool isAdmin = reqUser.Role == "admin";
+                if (!isAdmin || reqUser.Username != requestingUsername)
+                {
+                    throw new NotAuthorizedException();
+                }
+
                 UserModel user;
 
                 if (userLoginVM.UserName!.Length > 0)
-                    user = _Context.Users.Single(user => user.Username == userLoginVM.UserName);
+                    user = await _Context.Users.SingleAsync(user => user.Username == userLoginVM.UserName);
 
                 else
-                    user = _Context.Users.Single(user => user.Email == userLoginVM.Email);
+                    user = await _Context.Users.SingleAsync(user => user.Email == userLoginVM.Email);
 
                 user.Password = userLoginVM.Password;
-                _Context.SaveChanges();
+                await _Context.SaveChangesAsync();
 
                 return true;
             }
@@ -122,22 +129,28 @@ namespace Pexita.Services
             }
         }
 
-        public UserLoginVM ResetPassword(UserLoginVM userLoginVM)
+        public async Task<UserLoginVM> ResetPassword(UserLoginVM userLoginVM, string requestingUsername)
         {
             try
             {
+                UserModel requser = await _Context.Users.SingleAsync(x => x.Username == requestingUsername);
+                bool isAdmin = requser.Role == "admin";
+                if (!isAdmin || requser.Username != requestingUsername)
+                {
+                    throw new NotAuthorizedException();
+                }
+
                 UserModel user;
 
                 if (userLoginVM.UserName!.Length > 0)
-                    user = _Context.Users.Single(user => user.Username == userLoginVM.UserName);
+                    user = await _Context.Users.SingleAsync(user => user.Username == userLoginVM.UserName);
 
                 else
-                    user = _Context.Users.Single(user => user.Email == userLoginVM.Email);
+                    user = await _Context.Users.SingleAsync(user => user.Email == userLoginVM.Email);
 
                 user.Password = _pexitaTools.GenerateRandomPassword(32);
 
-                _Context.SaveChanges();
-
+                await _Context.SaveChangesAsync();
                 return new UserLoginVM { Password = user.Password, Email = userLoginVM.Email, UserName = userLoginVM.UserName };
             }
 
@@ -157,16 +170,22 @@ namespace Pexita.Services
             }
         }
 
-        public UserInfoVM UpdateUser(UserUpdateVM userUpdateVM)
+        public async Task<UserInfoVM> UpdateUser(UserUpdateVM userUpdateVM, string requestingUsername)
         {
             try
             {
+                UserModel reqUser = await _Context.Users.SingleAsync(x => x.Username == requestingUsername);
+                bool isAdmin = reqUser.Role == "admin";
+                if (!isAdmin || reqUser.Username != requestingUsername)
+                {
+                    throw new NotAuthorizedException();
+                }
 
-                UserModel User = _Context.Users.Single(u => u.ID == userUpdateVM.ID);
+                UserModel User = await _Context.Users.SingleAsync(u => u.ID == userUpdateVM.ID);
 
                 _mapper.Map(userUpdateVM, User);
 
-                _Context.SaveChanges();
+                await _Context.SaveChangesAsync();
 
                 return UserModelToInfoVM(User);
             }
@@ -182,9 +201,17 @@ namespace Pexita.Services
             }
         }
 
-        public bool DeleteUser(int UserID)
+        public async Task<bool> DeleteUser(int UserID, string requestingUsername)
         {
-            UserModel user = _Context.Users.FirstOrDefault(user => user.ID == UserID) ?? throw new NotFoundException($"User With ID:{UserID} Not Found");
+
+            UserModel reqUser = await _Context.Users.SingleAsync(x => x.Username == requestingUsername);
+            bool isAdmin = reqUser.Role == "admin";
+            if (!isAdmin || reqUser.Username != requestingUsername)
+            {
+                throw new NotAuthorizedException();
+            }
+
+            UserModel user = await _Context.Users.FirstOrDefaultAsync(user => user.ID == UserID) ?? throw new NotFoundException($"User With ID:{UserID} Not Found");
             _Context.Remove(user);
 
             return true;
@@ -247,26 +274,47 @@ namespace Pexita.Services
 
         }
 
-        public List<Address> GetAddresses(int UserID)
+        public async Task<List<Address>> GetAddresses(int UserID, string requestingUsername)
         {
-            UserModel user = _Context.Users.Include(u => u.Addresses).FirstOrDefault(u => u.ID == UserID) ?? throw new NotFoundException($"User With ID:{UserID} Not Found");
+            UserModel reqUser = await _Context.Users.SingleAsync(x => x.Username == requestingUsername);
+            bool isAdmin = reqUser.Role == "admin";
+            if (!isAdmin || reqUser.Username != requestingUsername)
+            {
+                throw new NotAuthorizedException();
+            }
+
+            UserModel user = await _Context.Users.Include(u => u.Addresses).FirstOrDefaultAsync(u => u.ID == UserID) ?? throw new NotFoundException($"User With ID:{UserID} Not Found");
             return user.Addresses.ToList();
         }
 
-        public bool AddAddress(int UserID, Address address)
+        public async Task<bool> AddAddress(int UserID, Address address, string requestingUsername)
         {
-            UserModel user = _Context.Users.Include(u => u.Addresses).FirstOrDefault(user => user.ID == UserID) ?? throw new NotFoundException($"User With ID:{UserID} Not Found");
+            UserModel reqUser = await _Context.Users.SingleAsync(x => x.Username == requestingUsername);
+            bool isAdmin = reqUser.Role == "admin";
+            if (!isAdmin || reqUser.Username != requestingUsername)
+            {
+                throw new NotAuthorizedException();
+            }
+
+            UserModel user = await _Context.Users.Include(u => u.Addresses).FirstOrDefaultAsync(user => user.ID == UserID) ?? throw new NotFoundException($"User With ID:{UserID} Not Found");
 
             user.Addresses.Add(address);
 
-            _Context.SaveChanges();
+            await _Context.SaveChangesAsync();
 
             return true;
         }
 
-        public bool UpdateAddress(int UserID, Address address)
+        public async Task<bool> UpdateAddress(int UserID, Address address, string requestingUsername)
         {
-            UserModel user = _Context.Users.Include(_u => _u.Addresses).FirstOrDefault(u => u.ID == UserID) ?? throw new NotFoundException($"User With ID:{UserID} Not Found");
+            UserModel reqUser = await _Context.Users.SingleAsync(x => x.Username == requestingUsername);
+            bool isAdmin = reqUser.Role == "admin";
+            if (!isAdmin || reqUser.Username != requestingUsername)
+            {
+                throw new NotAuthorizedException();
+            }
+
+            UserModel user = await _Context.Users.Include(_u => _u.Addresses).FirstOrDefaultAsync(u => u.ID == UserID) ?? throw new NotFoundException($"User With ID:{UserID} Not Found");
 
             // Find the existing address in the user's addresses list
             Address existingAddress = user.Addresses.FirstOrDefault(a => a.ID == address.ID) ?? throw new NotFoundException($"Address With ID:{address.ID} Not Found");
@@ -276,14 +324,21 @@ namespace Pexita.Services
             existingAddress.City = address.City;
             existingAddress.Text = address.Text;
 
-            _Context.SaveChanges();
+            await _Context.SaveChangesAsync();
             return true;
         }
 
 
-        public bool DeleteAddress(int UserID, int id)
+        public async Task<bool> DeleteAddress(int UserID, int id, string requestingUsername)
         {
-            UserModel user = _Context.Users.Include(_u => _u.Addresses).FirstOrDefault(u => u.ID == UserID) ?? throw new NotFoundException($"User With ID:{UserID} Not Found");
+            UserModel reqUser = await _Context.Users.SingleAsync(x => x.Username == requestingUsername);
+            bool isAdmin = reqUser.Role == "admin";
+            if (!isAdmin || reqUser.Username != requestingUsername)
+            {
+                throw new NotAuthorizedException();
+            }
+
+            UserModel user = await _Context.Users.Include(_u => _u.Addresses).FirstOrDefaultAsync(u => u.ID == UserID) ?? throw new NotFoundException($"User With ID:{UserID} Not Found");
 
             _Context.Remove(user.Addresses.FirstOrDefault(a => a.ID == id) ?? throw new NotFoundException($"Address with ID {id} Not found"));
 
@@ -292,26 +347,32 @@ namespace Pexita.Services
             return true;
         }
 
-        public List<CommentsModel> GetComments(int UserID)
+        public async Task<List<CommentsModel>> GetComments(int UserID)
         {
-            UserModel user = _Context.Users.Include(u => u.Comments).FirstOrDefault(u => u.ID == UserID) ?? throw new NotFoundException($"User With ID:{UserID} Not Found");
+
+            UserModel user = await _Context.Users.Include(u => u.Comments).FirstOrDefaultAsync(u => u.ID == UserID) ?? throw new NotFoundException($"User With ID:{UserID} Not Found");
             return user.Comments.ToList();
         }
 
-        public bool IsUser(int id)
+        public async Task<bool> IsUser(int id)
         {
-            return _Context.Users.FirstOrDefault(u => u.ID == id) != null;
+            return await _Context.Users.FirstOrDefaultAsync(u => u.ID == id) != null;
         }
 
-        public bool IsUser(string Username)
+        public async Task<bool> IsUser(string Username)
         {
-            return _Context.Users.FirstOrDefault(u => u.Username == Username) != null;
+            return await _Context.Users.FirstOrDefaultAsync(u => u.Username == Username) != null;
         }
 
-        public bool IsEmailInUse(string Email)
+        public async Task<bool> IsEmailInUse(string Email)
         {
-            return _Context.Users.FirstOrDefault(_u => _u.Email == Email) != null;
+            return await _Context.Users.FirstOrDefaultAsync(_u => _u.Email == Email) != null;
         }
 
+        public async Task<bool> IsAdmin(string userName)
+        {
+            var user = await _Context.Users.FirstOrDefaultAsync(u => u.Username == userName) ?? throw new NotFoundException();
+            return user.Role == "admin";
+        }
     }
 }

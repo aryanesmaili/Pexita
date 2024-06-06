@@ -14,13 +14,16 @@ namespace Pexita.Controllers
         private readonly IBrandService _brandService;
         private readonly IValidator<BrandCreateVM> _brandCreateValidator;
         private readonly IValidator<BrandUpdateVM> _brandUpdateValidator;
+        private readonly IHttpContextAccessor _httpContextAccessor;
         public BrandsController(IBrandService brandService,
             IValidator<BrandCreateVM> brandCreateValidator,
-            IValidator<BrandUpdateVM> brandUpdateValidator)
+            IValidator<BrandUpdateVM> brandUpdateValidator,
+            IHttpContextAccessor httpContextAccessor)
         {
             _brandService = brandService;
             _brandCreateValidator = brandCreateValidator;
             _brandUpdateValidator = brandUpdateValidator;
+            _httpContextAccessor = httpContextAccessor;
         }
 
         [HttpGet("Brands")]
@@ -113,11 +116,12 @@ namespace Pexita.Controllers
         [HttpPut("Edit/{id:int}")]
         public async Task<IActionResult> EditBrand(int id, [FromBody] BrandUpdateVM brand)
         {
+            string requestingUsername = _httpContextAccessor.HttpContext!.User?.Identity?.Name!;
             try
             {
                 await _brandUpdateValidator.ValidateAndThrowAsync(brand);
 
-                _brandService.UpdateBrandInfo(id, brand);
+                await _brandService.UpdateBrandInfo(id, brand, requestingUsername);
                 return Ok();
             }
 
@@ -141,11 +145,12 @@ namespace Pexita.Controllers
 
         [Authorize(Policy = "Brand")]
         [HttpDelete("Delete/{id:int}")]
-        public IActionResult DeleteBrand(int id)
+        public async Task<IActionResult> DeleteBrand(int id)
         {
+            string requestingUsername = _httpContextAccessor.HttpContext!.User?.Identity?.Name!;
             try
             {
-                return _brandService.RemoveBrand(id) ? NoContent() : StatusCode(StatusCodes.Status500InternalServerError);
+                return await _brandService.RemoveBrand(id, requestingUsername) ? NoContent() : StatusCode(StatusCodes.Status500InternalServerError);
             }
 
             catch (NotFoundException)

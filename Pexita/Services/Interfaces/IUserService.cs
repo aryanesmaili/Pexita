@@ -21,9 +21,9 @@ namespace Pexita.Services.Interfaces
         public Task<bool> DeleteAddress(int UserID, int id, string requestingUsername);
         public Task<List<CommentsModel>> GetComments(int UserID);
         public UserInfoVM UserModelToInfoVM(UserModel userModel);
-        public Task<bool> IsUser(int id);
-        public Task<bool> IsUser(string Username);
-        public Task<bool> IsEmailInUse(string Email);
-        public Task<bool> IsAdmin(string Username);
+        public bool IsUser(int id);
+        public bool IsUser(string Username);
+        public bool IsEmailInUse(string Email);
+        public bool IsAdmin(string Username);
     }
 }

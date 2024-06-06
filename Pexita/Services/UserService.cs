@@ -354,24 +354,24 @@ namespace Pexita.Services
             return user.Comments.ToList();
         }
 
-        public async Task<bool> IsUser(int id)
+        public bool IsUser(int id)
         {
-            return await _Context.Users.FirstOrDefaultAsync(u => u.ID == id) != null;
+            return _Context.Users.FirstOrDefault(u => u.ID == id) != null;
         }
 
-        public async Task<bool> IsUser(string Username)
+        public bool IsUser(string Username)
         {
-            return await _Context.Users.FirstOrDefaultAsync(u => u.Username == Username) != null;
+            return _Context.Users.FirstOrDefault(u => u.Username == Username) != null;
         }
 
-        public async Task<bool> IsEmailInUse(string Email)
+        public bool IsEmailInUse(string Email)
         {
-            return await _Context.Users.FirstOrDefaultAsync(_u => _u.Email == Email) != null;
+            return _Context.Users.FirstOrDefault(_u => _u.Email == Email) != null;
         }
 
-        public async Task<bool> IsAdmin(string userName)
+        public bool IsAdmin(string userName)
         {
-            var user = await _Context.Users.FirstOrDefaultAsync(u => u.Username == userName) ?? throw new NotFoundException();
+            var user = _Context.Users.FirstOrDefault(u => u.Username == userName) ?? throw new NotFoundException();
             return user.Role == "admin";
         }
     }

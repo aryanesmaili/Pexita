@@ -125,8 +125,13 @@ namespace Pexita.Services
             ProductModel productModel = await _Context.Products.SingleAsync(n => n.ID == id) ?? throw new NotFoundException();
             try
             {
-                if (_userService.IsAdmin(requestingUsername))
-                    _mapper.Map(product, productModel);
+                UserModel reqUser = await _Context.Users.SingleAsync(x => x.Username == requestingUsername);
+                bool isAdmin = reqUser.Role == "admin";
+                if (!isAdmin || reqUser.Username != requestingUsername)
+                {
+                    throw new NotAuthorizedException();
+                }
+                _mapper.Map(product, productModel);
 
                 try
                 {

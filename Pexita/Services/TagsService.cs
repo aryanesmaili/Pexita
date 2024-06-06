@@ -17,7 +17,7 @@ namespace Pexita.Services
             throw new NotImplementedException();
         }
 
-        public bool DeleteTag(int id)
+        public bool DeleteTag(int id, string requestingUsername)
         {
             throw new NotImplementedException();
         }
@@ -32,7 +32,7 @@ namespace Pexita.Services
             throw new NotImplementedException();
         }
 
-        public TagInfoVM UpdateTag(int id, TagCreateVM product)
+        public TagInfoVM UpdateTag(int id, TagCreateVM product, string requestingUsername)
         {
             throw new NotImplementedException();
         }

@@ -28,7 +28,7 @@ namespace Pexita.Services
             try
             {
                 BrandModel Brand = _mapper.Map<BrandModel>(createVM);
-                
+
                 _Context.Brands.Add(Brand);
                 _Context.SaveChanges();
                 return true;
@@ -159,14 +159,14 @@ namespace Pexita.Services
             return _mapper.Map(model, new BrandInfoVM());
         }
 
-        public async Task<bool> IsBrand(int id)
+        public bool IsBrand(int id)
         {
-            return await _Context.Brands.FirstOrDefaultAsync(x => x.ID == id) != null;
+            return _Context.Brands.FirstOrDefault(x => x.ID == id) != null;
         }
 
-        public async Task<bool> IsBrand(string BrandName)
+        public bool IsBrand(string BrandName)
         {
-            return await _Context.Brands.FirstOrDefaultAsync(x => x.Name == BrandName) != null;
+            return _Context.Brands.FirstOrDefault(x => x.Name == BrandName) != null;
         }
     }
 }

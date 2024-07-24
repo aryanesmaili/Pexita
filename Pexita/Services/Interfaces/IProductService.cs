@@ -1,10 +1,9 @@
-﻿using Pexita.Data.Entities.Comments;
-using Pexita.Data.Entities.Products;
+﻿using Pexita.Data.Entities.Products;
 namespace Pexita.Services.Interfaces
 {
     public interface IProductService
     {
-        public bool AddProduct(ProductCreateDTO product);
+        public Task<bool> AddProduct(ProductCreateDTO product, string requestingUsername);
         public List<ProductInfoVM> GetProducts();
         public List<ProductInfoVM> GetProducts(int count);
         public Task<ProductInfoVM> GetProductByID(int id);

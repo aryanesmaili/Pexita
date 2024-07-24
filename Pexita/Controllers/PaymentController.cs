@@ -1,12 +1,8 @@
 ﻿using FluentValidation;
-using FluentValidation.Results;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Pexita.Services;
 using Pexita.Services.Interfaces;
-using static Pexita.Utility.Exceptions.PaymentException;
 
 namespace Pexita.Controllers
 {
@@ -46,7 +42,7 @@ namespace Pexita.Controllers
             string requestingUsername = _httpContextAccessor.HttpContext!.User?.Identity?.Name!;
             try
             {
-                // add a check so that a user can only check their own payments not everyones'
+                // add a check so that a user can only check their own payments not other peoples'.
                 if (request == null)
                     throw new ArgumentNullException(nameof(request));
 

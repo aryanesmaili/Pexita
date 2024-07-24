@@ -1,15 +1,15 @@
-using Microsoft.EntityFrameworkCore;
-using Pexita.Data;
-using Pexita.Services.Interfaces;
-using Pexita.Services;
-using Pexita.Utility;
 using FluentValidation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Pexita.Data;
 using Pexita.Data.Entities.Authentication;
-using System.Text;
-using Pexita.Data.Entities.SMTP;
 using Pexita.Data.Entities.Newsletter;
+using Pexita.Data.Entities.SMTP;
+using Pexita.Services;
+using Pexita.Services.Interfaces;
+using Pexita.Utility;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 

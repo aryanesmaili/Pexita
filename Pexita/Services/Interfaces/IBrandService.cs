@@ -1,10 +1,12 @@
 ﻿using Pexita.Data.Entities.Brands;
+using Pexita.Data.Entities.User;
 
 namespace Pexita.Services.Interfaces
 {
     public interface IBrandService
     {
-        public bool AddBrand(BrandCreateVM createVM);
+        public Task<bool> AddBrand(BrandCreateVM createVM);
+        public Task<string> Login(UserLoginVM loginInfo);
         public List<BrandInfoVM> GetBrands();
         public List<BrandInfoVM> GetBrands(int count);
         public Task<BrandInfoVM> GetBrandByID(int id);
@@ -14,6 +16,5 @@ namespace Pexita.Services.Interfaces
         public BrandInfoVM BrandModelToInfo(BrandModel model);
         public bool IsBrand(int id);
         public bool IsBrand(string BrandName);
-
     }
 }

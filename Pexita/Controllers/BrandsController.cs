@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Pexita.Data.Entities.Brands;
+using Pexita.Data.Entities.User;
 using Pexita.Services.Interfaces;
 using Pexita.Utility.Exceptions;
 
@@ -15,15 +16,19 @@ namespace Pexita.Controllers
         private readonly IValidator<BrandCreateVM> _brandCreateValidator;
         private readonly IValidator<BrandUpdateVM> _brandUpdateValidator;
         private readonly IHttpContextAccessor _httpContextAccessor;
+        private readonly IValidator<UserLoginVM> _userLoginValidator;
+
         public BrandsController(IBrandService brandService,
             IValidator<BrandCreateVM> brandCreateValidator,
             IValidator<BrandUpdateVM> brandUpdateValidator,
-            IHttpContextAccessor httpContextAccessor)
+            IHttpContextAccessor httpContextAccessor,
+            IValidator<UserLoginVM> userLoginValidator)
         {
             _brandService = brandService;
             _brandCreateValidator = brandCreateValidator;
             _brandUpdateValidator = brandUpdateValidator;
             _httpContextAccessor = httpContextAccessor;
+            _userLoginValidator = userLoginValidator;
         }
 
         [HttpGet("Brands")]
@@ -86,7 +91,28 @@ namespace Pexita.Controllers
             }
         }
 
-        [Authorize(Policy = "Brand")]
+        [HttpPost]
+        public async Task<IActionResult> Login(UserLoginVM brand)
+        {
+            try
+            {
+                await _userLoginValidator.ValidateAndThrowAsync(brand);
+                string token = await _brandService.Login(brand);
+                return Ok(token);
+            }
+            catch (NotFoundException)
+            {
+                return NotFound(brand);
+            }
+            catch (ValidationException)
+            {
+                return BadRequest(brand);
+            }
+            catch (Exception)
+            {
+                return StatusCode(500);
+            }
+        }
         [HttpPost("AddBrand")]
         public async Task<IActionResult> AddBrand([FromBody] BrandCreateVM createVM)
         {
@@ -97,13 +123,13 @@ namespace Pexita.Controllers
 
                 await _brandCreateValidator.ValidateAndThrowAsync(createVM);
 
-                _brandService.AddBrand(createVM);
-                return Ok();
+                await _brandService.AddBrand(createVM);
+                return RedirectToRoute("Brand/Login");
             }
 
             catch (ArgumentNullException e)
             {
-                return BadRequest($"Arguement null {e.Message}");
+                return BadRequest($"Argument null {e.Message}");
             }
 
             catch (ValidationException e)

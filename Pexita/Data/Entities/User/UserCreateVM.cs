@@ -43,7 +43,7 @@ namespace Pexita.Data.Entities.User
         public string Password { get; set; }
         public string ConfirmPassword { get; set; }
         public string Email { get; set; }
-        
+
         public List<Address> Addresses { get; set; }
     }
 }

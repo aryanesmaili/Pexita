@@ -5,7 +5,6 @@ using Microsoft.EntityFrameworkCore;
 using Pexita.Data;
 using Pexita.Data.Entities.Newsletter;
 using Pexita.Data.Entities.Products;
-using Pexita.Data.Entities.User;
 using Pexita.Services.Interfaces;
 using Pexita.Utility.Exceptions;
 
@@ -33,82 +32,84 @@ namespace Pexita.Services
             _eventdispatcher = dispatcher;
         }
 
-        public bool AddProduct(ProductCreateDTO product)
+        /// <summary>
+        /// Adds a new product to Product Table.
+        /// </summary>
+        /// <param name="product"> the product to be added to the Table</param>
+        /// <returns></returns>
+        /// <exception cref="ValidationException"></exception>
+        /// <exception cref="Exception"></exception>
+        public async Task<bool> AddProduct(ProductCreateDTO product, string requestingUsername)
         {
-            try
-            {
-                ProductModel NewProduct = _mapper.Map<ProductModel>(product);
+            await _pexitaTools.AuthorizeProductCreationAsync(product.Brand, requestingUsername);
 
-                _Context.Products.Add(NewProduct);
-                _Context.SaveChanges();
-                return true;
-            }
-            catch (ValidationException e)
-            {
-                throw new ValidationException(e.Message);
-            }
-            catch (Exception e)
-            {
-                throw new Exception(e.Message, e.InnerException);
-            }
+            ProductModel NewProduct = _mapper.Map<ProductModel>(product);
+
+            _Context.Products.Add(NewProduct);
+            _Context.SaveChanges();
+            return true;
+
         }
-
+        /// <summary>
+        /// Get the list of products along with their brands, comments and tags.
+        /// </summary>
+        /// <returns></returns>
+        /// <exception cref="NotFoundException"></exception>
+        /// <exception cref="Exception"></exception>
         public List<ProductInfoVM> GetProducts()
         {
-            try
+            List<ProductModel> products = _Context.Products.Include(b => b.Brand).Include(c => c.Comments).Include(t => t.Tags).ToList();
+            if (products.Count > 0)
             {
-                List<ProductModel> products = _Context.Products.Include(b => b.Brand).Include(c => c.Comments).Include(t => t.Tags).ToList();
-                if (products.Count > 0)
-                {
-                    List<ProductInfoVM> productsVM = products.Select(ProductModelToInfoVM).ToList();
-                    return productsVM;
-                }
-                else
-                {
-                    throw new NotFoundException("No Records found in Products Table");
-                }
+                List<ProductInfoVM> productsVM = products.Select(ProductModelToInfoVM).ToList();
+                return productsVM;
             }
-
-            catch (NotFoundException e)
+            else
             {
-                throw new NotFoundException(e.Message);
-            }
-
-            catch (Exception e)
-            {
-                throw new Exception(e.Message);
+                throw new NotFoundException("No Records found in Products Table");
             }
         }
 
+        /// <summary>
+        /// get a set amount of products from database.
+        /// </summary>
+        /// <param name="count">Count of how many products you want to get.</param>
+        /// <returns></returns>
+        /// <exception cref="ArgumentOutOfRangeException"></exception>
+        /// <exception cref="NotFoundException"></exception>
         public List<ProductInfoVM> GetProducts(int count)
         {
             if (count > _Context.Products.Count())
                 throw new ArgumentOutOfRangeException(nameof(count));
 
-            try
-            {
-                List<ProductModel> prods = _Context.Products.Take(count).ToList();
+            List<ProductModel> prods = _Context.Products.Take(count).ToList();
 
-                if (prods.Count > 0)
-                {
-                    return prods.Select(ProductModelToInfoVM).ToList();
-                }
-
-                else
-                {
-                    throw new NotFoundException("No record was Found");
-                }
-            }
-            catch (Exception e)
+            if (prods.Count > 0)
             {
-                throw new Exception(e.Message);
+                return prods.Select(ProductModelToInfoVM).ToList();
             }
+
+            else
+            {
+                throw new NotFoundException("No record was Found");
+            }
+
         }
+        /// <summary>
+        /// Converts a database table to a VM to be sent to frontend.
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
         public ProductInfoVM ProductModelToInfoVM(ProductModel model)
         {
             return _mapper.Map<ProductInfoVM>(model);
         }
-
+        /// <summary>
+        /// Gets a product from database via its ID.
+        /// </summary>
+        /// <param name="id">Product ID</param>
+        /// <returns>Product info as VM</returns>
+        /// <exception cref="NotFoundException"></exception>
         public async Task<ProductInfoVM> GetProductByID(int id)
         {
             return ProductModelToInfoVM(await _Context.Products
@@ -118,65 +119,66 @@ namespace Pexita.Services
                                                         .FirstOrDefaultAsync(p => p.ID == id)
                                                         ?? throw new NotFoundException($"Entity {id} not Found in Products."));
         }
-
+        /// <summary>
+        /// Completely Edits a database table based on the object given (PUT). publishes a <see cref="ProductAvailableEvent"/> if a product's state changes.
+        /// </summary>
+        /// <param name="id">id of the db record to be edited.</param>
+        /// <param name="product">new product info.</param>
+        /// <param name="requestingUsername">the user requesting the edit.</param>
+        /// <returns></returns>
         public async Task<ProductInfoVM> UpdateProductInfo(int id, ProductUpdateDTO product, string requestingUsername)
         {
-            try
-            {
-                ProductModel productModel = await _pexitaTools.AuthorizeProductRequest(id, requestingUsername);
-                bool NotInStock = productModel.Quantity == 0;
-                _mapper.Map(product, productModel);
 
-                try
-                {
-                    await _Context.SaveChangesAsync();
-                    if(NotInStock && product.Quantity > 0)
-                    {
-                        var eventMessage = new ProductAvailableEvent(id);
-                        _eventdispatcher.Dispatch(eventMessage);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    throw new Exception("An error occurred while saving changes to the database.", ex);
-                }
-                return ProductModelToInfoVM(productModel);
-            }
-            catch (ValidationException e)
+            ProductModel productModel = await _pexitaTools.AuthorizeProductAccessAsync(id, requestingUsername);
+            bool NotInStock = productModel.Quantity == 0;
+            _mapper.Map(product, productModel);
+
+            await _Context.SaveChangesAsync();
+            if (NotInStock && product.Quantity > 0)
             {
-                throw new ValidationException(e.Message);
+                var eventMessage = new ProductAvailableEvent(id); // Product has changed its state to "In stock" so we're publishing an event.
+                _eventdispatcher.Dispatch(eventMessage);
             }
+            return ProductModelToInfoVM(productModel);
         }
-
+        /// <summary>
+        /// Deletes a record from database after checking if the requester has authorization to do so.
+        /// </summary>
+        /// <param name="id">id of the product to be deleted</param>
+        /// <param name="requestingUsername">the requester's username.used in authenticating request.</param>
+        /// <returns></returns>
         public async Task<bool> DeleteProduct(int id, string requestingUsername)
         {
-            try
-            {
-                ProductModel Product = await _pexitaTools.AuthorizeProductRequest(id, requestingUsername);
+            ProductModel Product = await _pexitaTools.AuthorizeProductAccessAsync(id, requestingUsername);
 
-                _Context.Products.Remove(Product);
-                await _Context.SaveChangesAsync();
-                return true;
-            }
+            _Context.Products.Remove(Product);
+            await _Context.SaveChangesAsync();
+            return true;
 
-            catch (Exception e)
-            {
-                throw new Exception(e.Message);
-            }
         }
-
+        /// <summary>
+        /// Adds the given comment to the product.
+        /// </summary>
+        /// <param name="commentDTO">the comment to be added.</param>
+        /// <param name="requestingUsername">the requester's username.used in authenticating request.</param>
+        /// <returns></returns>
         public async Task<bool> AddCommentToProduct(ProductCommentDTO commentDTO, string requestingUsername)
         {
-            ProductModel product = await _pexitaTools.AuthorizeProductRequest(commentDTO.ProductID, requestingUsername);
+            ProductModel product = await _pexitaTools.AuthorizeProductAccessAsync(commentDTO.ProductID, requestingUsername);
 
             product.Comments.Add(commentDTO.Comment);
             await _Context.SaveChangesAsync();
             return true;
         }
-
+        /// <summary>
+        /// updates a record's rating.
+        /// </summary>
+        /// <param name="rateDTO"></param>
+        /// <param name="requestingUsername"></param>
+        /// <returns></returns>
         public async Task<bool> UpdateProductRate(UpdateProductRateDTO rateDTO, string requestingUsername)
         {
-            ProductModel product = await _pexitaTools.AuthorizeProductRequest(rateDTO.ProductID, requestingUsername);
+            ProductModel product = await _pexitaTools.AuthorizeProductAccessAsync(rateDTO.ProductID, requestingUsername);
 
             ProductRating rating = new() { Rating = rateDTO.ProductRating, Product = product, ProductID = product.ID };
 
@@ -186,33 +188,37 @@ namespace Pexita.Services
             return true;
 
         }
-
+        /// <summary>
+        /// checking if a product already exists in a brand's collection.
+        /// </summary>
+        /// <param name="BrandName"></param>
+        /// <param name="ProductTitle"></param>
+        /// <returns></returns>
         public bool IsProductAlready(string BrandName, string ProductTitle)
         {
             return _Context.Brands.Include(bp => bp.Products).AsNoTracking().FirstOrDefault(x => x.Name == BrandName)?
                         .Products!.FirstOrDefault(x => x.Title == ProductTitle) != null;
         }
-
+        /// <summary>
+        /// partially edits a product's record in database.
+        /// </summary>
+        /// <param name="id">ID of the product to be edited</param>
+        /// <param name="productDTO">new product's info.</param>
+        /// <param name="requestingUsername">the user requesting the edit.used in authenticating the request</param>
+        /// <returns></returns>
         public async Task<ProductInfoVM> PatchProductInfo(int id, ProductUpdateDTO productDTO, string requestingUsername)
         {
-            ProductModel product = await _pexitaTools.AuthorizeProductRequest(id, requestingUsername);
+            ProductModel product = await _pexitaTools.AuthorizeProductAccessAsync(id, requestingUsername);
             bool NotInStock = product.Quantity == 0;
             _mapper.Map(productDTO, product);
+            await _Context.SaveChangesAsync();
 
-            try
+            if (NotInStock && productDTO.Quantity > 0)
             {
-                await _Context.SaveChangesAsync();
+                var eventMessage = new ProductAvailableEvent(product.ID);
+                _eventdispatcher.Dispatch(eventMessage);
+            }
 
-                if (NotInStock && productDTO.Quantity > 0)
-                {
-                    var eventMessage = new ProductAvailableEvent(product.ID);
-                    _eventdispatcher.Dispatch(eventMessage);
-                }
-            }
-            catch (Exception ex)
-            {
-                throw new Exception("An error occurred while saving changes to the database.", ex);
-            }
             return ProductModelToInfoVM(product);
         }
     }

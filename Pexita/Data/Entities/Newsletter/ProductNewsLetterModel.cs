@@ -1,5 +1,4 @@
-﻿using Pexita.Data.Entities.Brands;
-using Pexita.Data.Entities.Products;
+﻿using Pexita.Data.Entities.Products;
 using Pexita.Data.Entities.User;
 using Pexita.Services.Interfaces;
 

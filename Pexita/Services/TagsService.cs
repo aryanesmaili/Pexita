@@ -1,5 +1,4 @@
-﻿using Azure;
-using Pexita.Data;
+﻿using Pexita.Data;
 using Pexita.Data.Entities.Tags;
 using Pexita.Services.Interfaces;
 

@@ -9,7 +9,6 @@ using Pexita.Data.Entities.ShoppingCart;
 using Pexita.Data.Entities.User;
 using Pexita.Services;
 using Pexita.Services.Interfaces;
-using BCrypt.Net;
 
 namespace Pexita.Utility
 {

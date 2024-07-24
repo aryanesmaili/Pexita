@@ -1,6 +1,5 @@
 ﻿using AutoMapper;
 using Microsoft.EntityFrameworkCore;
-using NuGet.Packaging.Signing;
 using Pexita.Data;
 using Pexita.Data.Entities.Brands;
 using Pexita.Data.Entities.Orders;
@@ -10,7 +9,6 @@ using Pexita.Data.Entities.User;
 using Pexita.Services.Interfaces;
 using Pexita.Utility.Exceptions;
 using System.Net;
-using System.Security;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
@@ -29,17 +27,6 @@ namespace Pexita.Services
         private readonly AppDBContext _Context;
         private readonly IMapper _mapper;
 
-
-        public async Task<List<PaymentModel>> GetPayments()
-        {
-            return await _Context.Payments.ToListAsync();
-        }
-
-        public async Task<PaymentModel> GetPayment(int id)
-        {
-            return await _Context.Payments.SingleAsync(p => p.ID == id);
-        }
-
         public PaymentService(string APIKey, string CallbackAddress, bool isTest, AppDBContext Context, IMapper mapper)
         {
             _apiKey = APIKey;
@@ -47,6 +34,23 @@ namespace Pexita.Services
             _CallbackAddress = CallbackAddress;
             _Context = Context;
             _mapper = mapper;
+        }
+        /// <summary>
+        /// Get the list of all payments.
+        /// </summary>
+        /// <returns>The list of all payments.</returns>
+        public async Task<List<PaymentModel>> GetPayments()
+        {
+            return await _Context.Payments.ToListAsync();
+        }
+        /// <summary>
+        /// Get info about a certain payment by its Id.
+        /// </summary>
+        /// <param name="id">id of the payment.</param>
+        /// <returns>database record demonstrating that payment.</returns>
+        public async Task<PaymentModel> GetPayment(int id)
+        {
+            return await _Context.Payments.SingleAsync(p => p.ID == id);
         }
 
         /// <summary>
@@ -127,7 +131,6 @@ namespace Pexita.Services
             }
         }
 
-
         /// <summary>
         /// Validates the outcome of a payment based on the response received from the IDPay API.
         /// </summary>
@@ -205,6 +208,13 @@ namespace Pexita.Services
             // Return true to indicate that the payment outcome validation was successful.
             return true;
         }
+        /// <summary>
+        /// Changes the status of an order to "Sent".
+        /// </summary>
+        /// <param name="orderID"></param>
+        /// <param name="requestingUsername"></param>
+        /// <returns></returns>
+        /// <exception cref="NotAuthorizedException"></exception>
         public async Task<bool> ToggleOrderToSent(int orderID, string requestingUsername)
         {
             UserModel user = await _Context.Users.SingleAsync(x => x.Username == requestingUsername);
@@ -219,6 +229,12 @@ namespace Pexita.Services
             _Context.SaveChanges();
             return true;
         }
+        /// <summary>
+        /// Extracts the brands from a given shopping cart.
+        /// </summary>
+        /// <param name="order"> the order </param>
+        /// <param name="shoppingCart"> the shopping cart to extract brands from</param>
+        /// <returns></returns>
         private List<BrandOrder> GetBrandsFromCart(OrdersModel order, ShoppingCartModel shoppingCart)
         {
             // Initialize a list to store brand orders
@@ -255,12 +271,31 @@ namespace Pexita.Services
             // Return the list of brand orders created
             return brandOrders;
         }
+
         static int ExtractNumberFromString(string input)
         {
             string pattern = @"\d+"; // \d matches any digit, and + matches one or more occurrences
             Match match = Regex.Match(input, pattern);
             return int.Parse(match.Value);
         }
+        /// <summary>
+        /// manages the exceptions that can be thrown throughout payment.
+        /// </summary>
+        /// <param name="response"></param>
+        /// <param name="innerResponse"></param>
+        /// <exception cref="AmountLessThanMinimumException"></exception>
+        /// <exception cref="AmountExceedsMaximumException"></exception>
+        /// <exception cref="AmountExceedsLimitException"></exception>
+        /// <exception cref="CallbackDomainMismatchException"></exception>
+        /// <exception cref="InvalidCallbackAddressException"></exception>
+        /// <exception cref="UnexpectedErrorException"></exception>
+        /// <exception cref="UserBlockedException"></exception>
+        /// <exception cref="ApiKeyNotFoundException"></exception>
+        /// <exception cref="IpMismatchException"></exception>
+        /// <exception cref="WebServiceNotApprovedException"></exception>
+        /// <exception cref="BankAccountNotApprovedException"></exception>
+        /// <exception cref="BankAccountInactiveException"></exception>
+        /// <exception cref="TransactionNotCreatedException"></exception>
         private static void PaymentExceptionManager(HttpStatusCode response, PaymentErrorResponse innerResponse)
         {
             if (response == HttpStatusCode.NotAcceptable) // 406
@@ -321,12 +356,30 @@ namespace Pexita.Services
             return $"{BrandID}{ProductID}{UserID}{Datetime}";
         }
     }
+    /// <summary>
+    /// Info required for requesting a payment from IDPay as an object.
+    /// </summary>
     public class PaymentRequest
     {
+        /// <summary>
+        /// order id generated by our application.
+        /// </summary>
         public required string OrderId { get; set; }
+        /// <summary>
+        /// amount to be paid by client.
+        /// </summary>
         public required int Amount { get; set; }
+        /// <summary>
+        /// transaction description by client.
+        /// </summary>
         public string? Description { get; set; }
+        /// <summary>
+        /// foreign key pointing to shopping cart.
+        /// </summary>
         public required int ShoppingCartID { get; set; }
+        /// <summary>
+        /// the shopping cart the client is paying for.
+        /// </summary>
         public required ShoppingCartModel ShoppingCart { get; set; }
 
         public PaymentRequest(string Order_id, int Amount, string? Name, string? PhoneNumber, string? Email, string? Description, string CallBackAddress)
@@ -336,29 +389,72 @@ namespace Pexita.Services
             this.Description = Description;
         }
     }
-
+    /// <summary>
+    /// format of an Exception thrown by IDPay. used for binding.
+    /// </summary>
     public class PaymentErrorResponse
     {
+        /// <summary>
+        /// Error Code
+        /// </summary>
         public int Code { get; set; }
+        /// <summary>
+        /// Error Message
+        /// </summary>
         public string Message { get; set; }
     }
+    /// <summary>
+    /// The response sent by idpay showing payment creation has been successful and we can guide our user to the link given. 
+    /// </summary>
     public class PaymentCreationSuccessResponse
     {
-        public string Id { get; set; }
+        /// <summary>
+        /// payment id generated by idpay.
+        /// </summary>
+        public required string Id { get; set; }
+        /// <summary>
+        /// the URL of the terminal.
+        /// </summary>
         public required string Link { get; set; }
 
     }
+    /// <summary>
+    /// The response given by IDPay for validating a payment.
+    /// </summary>
     public class PaymentOutcomeValidationResponse
     {
+        /// <summary>
+        /// Payment Status as code
+        /// </summary>
         public required int Status { get; set; }
+        /// <summary>
+        /// the number you can use to get info about a transaction.
+        /// </summary>
         public required int TrackID { get; set; }
+        /// <summary>
+        /// a transactions identifier.
+        /// </summary>
         public required string TransactionID { get; set; } // Already in the DB record
+        /// <summary>
+        /// the order id generated by us
+        /// </summary>
         public required string OrderID { get; set; } // Already in the DB record
+        /// <summary>
+        /// the amount to pay by client.
+        /// </summary>
         public required int Amount { get; set; }
+        /// <summary>
+        /// cardNo of our client.
+        /// </summary>
         public required string CardNo { get; set; }
+        /// <summary>
+        /// hashed card number of our client.
+        /// </summary>
         public required string HashedCardNo { get; set; }
+        /// <summary>
+        /// time of when the transaction occurred.
+        /// </summary>
         public required long TransactionTime { get; set; }
 
     }
-
 }

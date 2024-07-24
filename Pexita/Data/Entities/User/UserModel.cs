@@ -14,9 +14,9 @@ namespace Pexita.Data.Entities.User
         public string Password { get; set; }
         public string Email { get; set; }
         public string Role { get; set; } = "user";
-        public required string PhoneNumber {  get; set; } // TODO: add phone number to mapping 
+        public required string PhoneNumber { get; set; } // TODO: add phone number to mapping 
         public List<Address> Addresses { get; set; }
-        public  DateTime DateCreated { get; set; }
+        public DateTime DateCreated { get; set; }
 
         //Navigation Properties
         public List<OrdersModel> Orders { get; set; }

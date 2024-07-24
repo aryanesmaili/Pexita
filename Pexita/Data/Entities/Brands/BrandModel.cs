@@ -1,7 +1,6 @@
 ﻿using Pexita.Data.Entities.Newsletter;
 using Pexita.Data.Entities.Orders;
 using Pexita.Data.Entities.Products;
-using Pexita.Data.Entities.User;
 
 namespace Pexita.Data.Entities.Brands
 {

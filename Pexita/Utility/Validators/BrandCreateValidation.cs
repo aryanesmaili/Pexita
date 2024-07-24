@@ -1,6 +1,5 @@
 ﻿using FluentValidation;
 using Pexita.Data.Entities.Brands;
-using Pexita.Services;
 using Pexita.Services.Interfaces;
 
 namespace Pexita.Utility.Validators

@@ -1,10 +1,9 @@
 ﻿using FluentValidation;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Pexita.Utility.Exceptions;
-using Pexita.Data.Entities.Comments;
 using Pexita.Data.Entities.Products;
 using Pexita.Services.Interfaces;
-using Microsoft.AspNetCore.Authorization;
+using Pexita.Utility.Exceptions;
 
 namespace Pexita.Controllers
 {
@@ -91,6 +90,7 @@ namespace Pexita.Controllers
         [HttpPost("product/add")]
         public async Task<IActionResult> AddProduct([FromBody] ProductCreateDTO product)
         {
+            var requestingUsername = _contextAccessor.HttpContext?.User.Identity?.Name;
             try
             {
                 if (product == null)
@@ -98,7 +98,7 @@ namespace Pexita.Controllers
 
                 await _productCreateValidator.ValidateAndThrowAsync(product);
 
-                _productService.AddProduct(product);
+                _productService.AddProduct(product, requestingUsername);
 
                 return Ok();
             }
@@ -131,7 +131,7 @@ namespace Pexita.Controllers
             try
             {
                 ProductInfoVM? update = null;
-                update = await _productService.PatchUpdateInfo(id, product, requestingUsername);
+                update = await _productService.PatchProductInfo(id, product, requestingUsername);
                 return Ok(update);
             }
             catch (NotFoundException)

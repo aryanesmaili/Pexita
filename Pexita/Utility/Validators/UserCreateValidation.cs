@@ -1,5 +1,4 @@
 ﻿using FluentValidation;
-using Microsoft.IdentityModel.Tokens;
 using Pexita.Data.Entities.User;
 using Pexita.Services.Interfaces;
 

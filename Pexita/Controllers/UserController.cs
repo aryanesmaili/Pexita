@@ -79,13 +79,10 @@ namespace Pexita.Controllers
         {
             try
             {
+                await _loginValidator.ValidateAndThrowAsync(loginVM);
+
                 var token = await _userService.Login(loginVM);
                 return Ok(token);
-            }
-
-            catch (NotAuthorizedException e)
-            {
-                return Unauthorized(e.Message);
             }
             catch (NotFoundException e)
             {
@@ -129,7 +126,7 @@ namespace Pexita.Controllers
                 return BadRequest(e.Message);
             }
         }
-        [Authorize(Policy ="AllUsers")]
+        [Authorize(Policy = "AllUsers")]
         [HttpPut("User/Edit")]
         public async Task<IActionResult> UpdateUser([FromBody] UserUpdateVM userUpdateVM)
         {

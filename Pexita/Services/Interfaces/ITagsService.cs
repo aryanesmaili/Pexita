@@ -1,5 +1,4 @@
-﻿using Pexita.Data.Entities.Products;
-using Pexita.Data.Entities.Tags;
+﻿using Pexita.Data.Entities.Tags;
 
 namespace Pexita.Services.Interfaces
 {
@@ -10,7 +9,7 @@ namespace Pexita.Services.Interfaces
         public TagInfoVM GetTagByID(int id);
         public TagInfoVM UpdateTag(int id, TagCreateVM product, string requestingUsername);
         public bool DeleteTag(int id, string requestingUsername);
-        public  List<TagInfoVM> TagsToVM(List<TagModel> tags);
+        public List<TagInfoVM> TagsToVM(List<TagModel> tags);
         public bool IsTag(int id);
         public bool IsTag(string TagName);
 

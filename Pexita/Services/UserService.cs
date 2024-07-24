@@ -265,7 +265,7 @@ namespace Pexita.Services
                 return false;
 
             UserModel User = _mapper.Map<UserModel>(userCreateVM);
-
+            User.Password = BCrypt.Net.BCrypt.HashPassword(User.Password);
             _Context.Users.Add(User);
 
             _Context.SaveChanges();

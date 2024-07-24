@@ -1,5 +1,4 @@
-﻿using Pexita.Data.Entities;
-namespace Pexita.Services
+﻿namespace Pexita.Services
 {
     public class EventDispatcher
     {

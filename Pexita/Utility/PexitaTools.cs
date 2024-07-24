@@ -5,6 +5,9 @@ using System.Text;
 using Pexita.Data.Entities.User;
 using Pexita.Services.Interfaces;
 using Pexita.Utility.Exceptions;
+using Microsoft.IdentityModel.Tokens;
+using Pexita.Data.Entities.Products;
+using Azure.Core;
 
 namespace Pexita.Utility
 {
@@ -29,40 +32,113 @@ namespace Pexita.Utility
             return true;
         }
 
-        public async Task<string> SaveProductImages(List<IFormFile> files, string identifier)
+        public async Task<string> SaveProductImages(List<IFormFile> files, string identifier, bool isUpdate = false)
         {
-            string imagePath = Path.Combine(_webHostEnvironment.WebRootPath, $"/Images/{identifier}");
+            if (string.IsNullOrWhiteSpace(identifier))
+                throw new ArgumentException("Identifier cannot be null or empty.", nameof(identifier));
+
+            string imagePath = Path.Combine(_webHostEnvironment.WebRootPath, $"Images/{identifier}");
+
+            // For POST requests or when the directory doesn't exist
+            if (!isUpdate || !Directory.Exists(imagePath))
+            {
+                if (!Directory.Exists(imagePath))
+                    Directory.CreateDirectory(imagePath);
+
+                return await SaveNewImages(files, imagePath, identifier);
+            }
+
+            // For PUT and PATCH requests
+            return await UpdateExistingImages(files, imagePath, identifier);
+        }
+        public async Task<string> SaveProductImages(IFormFile file, string identifier, bool isUpdate = false)
+        {
+            if (string.IsNullOrWhiteSpace(identifier))
+                throw new ArgumentException("Identifier cannot be null or empty.", nameof(identifier));
+
+            string imagePath = Path.Combine(_webHostEnvironment.WebRootPath, $"Images/{identifier}");
 
             if (!Directory.Exists(imagePath))
                 Directory.CreateDirectory(imagePath);
 
+            // If it's an update and the file is empty, don't overwrite existing file
+            if (isUpdate && (file == null || file.Length == 0))
+                return imagePath;
+
+            // Generate a unique filename
+            string uniqueFileName = $"{identifier}_{DateTime.UtcNow.Ticks}{Path.GetExtension(file.FileName)}";
+            string filePath = Path.Combine(imagePath, uniqueFileName);
+
+            // If it's an update, remove the old file (if it exists)
+            if (isUpdate)
+            {
+                var existingFiles = Directory.GetFiles(imagePath);
+                if (existingFiles.Length > 0)
+                {
+                    File.Delete(existingFiles[0]); // Assuming only one file per identifier
+                }
+            }
+
+            // Save the new file
+            using (var stream = new FileStream(filePath, FileMode.Create))
+            {
+                await file.CopyToAsync(stream);
+            }
+
+            return imagePath;
+        }
+        private static async Task<string> SaveNewImages(List<IFormFile> files, string imagePath, string identifier)
+        {
+            if (files == null || files.Count == 0)
+                return imagePath;
+
             for (int i = 0; i < files.Count; i++)
             {
-               
-                string uniqueFileName = $"{identifier}_{i:03}{Path.GetExtension(files[i].FileName)}";
+                string uniqueFileName = $"{identifier}_{i:000}{Path.GetExtension(files[i].FileName)}";
                 string filePath = Path.Combine(imagePath, uniqueFileName);
-
                 using (var stream = new FileStream(filePath, FileMode.Create))
                 {
                     await files[i].CopyToAsync(stream);
                 }
             }
+
             return imagePath;
         }
-        public async Task<string> SaveProductImages(IFormFile file, string identifier)
+        private static async Task<string> UpdateExistingImages(List<IFormFile> files, string imagePath, string identifier)
         {
-            string imagePath = Path.Combine(_webHostEnvironment.WebRootPath, $"/Images/{identifier}");
+            if (files == null || files.Count == 0)
+                return imagePath;
 
-            if (!Directory.Exists(imagePath))
-                Directory.CreateDirectory(imagePath);
+            var existingFiles = Directory.GetFiles(imagePath);
+            var existingFileNames = existingFiles.Select(Path.GetFileName).ToList();
 
-            string uniqueFileName = $"{identifier}_{DateTime.UtcNow.Ticks}{Path.GetExtension(file.FileName)}";
-            string filePath = Path.Combine(imagePath, uniqueFileName);
-
-            using (var stream = new FileStream(filePath, FileMode.Create))
+            for (int i = 0; i < files.Count; i++)
             {
-                await file.CopyToAsync(stream);
+                if (files[i].Length == 0) continue; // Skip empty files
+
+                string fileName = $"{identifier}_{i:000}{Path.GetExtension(files[i].FileName)}";
+                string filePath = Path.Combine(imagePath, fileName);
+
+                // If file exists and new file has content, overwrite
+                if (existingFileNames.Contains(fileName))
+                {
+                    using (var stream = new FileStream(filePath, FileMode.Create))
+                    {
+                        await files[i].CopyToAsync(stream);
+                    }
+                    existingFileNames.Remove(fileName);
+                }
+                // If file doesn't exist, create new
+                else
+                {
+                    using (var stream = new FileStream(filePath, FileMode.Create))
+                    {
+                        await files[i].CopyToAsync(stream);
+                    }
+                }
             }
+
+            // Remaining files in existingFileNames were not updated, so we keep them
 
             return imagePath;
         }
@@ -84,7 +160,6 @@ namespace Pexita.Utility
             return res;
         }
         public double GetRating(List<int> Ratings) => Ratings.Average();
-
         public string GenerateRandomPassword(int length)
         {
             Random random = new();
@@ -100,7 +175,6 @@ namespace Pexita.Utility
 
             return passwordBuilder.ToString();
         }
-
         public List<Address> ValidateAddresses(int UserID, List<Address> VMAddresses)
         {
 
@@ -127,5 +201,30 @@ namespace Pexita.Utility
             }
         }
 
+        public async Task<ProductModel> AuthorizeProductRequest(int id, string username)
+        {
+            if (string.IsNullOrEmpty(username))
+                throw new ArgumentNullException(nameof(username));
+
+            ProductModel product = _Context.Products
+                .Include(p => p.Brand)
+                .Include(p => p.Comments)
+                .Include(p => p.Tags)
+                .FirstOrDefault(p => p.ID == id)
+                ?? throw new NotFoundException($"Entity {id} not found in products.");
+
+            var reqUser = await _Context.Users.AsNoTracking()
+                .FirstOrDefaultAsync(x => x.Username == username)
+                ?? throw new NotFoundException($"User {username} not found in Users.");
+
+            bool isAdmin = reqUser.Role == "admin";
+            bool isOwner = reqUser.ID == product.Brand.ID;
+
+            if (!isAdmin && !isOwner)
+            {
+                throw new NotAuthorizedException($"User is not authorized to modify product {id}");
+            }
+            return product;
+        }
     }
 }

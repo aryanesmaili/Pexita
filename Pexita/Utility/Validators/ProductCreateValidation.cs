@@ -6,7 +6,7 @@ using Pexita.Services.Interfaces;
 
 namespace Pexita.Utility.Validators
 {
-    public class ProductCreateValidation : AbstractValidator<ProductCreateVM>
+    public class ProductCreateValidation : AbstractValidator<ProductCreateDTO>
     {
         private readonly IBrandService _brandService;
         private readonly ITagsService _tagsService;
@@ -59,7 +59,7 @@ namespace Pexita.Utility.Validators
                 .LessThanOrEqualTo(5).WithErrorCode("400").WithMessage("Rate cannot be more than 5");
         }
     }
-    public class ProductUpdateValidation : AbstractValidator<ProductUpdateVM>
+    public class ProductUpdateValidation : AbstractValidator<ProductUpdateDTO>
     {
         private readonly IBrandService _brandService;
         private readonly ITagsService _tagsService;

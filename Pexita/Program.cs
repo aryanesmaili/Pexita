@@ -3,13 +3,13 @@ using Pexita.Data;
 using Pexita.Services.Interfaces;
 using Pexita.Services;
 using Pexita.Utility;
-using FluentValidation.AspNetCore;
 using FluentValidation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Pexita.Data.Entities.Authentication;
 using System.Text;
-using System.Security.Claims;
+using Pexita.Data.Entities.SMTP;
+using Pexita.Data.Entities.Newsletter;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -26,7 +26,15 @@ builder.Services.AddAutoMapper(typeof(AutoMapperConfig));
 builder.Services.AddDbContext<AppDBContext>
     (options => options.UseSqlServer(builder.Configuration.GetConnectionString("DbTwo")));
 
-// automatically adds all validators of this project to DI pool.
+// Add the SMTP service to be able to send emails
+builder.Services.Configure<SMTPSettings>(builder.Configuration.GetSection("SmtpSettings"));
+builder.Services.AddTransient<IEmailService, EmailService>();
+
+// Add the Event driven system services
+builder.Services.AddSingleton<EventDispatcher>();
+builder.Services.AddTransient<ProductAvailableEventHandler>();
+
+// Automatically adds all validators of this project to DI pool.
 var assembly = typeof(Program).Assembly;
 builder.Services.AddValidatorsFromAssembly(assembly);
 
@@ -74,7 +82,11 @@ builder.Services.AddAuthorization(options =>
 });
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+var productAvailableEventHandler = app.Services.GetRequiredService<ProductAvailableEventHandler>();
+var event_dispatcher = app.Services.GetRequiredService<EventDispatcher>();
+event_dispatcher.RegisterHandler<ProductAvailableEvent>(productAvailableEventHandler.Handle);
+
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();

@@ -13,14 +13,14 @@ namespace Pexita.Controllers
     public class ProductsController : ControllerBase
     {
         private readonly IProductService _productService;
-        private readonly IValidator<ProductCreateVM> _productCreateValidator;
-        private readonly IValidator<ProductUpdateVM> _productUpdateValidator;
+        private readonly IValidator<ProductCreateDTO> _productCreateValidator;
+        private readonly IValidator<ProductUpdateDTO> _productUpdateValidator;
         private readonly IValidator<UpdateProductRateDTO> _productRateValidator;
         private readonly IValidator<ProductCommentDTO> _productCommentValidator;
         private readonly IHttpContextAccessor _contextAccessor;
 
-        public ProductsController(IProductService productService, IValidator<ProductCreateVM> productCreateValidator
-            , IValidator<ProductUpdateVM> productUpdateValidator, IValidator<UpdateProductRateDTO> productRateValidator, IValidator<ProductCommentDTO> productCommentValidator, IHttpContextAccessor contextAccessor)
+        public ProductsController(IProductService productService, IValidator<ProductCreateDTO> productCreateValidator
+            , IValidator<ProductUpdateDTO> productUpdateValidator, IValidator<UpdateProductRateDTO> productRateValidator, IValidator<ProductCommentDTO> productCommentValidator, IHttpContextAccessor contextAccessor)
         {
             _productService = productService;
             _productCreateValidator = productCreateValidator;
@@ -89,7 +89,7 @@ namespace Pexita.Controllers
 
         [Authorize(Policy = "Brand")]
         [HttpPost("product/add")]
-        public async Task<IActionResult> AddProduct([FromBody] ProductCreateVM product)
+        public async Task<IActionResult> AddProduct([FromBody] ProductCreateDTO product)
         {
             try
             {
@@ -124,8 +124,28 @@ namespace Pexita.Controllers
             }
         }
         [Authorize(Policy = "Brand")]
+        [HttpPatch("product/patch/{id}")]
+        public async Task<IActionResult> UpdateProductPartially(int id, [FromBody] ProductUpdateDTO product)
+        {
+            var requestingUsername = _contextAccessor.HttpContext?.User.Identity?.Name;
+            try
+            {
+                ProductInfoVM? update = null;
+                update = await _productService.PatchUpdateInfo(id, product, requestingUsername);
+                return Ok(update);
+            }
+            catch (NotFoundException)
+            {
+                return NotFound(id);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ex.Message);
+            }
+        }
+        [Authorize(Policy = "Brand")]
         [HttpPut("product/update/{id}")]
-        public async Task<IActionResult> UpdateProduct(int id, [FromBody] ProductUpdateVM product)
+        public async Task<IActionResult> UpdateProduct(int id, [FromBody] ProductUpdateDTO product)
         {
             var requestingUsername = _contextAccessor.HttpContext!.User?.Identity?.Name;
             try
@@ -173,7 +193,7 @@ namespace Pexita.Controllers
                 return StatusCode(StatusCodes.Status500InternalServerError, $"there was an error processing your request: {e.Message}");
             }
         }
-        [Authorize(Policy ="Brand")]
+        [Authorize(Policy = "Brand")]
         [HttpDelete("products/delete/{id}")]
         public async Task<IActionResult> DeleteProduct(int id)
         {
@@ -193,7 +213,7 @@ namespace Pexita.Controllers
                 return StatusCode(StatusCodes.Status500InternalServerError, $"there was an error processing your request: {e.Message}");
             }
         }
-        [Authorize(Policy ="AllUsers")]
+        [Authorize(Policy = "AllUsers")]
         [HttpPost("/product/Comments/Add/{id:int}")]
         public async Task<IActionResult> AddCommentToProduct(ProductCommentDTO commentDTO)
         {

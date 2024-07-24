@@ -4,7 +4,7 @@ using Pexita.Data.Entities.Tags;
 
 namespace Pexita.Data.Entities.Products
 {
-    public class ProductCreateVM
+    public class ProductCreateDTO
     {
         public string Title { get; set; }
         public string? Description { get; set; }
@@ -36,7 +36,20 @@ namespace Pexita.Data.Entities.Products
         public bool IsAvailable { get; set; }
         public DateTime DateCreated { get; set; }
     }
-    public class ProductUpdateVM
+    public class ProductUpdateDTO
+    {
+        public string Title { get; set; }
+        public string? Description { get; set; }
+        public double? Price { get; set; }
+        public int? Quantity { get; set; }
+        public string Brand { get; set; }
+        public double? Rate { get; set; }
+        public List<IFormFile> ProductPics { get; set; }
+        public bool IsAvailable { get; set; } = true;
+        public string Tags { get; set; }
+        public string? Colors { get; set; }
+    }
+    public class ProductPatchDTO
     {
         public string Title { get; set; }
         public string? Description { get; set; }

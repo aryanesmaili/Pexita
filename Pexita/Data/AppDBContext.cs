@@ -125,13 +125,25 @@ namespace Pexita.Data
                 .WithOne(u => u.User)
                 .HasForeignKey(u => u.UserID)
                 .OnDelete(DeleteBehavior.Cascade);
-                
+
+            modelBuilder.Entity<UserModel>()
+                .HasMany(pnl => pnl.ProductNewsletters)
+                .WithOne(u => u.User)
+                .HasForeignKey(u => u.UserID)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<UserModel>()
+                .HasMany(bnl => bnl.BrandNewsletters)
+                .WithOne(u => u.User)
+                .HasForeignKey(u => u.UserID)
+                .OnDelete(DeleteBehavior.Cascade);
         }
         public virtual DbSet<ProductModel> Products { get; set; }
         public DbSet<BrandModel> Brands { get; set; }
         public DbSet<CommentsModel> Comments { get; set; }
         public DbSet<OrdersModel> Orders { get; set; }
-        public DbSet<ProductNewsLetterModel> NewsLetters { get; set; }
+        public DbSet<ProductNewsLetterModel> ProductNewsletters { get; set; }
+        public DbSet<BrandNewsletterModel> BrandNewsletters { get; set; }
         public DbSet<PaymentModel> Payments { get; set; }
         public DbSet<ShoppingCartModel> ShoppingCarts { get; set; }
         public DbSet<TagModel> Tags { get; set; }

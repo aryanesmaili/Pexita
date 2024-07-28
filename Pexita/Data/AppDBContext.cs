@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Pexita.Data.Entities.Authentication;
 using Pexita.Data.Entities.Brands;
 using Pexita.Data.Entities.Comments;
 using Pexita.Data.Entities.Newsletter;
@@ -50,7 +51,6 @@ namespace Pexita.Data
                 .WithOne(ci => ci.Product)
                 .HasForeignKey(ci => ci.ProductID);
 
-            // TODO: Handle Deleteion of cartitems explicitly in corresponding service.
             modelBuilder.Entity<ShoppingCartModel>()
                 .HasMany(ci => ci.CartItems)
                 .WithOne(sc => sc.ShoppingCart)
@@ -137,6 +137,12 @@ namespace Pexita.Data
                 .WithOne(u => u.User)
                 .HasForeignKey(u => u.UserID)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<UserModel>()
+                .HasMany(t => t.RefreshTokens)
+                .WithOne(u => u.User)
+                .HasForeignKey(user => user.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
         }
         public virtual DbSet<ProductModel> Products { get; set; }
         public DbSet<BrandModel> Brands { get; set; }
@@ -150,5 +156,6 @@ namespace Pexita.Data
         public DbSet<UserModel> Users { get; set; }
         public DbSet<Address> Addresses { get; set; }
         public DbSet<BrandOrder> BrandOrder { get; set; }
+        public DbSet<RefreshToken> RefreshTokens { get; set; }
     }
 }

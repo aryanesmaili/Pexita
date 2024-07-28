@@ -3,7 +3,7 @@ using FluentValidation;
 using Microsoft.CodeAnalysis;
 using Microsoft.EntityFrameworkCore;
 using Pexita.Data;
-using Pexita.Data.Entities.Newsletter;
+using Pexita.Data.Entities.Events;
 using Pexita.Data.Entities.Products;
 using Pexita.Services.Interfaces;
 using Pexita.Utility.Exceptions;
@@ -44,11 +44,10 @@ namespace Pexita.Services
             await _pexitaTools.AuthorizeProductCreationAsync(product.Brand, requestingUsername);
 
             ProductModel NewProduct = _mapper.Map<ProductModel>(product);
-
+            BrandNewProductEvent Event = new() { Brand = NewProduct.Brand, BrandID = NewProduct.BrandID, Product = NewProduct, ProductID = NewProduct.ID };
             _Context.Products.Add(NewProduct);
             _Context.SaveChanges();
             return true;
-
         }
         /// <summary>
         /// Get the list of products along with their brands, comments and tags.
@@ -137,7 +136,7 @@ namespace Pexita.Services
             if (NotInStock && product.Quantity > 0)
             {
                 var eventMessage = new ProductAvailableEvent(id); // Product has changed its state to "In stock" so we're publishing an event.
-                _eventdispatcher.Dispatch(eventMessage);
+                await _eventdispatcher.DispatchAsync(eventMessage);
             }
             return ProductModelToInfoVM(productModel);
         }
@@ -216,7 +215,7 @@ namespace Pexita.Services
             if (NotInStock && productDTO.Quantity > 0)
             {
                 var eventMessage = new ProductAvailableEvent(product.ID);
-                _eventdispatcher.Dispatch(eventMessage);
+                await _eventdispatcher.DispatchAsync(eventMessage);
             }
 
             return ProductModelToInfoVM(product);

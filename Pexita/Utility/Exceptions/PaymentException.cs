@@ -136,7 +136,6 @@
             {
             }
         }
-        // TODO: Translate more errors
         public class InvalidTransactionStatusFilterException : Exception
         {
             public InvalidTransactionStatusFilterException() : base("فیلتر وضعیت تراکنش ها می بایست آرایه ای (لیستی) از وضعیت های مجاز در مستندات باشد.")

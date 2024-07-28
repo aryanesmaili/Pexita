@@ -17,6 +17,8 @@ namespace Pexita.Services.Interfaces
         public Task<ProductModel> AuthorizeProductAccessAsync(int id, string Username);
         public Task AuthorizeProductCreationAsync(string targetBrand, string reqUser);
         public Task<BrandModel> AuthorizeBrandAccessAsync(int id, string Username);
-
+        public Task<UserModel> AuthorizeUserAccessAsync(int userID, string Username);
+        public string GenerateJWToken(string Username, string Role, string Email);
+        public string GenerateRefreshToken();
     }
 }

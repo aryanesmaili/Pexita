@@ -17,13 +17,15 @@ namespace Pexita.Controllers
         private readonly IValidator<UserUpdateVM> _updateValidator;
         private readonly IValidator<Address> _addressValidator;
         private readonly IHttpContextAccessor _contextAccessor;
+        private readonly INewsletterService _newsletterService;
 
         public UserController(IUserService userService,
             IValidator<UserCreateVM> CreateValidator,
             IValidator<UserLoginVM> LoginValidator,
             IValidator<UserUpdateVM> UpdateValidator,
             IValidator<Address> addressValidator,
-            IHttpContextAccessor contextAccessor)
+            IHttpContextAccessor contextAccessor,
+            INewsletterService newsletterService)
         {
             _userService = userService;
             _createValidator = CreateValidator;
@@ -31,6 +33,7 @@ namespace Pexita.Controllers
             _updateValidator = UpdateValidator;
             _addressValidator = addressValidator;
             _contextAccessor = contextAccessor;
+            _newsletterService = newsletterService;
         }
 
 
@@ -45,6 +48,10 @@ namespace Pexita.Controllers
             {
                 return NotFound(e.Message);
             }
+            catch (Exception e)
+            {
+                return StatusCode(500, e.Message);
+            }
         }
 
         [HttpGet("Users/get/{id:int}")]
@@ -57,6 +64,10 @@ namespace Pexita.Controllers
             catch (NotFoundException e)
             {
                 return NotFound(e.Message);
+            }
+            catch (Exception e)
+            {
+                return StatusCode(500, e.Message);
             }
         }
 
@@ -72,6 +83,10 @@ namespace Pexita.Controllers
             {
                 return NotFound(e.Message);
 
+            }
+            catch (Exception e)
+            {
+                return StatusCode(500, e.Message);
             }
         }
         [HttpPost("Auth/Login")]
@@ -100,20 +115,21 @@ namespace Pexita.Controllers
         {
             try
             {
-                bool result = false;
-
                 if (userCreateVM == null)
                     throw new ArgumentNullException($"{nameof(userCreateVM)} is Null");
 
                 await _createValidator.ValidateAndThrowAsync(userCreateVM);
-                result = await _userService.Register(userCreateVM);
+                var result = await _userService.Register(userCreateVM);
 
-                return Ok();
+                return Ok(result);
             }
-
+            catch (NotAuthorizedException)
+            {
+                return Unauthorized();
+            }
             catch (ValidationException e)
             {
-                throw new ValidationException(e.Message);
+                return BadRequest(e.Message);
             }
 
             catch (NotFoundException e)
@@ -124,6 +140,32 @@ namespace Pexita.Controllers
             catch (ArgumentNullException e)
             {
                 return BadRequest(e.Message);
+            }
+            catch (Exception e)
+            {
+                return StatusCode(500, e.Message);
+            }
+        }
+        [Authorize(Policy = "AllUsers")]
+        public async Task<IActionResult> Logout([FromBody] string logout)
+        {
+            try
+            {
+                await _userService.RevokeToken(logout);
+
+                return Ok();
+            }
+            catch (ArgumentNullException)
+            {
+                return BadRequest(logout);
+            }
+            catch (NotFoundException e)
+            {
+                return NotFound(e.Message);
+            }
+            catch (Exception e)
+            {
+                return StatusCode(500, e.Message);
             }
         }
         [Authorize(Policy = "AllUsers")]
@@ -139,11 +181,14 @@ namespace Pexita.Controllers
                     throw new ArgumentNullException($"{nameof(userUpdateVM)} is Null");
 
                 await _updateValidator.ValidateAndThrowAsync(userUpdateVM);
-                result = await _userService.UpdateUser(userUpdateVM, requestingUsername);
+                result = await _userService.UpdateUser(userUpdateVM, requestingUsername!);
 
                 return Ok(result);
             }
-
+            catch (NotAuthorizedException e)
+            {
+                return Unauthorized(e.Message);
+            }
             catch (ValidationException e)
             {
                 return BadRequest(e.Message);
@@ -158,21 +203,20 @@ namespace Pexita.Controllers
             {
                 return BadRequest(e.Message);
             }
+            catch (Exception e)
+            {
+                return StatusCode(500, e.Message);
+            }
         }
-        [Authorize(Policy = "AllUsers")]
         [HttpPut("User/ResetPassword")]
-        public async Task<IActionResult> ResetPassword([FromBody] UserLoginVM userLoginVM)
+        public async Task<IActionResult> ResetPassword([FromBody] string userInfo)
         {
-            var requestingUsername = _contextAccessor.HttpContext!.User?.Identity?.Name;
-
             try
             {
-                UserLoginVM? result = null;
 
-                await _loginValidator.ValidateAndThrowAsync(userLoginVM);
-                result = await _userService.ResetPassword(userLoginVM, requestingUsername);
+                UserInfoVM user = await _userService.ResetPassword(userInfo);
 
-                return Ok(result);
+                return Ok(user);
             }
 
             catch (ValidationException e)
@@ -183,21 +227,69 @@ namespace Pexita.Controllers
             catch (NotFoundException e)
             {
                 return NotFound(e.Message);
+            }
+            catch (Exception e)
+            {
+                return StatusCode(500, e.Message);
+            }
+        }
+        [HttpPost("User/CheckResetCode")]
+        public async Task<IActionResult> CheckResetCode([FromBody] UserInfoVM user, [FromBody] string Code)
+        {
+            try
+            {
+                var result = await _userService.CheckResetCode(user, Code);
+                return Ok(result);
+            }
+            catch (ArgumentNullException e)
+            {
+                return BadRequest(e.Message);
+            }
+            catch (NotFoundException e)
+            {
+                return NotFound(e.Message);
+            }
+            catch (Exception e)
+            {
+                return StatusCode(500, e.Message);
             }
         }
         [Authorize(Policy = "AllUsers")]
         [HttpPut("User/ChangePassword")]
-        public async Task<IActionResult> ChangePassword([FromBody] UserLoginVM userLoginVM)
+        public async Task<IActionResult> ChangePassword([FromBody] UserInfoVM userID, [FromBody] string newPassword, [FromBody] string confirmPassword)
         {
             var requestingUsername = _contextAccessor.HttpContext!.User?.Identity?.Name;
-
             try
             {
+                var result = await _userService.ChangePassword(userID, newPassword, confirmPassword, requestingUsername!);
 
-                bool result = false;
+                return Ok(result);
+            }
+            catch (NotAuthorizedException e)
+            {
+                return Unauthorized(e.Message);
+            }
+            catch (ValidationException e)
+            {
+                return BadRequest(e.Message);
+            }
 
-                await _loginValidator.ValidateAndThrowAsync(userLoginVM);
-                result = await _userService.ChangePassword(userLoginVM, requestingUsername);
+            catch (NotFoundException e)
+            {
+                return NotFound(e.Message);
+            }
+            catch (Exception e)
+            {
+                return StatusCode(500, e.Message);
+            }
+        }
+        [Authorize(Policy = "AllUsers")]
+        [HttpPost("User/RefreshToken")]
+        public async Task<IActionResult> RefreshToken([FromBody] string refreshToken)
+        {
+            try
+            {
+                var result = await _userService.TokenRefresher(refreshToken);
 
                 return Ok(result);
             }
@@ -210,6 +302,10 @@ namespace Pexita.Controllers
             catch (NotFoundException e)
             {
                 return NotFound(e.Message);
+            }
+            catch (Exception e)
+            {
+                return StatusCode(500, e.Message);
             }
         }
         [Authorize(Policy = "AllUsers")]
@@ -220,11 +316,20 @@ namespace Pexita.Controllers
 
             try
             {
-                return await _userService.DeleteUser(id, requestingUsername) ? Ok() : StatusCode(StatusCodes.Status500InternalServerError);
+                await _userService.DeleteUser(id, requestingUsername!);
+                return Ok();
+            }
+            catch (NotAuthorizedException e)
+            {
+                return Unauthorized(e.Message);
             }
             catch (NotFoundException)
             {
                 return NotFound($"User with ID:{id} not Found");
+            }
+            catch (Exception e)
+            {
+                return StatusCode(500, e.Message);
             }
         }
         [Authorize(Policy = "AllUsers")]
@@ -237,9 +342,17 @@ namespace Pexita.Controllers
             {
                 return Ok(await _userService.GetAddresses(id, requestingUsername));
             }
+            catch (NotAuthorizedException e)
+            {
+                return Unauthorized(e.Message);
+            }
             catch (NotFoundException)
             {
                 return NotFound($"User with ID:{id} not Found");
+            }
+            catch (Exception e)
+            {
+                return StatusCode(500, e.Message);
             }
         }
         [Authorize(Policy = "AllUsers")]
@@ -250,17 +363,19 @@ namespace Pexita.Controllers
 
             try
             {
-                bool result = false;
                 if (address == null)
                     throw new ArgumentNullException($"{nameof(address)} is Null");
 
-                if (_addressValidator.Validate(address, options => options.ThrowOnFailures()).IsValid)
-                    result = await _userService.AddAddress(id, address, requestingUsername);
+                await _addressValidator.ValidateAndThrowAsync(address); 
+                await _userService.AddAddress(id, address, requestingUsername!);
 
-                return Ok(false);
+                return Ok();
 
             }
-
+            catch (NotAuthorizedException e)
+            {
+                return Unauthorized(e.Message);
+            }
             catch (NotFoundException)
             {
                 return NotFound($"Address ID : {address.ID} Not found");
@@ -275,6 +390,10 @@ namespace Pexita.Controllers
             {
                 return BadRequest(e.Message);
             }
+            catch (Exception e)
+            {
+                return StatusCode(500, e.Message);
+            }
         }
         [Authorize(Policy = "AllUsers")]
         [HttpPut("User/Address/Edit/{id:int}")]
@@ -284,12 +403,20 @@ namespace Pexita.Controllers
 
             try
             {
-                return Ok(await _userService.UpdateAddress(id, address, requestingUsername));
+                await _userService.UpdateAddress(id, address, requestingUsername!);
+                return Ok();
             }
-
+            catch (NotAuthorizedException e)
+            {
+                return Unauthorized(e.Message);
+            }
             catch (NotFoundException e)
             {
                 return NotFound(e.Message);
+            }
+            catch (Exception e)
+            {
+                return StatusCode(500, e.Message);
             }
         }
         [Authorize(Policy = "AllUsers")]
@@ -301,9 +428,13 @@ namespace Pexita.Controllers
             try
             {
                 await _addressValidator.ValidateAndThrowAsync(address);
-                return Ok(await _userService.DeleteAddress(id, address.ID, requestingUsername));
+                await _userService.DeleteAddress(id, address.ID, requestingUsername!);
+                return Ok();
             }
-
+            catch (NotAuthorizedException e)
+            {
+                return Unauthorized(e.Message);
+            }
             catch (NotFoundException e)
             {
                 return NotFound(e.Message);
@@ -313,7 +444,6 @@ namespace Pexita.Controllers
                 return BadRequest(e.Message);
             }
         }
-
         [HttpGet("User/Comments/{id:int}")]
         public IActionResult GetComments(int id)
         {
@@ -325,6 +455,66 @@ namespace Pexita.Controllers
             catch (NotFoundException e)
             {
                 return NotFound(e.Message);
+            }
+            catch (Exception e)
+            {
+                return StatusCode(500, e.Message);
+            }
+        }
+        [Authorize(Policy = "OnlyUsers")]
+        [HttpPost("User/Newsletters/Add/Product")]
+        public async Task<IActionResult> AddProductNewsletter([FromBody] int UserID, [FromBody] int ProductID)
+        {
+            var requestingUsername = _contextAccessor.HttpContext!.User?.Identity?.Name;
+            try
+            {
+                await _newsletterService.AddProductNewsLetter(UserID, ProductID, requestingUsername!);
+
+                return Ok(ProductID);
+            }
+            catch (ArgumentNullException e)
+            {
+                return BadRequest(e.Message);
+            }
+            catch (NotFoundException e)
+            {
+                return NotFound(e.Message);
+            }
+            catch (NotAuthorizedException)
+            {
+                return Unauthorized(UserID);
+            }
+            catch (Exception e)
+            {
+                return StatusCode(500, e.Message);
+            }
+        }
+        [Authorize(Policy = "OnlyUsers")]
+        [HttpPost("User/Newsletters/Add/Brand")]
+        public async Task<IActionResult> AddBrandNewsletter([FromBody] int UserID, [FromBody] int ProductID)
+        {
+            var requestingUsername = _contextAccessor.HttpContext!.User?.Identity?.Name;
+            try
+            {
+                await _newsletterService.AddBrandNewProductNewsLetter(UserID, ProductID, requestingUsername!);
+
+                return Ok(ProductID);
+            }
+            catch (ArgumentNullException e)
+            {
+                return BadRequest(e.Message);
+            }
+            catch (NotFoundException e)
+            {
+                return NotFound(e.Message);
+            }
+            catch (NotAuthorizedException)
+            {
+                return Unauthorized(UserID);
+            }
+            catch (Exception e)
+            {
+                return StatusCode(500, e.Message);
             }
         }
     }

@@ -1,11 +1,16 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using Pexita.Data;
+using Pexita.Data.Entities.Authentication;
 using Pexita.Data.Entities.Brands;
 using Pexita.Data.Entities.Products;
 using Pexita.Data.Entities.Tags;
 using Pexita.Data.Entities.User;
 using Pexita.Services.Interfaces;
 using Pexita.Utility.Exceptions;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
 
 namespace Pexita.Services
@@ -14,10 +19,12 @@ namespace Pexita.Services
     {
         private readonly IWebHostEnvironment _webHostEnvironment;
         private readonly AppDBContext _Context;
-        public PexitaTools(IWebHostEnvironment webHostEnvironment, AppDBContext Context)
+        private readonly JwtSettings _jwtSettings;
+        public PexitaTools(IWebHostEnvironment webHostEnvironment, AppDBContext Context, JwtSettings jwtSettings)
         {
             _webHostEnvironment = webHostEnvironment;
             _Context = Context;
+            _jwtSettings = jwtSettings;
         }
         /// <summary>
         /// checks if a given picture file is valid.
@@ -352,6 +359,75 @@ namespace Pexita.Services
                 throw new NotAuthorizedException($"User {username} is not authorized to modify brand {id}");
             }
             return brand;
+        }
+        /// <summary>
+        /// Checks if a username as enough authorization to modify a user records' info.
+        /// </summary>
+        /// <param name="id"> id of the user record to be modified.</param>
+        /// <param name="Username">Username of the user trying to modify.</param>
+        /// <returns></returns>
+        /// <exception cref="ArgumentNullException"></exception>
+        /// <exception cref="NotFoundException"></exception>
+        /// <exception cref="NotAuthorizedException"></exception>
+        public async Task<UserModel> AuthorizeUserAccessAsync(int id, string Username)
+        {
+            if (string.IsNullOrEmpty(Username))
+                throw new ArgumentNullException(nameof(Username));
+
+            UserModel user = await _Context.Users.Include(a => a.Addresses).FirstOrDefaultAsync(u => u.ID == id) ?? throw new NotFoundException($"User {id} not found in Users Table.");
+            var reqUser = await _Context.Users.AsNoTracking().FirstOrDefaultAsync(x => x.Username == Username) ?? throw new NotFoundException($"User {id} not found in Users Table.");
+
+            bool isAdmin = reqUser.Role == "admin";
+            bool isOwner = user.ID == reqUser.ID;
+
+            if (!isAdmin && !isOwner)
+            {
+                throw new NotAuthorizedException($"User {Username} is not authorized to modify User {id}");
+            }
+            return user;
+        }
+        /// <summary>
+        /// Generates a JWToken for a user based on their creds
+        /// </summary>
+        /// <param name="Username"></param>
+        /// <param name="Role"></param>
+        /// <param name="Email"></param>
+        /// <returns> a string containing JWT token</returns>
+        public string GenerateJWToken(string Username, string Role, string Email)
+        {
+            var tokenHandler = new JwtSecurityTokenHandler();
+            var key = Encoding.ASCII.GetBytes(_jwtSettings.SecretKey);
+
+            var tokenDescriptor = new SecurityTokenDescriptor
+            {
+                Subject = new ClaimsIdentity(new[]
+                {
+                    new Claim(ClaimTypes.Name, Username),
+                    new Claim(ClaimTypes.Role, Role),
+                    new Claim(ClaimTypes.Email, Email),
+                }),
+                Expires = DateTime.UtcNow.AddMinutes(_jwtSettings.ExpiresInMinutes),
+                SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature),
+                Issuer = _jwtSettings.Issuer,
+                Audience = _jwtSettings.Audience,
+            };
+
+            var token = tokenHandler.CreateToken(tokenDescriptor);
+            return tokenHandler.WriteToken(token);
+        }
+        /// <summary>
+        /// Generates the refresh token needed for user to refresh their JWToken.
+        /// </summary>
+        /// <returns>a random string containing the new RefreshToken</returns>
+        /// <exception cref="NotImplementedException"></exception>
+        public string GenerateRefreshToken()
+        {
+            var randomBytes = new byte[64];
+            using (var rng = RandomNumberGenerator.Create())
+            {
+                rng.GetBytes(randomBytes);
+                return Convert.ToBase64String(randomBytes);
+            }
         }
     }
 }

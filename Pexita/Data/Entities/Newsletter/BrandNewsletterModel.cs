@@ -7,9 +7,9 @@ namespace Pexita.Data.Entities.Newsletter
     {
         public int ID { get; set; }
         public int BrandID { get; set; }
-        public BrandModel? Brand { get; set; }
-
+        public required BrandModel Brand { get; set; }
         public int UserID { get; set; }
-        public UserModel User { get; set; }
+        public required UserModel User { get; set; }
+        public DateTime SubscribedAt { get; set; }
     }
 }

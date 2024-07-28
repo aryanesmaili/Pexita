@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Pexita.Data;
 using Pexita.Data.Entities.Authentication;
-using Pexita.Data.Entities.Newsletter;
+using Pexita.Data.Entities.Events;
 using Pexita.Data.Entities.SMTP;
 using Pexita.Services;
 using Pexita.Services.Interfaces;
@@ -53,15 +53,15 @@ builder.Services.AddSingleton(jwtSettings);
 
 var key = Encoding.ASCII.GetBytes(jwtSettings.SecretKey);
 
-builder.Services.AddAuthentication(x =>
+builder.Services.AddAuthentication(auth =>
 {
-    x.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-    x.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-}).AddJwtBearer(x =>
+    auth.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    auth.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+}).AddJwtBearer(jwtbearer =>
 {
-    x.RequireHttpsMetadata = true;
-    x.SaveToken = true;
-    x.TokenValidationParameters = new TokenValidationParameters
+    jwtbearer.RequireHttpsMetadata = true;
+    jwtbearer.SaveToken = true;
+    jwtbearer.TokenValidationParameters = new TokenValidationParameters
     {
         ValidateIssuer = true,
         ValidateAudience = true,
@@ -83,9 +83,10 @@ builder.Services.AddAuthorization(options =>
 var app = builder.Build();
 
 var productAvailableEventHandler = app.Services.GetRequiredService<ProductAvailableEventHandler>();
+var BrandAvailableEventHandler = app.Services.GetRequiredService<BrandNewProductEventHandler>();
 var event_dispatcher = app.Services.GetRequiredService<EventDispatcher>();
-event_dispatcher.RegisterHandler<ProductAvailableEvent>(productAvailableEventHandler.Handle);
-
+event_dispatcher.RegisterHandlerAsync<ProductAvailableEvent>(productAvailableEventHandler.Handle);
+event_dispatcher.RegisterHandler<BrandNewProductEvent>(BrandAvailableEventHandler.Handle);
 
 if (app.Environment.IsDevelopment())
 {

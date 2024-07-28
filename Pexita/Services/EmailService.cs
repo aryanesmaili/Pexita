@@ -15,18 +15,18 @@ namespace Pexita.Services
 
         public void SendEmail(string to, string subject, string body)
         {
-            var smtpClient = new SmtpClient(_smtpSettings.Server, _smtpSettings.Port)
+            SmtpClient smtpClient = new SmtpClient(_smtpSettings.Server, _smtpSettings.Port)
             {
                 Credentials = new NetworkCredential(_smtpSettings.Username, _smtpSettings.Password),
                 EnableSsl = true
             };
 
-            var mailMessage = new MailMessage
+            MailMessage mailMessage = new MailMessage
             {
                 From = new MailAddress(_smtpSettings.SenderEmail, _smtpSettings.SenderName),
                 Subject = subject,
                 Body = body,
-                IsBodyHtml = true,
+                IsBodyHtml = false,
             };
 
             mailMessage.To.Add(to);

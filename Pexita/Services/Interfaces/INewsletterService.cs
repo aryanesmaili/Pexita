@@ -1,9 +1,8 @@
-﻿using Pexita.Data.Entities.User;
-
-namespace Pexita.Services.Interfaces
+﻿namespace Pexita.Services.Interfaces
 {
     public interface INewsletterService
     {
-        public bool AddProductNewsLetter(UserInfoVM user);
+        public Task AddProductNewsLetter(int UserID, int productid, string requestingUsername);
+        public Task AddBrandNewProductNewsLetter(int UserID, int BrandID, string requestingUsername);
     }
 }

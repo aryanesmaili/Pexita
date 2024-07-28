@@ -74,7 +74,6 @@ namespace Pexita.Utility.Validators
 
             RuleFor(x => x.Text).NotEmpty();
 
-            // TODO: Validate these with Regex or External Package
             RuleFor(x => x.Province).NotEmpty().Must(x => _iranAPI.IsStateValid(x).Result);
             RuleFor(x => x.City).NotEmpty().Must((state, city) => _iranAPI.IsCityValid(state.Province, city).Result);
             RuleFor(x => x.PostalCode).NotEmpty().Matches(@"\\b(?!(\\d)\\1{3})[13-9]{4}[1346-9][013-9]{5}\\b"); // regex for IR Postal Codes

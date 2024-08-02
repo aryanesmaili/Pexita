@@ -147,6 +147,7 @@ namespace Pexita.Controllers
             }
         }
         [Authorize(Policy = "AllUsers")]
+        [HttpPost("User/Logout")]
         public async Task<IActionResult> Logout([FromBody] string logout)
         {
             try
@@ -234,7 +235,7 @@ namespace Pexita.Controllers
             }
         }
         [HttpPost("User/CheckResetCode")]
-        public async Task<IActionResult> CheckResetCode([FromBody] UserInfoVM user, [FromBody] string Code)
+        public async Task<IActionResult> CheckResetCode([FromBody] UserInfoVM user, [FromQuery] string Code)
         {
             try
             {
@@ -256,7 +257,7 @@ namespace Pexita.Controllers
         }
         [Authorize(Policy = "AllUsers")]
         [HttpPut("User/ChangePassword")]
-        public async Task<IActionResult> ChangePassword([FromBody] UserInfoVM userID, [FromBody] string newPassword, [FromBody] string confirmPassword)
+        public async Task<IActionResult> ChangePassword([FromBody] UserInfoVM userID, [FromForm] string newPassword, [FromForm] string confirmPassword)
         {
             var requestingUsername = _contextAccessor.HttpContext!.User?.Identity?.Name;
             try
@@ -463,7 +464,7 @@ namespace Pexita.Controllers
         }
         [Authorize(Policy = "OnlyUsers")]
         [HttpPost("User/Newsletters/Add/Product")]
-        public async Task<IActionResult> AddProductNewsletter([FromBody] int UserID, [FromBody] int ProductID)
+        public async Task<IActionResult> AddProductNewsletter([FromQuery] int UserID, [FromQuery] int ProductID)
         {
             var requestingUsername = _contextAccessor.HttpContext!.User?.Identity?.Name;
             try
@@ -491,7 +492,7 @@ namespace Pexita.Controllers
         }
         [Authorize(Policy = "OnlyUsers")]
         [HttpPost("User/Newsletters/Add/Brand")]
-        public async Task<IActionResult> AddBrandNewsletter([FromBody] int UserID, [FromBody] int ProductID)
+        public async Task<IActionResult> AddBrandNewsletter([FromQuery] int UserID, [FromQuery] int ProductID)
         {
             var requestingUsername = _contextAccessor.HttpContext!.User?.Identity?.Name;
             try

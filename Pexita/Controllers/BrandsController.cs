@@ -31,7 +31,7 @@ namespace Pexita.Controllers
             _userLoginValidator = userLoginValidator;
         }
 
-        [HttpGet("Brands")]
+        [HttpGet]
         public IActionResult GetAllBrands()
         {
             try
@@ -52,7 +52,7 @@ namespace Pexita.Controllers
                 return BadRequest(e.Message);
             }
         }
-        [HttpGet("Brands/Get/{count:int}")]
+        [HttpGet("Get/{count:int}")]
         public IActionResult GetAllBrands(int count)
         {
             try
@@ -67,6 +67,10 @@ namespace Pexita.Controllers
             catch (InvalidOperationException e)
             {
                 return StatusCode(StatusCodes.Status500InternalServerError, e.Message);
+            }
+            catch (IndexOutOfRangeException e)
+            {
+                return BadRequest(e.Message);
             }
             catch (Exception e)
             {
@@ -91,7 +95,7 @@ namespace Pexita.Controllers
             }
         }
 
-        [HttpPost]
+        [HttpPost("Login")]
         public async Task<IActionResult> Login(UserLoginVM brand)
         {
             try

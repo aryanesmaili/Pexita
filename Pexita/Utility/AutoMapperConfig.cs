@@ -19,12 +19,16 @@ namespace Pexita.Utility
         private readonly IPexitaTools _pexitaTools;
         private readonly ITagsService _tagsService;
 
-        public AutoMapperConfig(IBrandService brandService, IProductService productService, IPexitaTools pexitaTools, ITagsService TagsService)
+        public AutoMapperConfig()
         {
-            _brandService = brandService;
-            _productService = productService;
-            _pexitaTools = pexitaTools;
-            _tagsService = TagsService;
+            
+        }
+        public AutoMapperConfig(IServiceProvider serviceProvider)
+        {
+            _brandService = serviceProvider.GetRequiredService<IBrandService>();
+            _productService = serviceProvider.GetRequiredService<IProductService>();
+            _pexitaTools = serviceProvider.GetRequiredService<IPexitaTools>();
+            _tagsService = serviceProvider.GetRequiredService<ITagsService>();
 
             CreateMap<ProductCreateDTO, ProductModel>()
                 .ForMember(Product => Product.Brand, opt => opt.MapFrom(src => _brandService.GetBrandByName(src.Brand)))

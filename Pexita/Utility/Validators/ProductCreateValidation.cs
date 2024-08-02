@@ -98,10 +98,10 @@ namespace Pexita.Utility.Validators
     }
     public class ProductCommentValidation : AbstractValidator<ProductCommentDTO>
     {
-        private readonly ProductService _productService;
-        private readonly UserService userService;
+        private readonly IProductService _productService;
+        private readonly IUserService userService;
 
-        public ProductCommentValidation(ProductService productService, UserService userService)
+        public ProductCommentValidation(IProductService productService, IUserService userService)
         {
             this.userService = userService;
             _productService = productService;

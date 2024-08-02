@@ -33,13 +33,13 @@ namespace Pexita.Data
                 .HasOne(bo => bo.Brand)
                 .WithMany(b => b.BrandOrders)
                 .HasForeignKey(bo => bo.BrandID)
-                .OnDelete(DeleteBehavior.SetNull);
+                .OnDelete(DeleteBehavior.NoAction);
 
             modelBuilder.Entity<BrandOrder>()
                 .HasOne(bo => bo.Order)
                 .WithMany(o => o.BrandOrders)
                 .HasForeignKey(bo => bo.OrderID)
-                .OnDelete(DeleteBehavior.SetNull);
+                .OnDelete(DeleteBehavior.NoAction);
 
             modelBuilder.Entity<ProductModel>()
                 .HasOne(p => p.Brand)

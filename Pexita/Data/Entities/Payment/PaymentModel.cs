@@ -19,4 +19,10 @@ namespace Pexita.Data.Entities.Payment
         public int? ShoppingCartID { get; set; } // !
         public ShoppingCartModel? ShoppingCart { get; set; } // !
     }
+    public class PaymentSettings
+    {
+        public required string APIKey { get; set; }
+        public required string CallbackAddress { get; set; }
+        public bool isTest { get; set; }
+    }
 }

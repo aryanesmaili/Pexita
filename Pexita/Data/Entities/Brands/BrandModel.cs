@@ -1,4 +1,5 @@
-﻿using Pexita.Data.Entities.Newsletter;
+﻿using Microsoft.EntityFrameworkCore;
+using Pexita.Data.Entities.Newsletter;
 using Pexita.Data.Entities.Orders;
 using Pexita.Data.Entities.Products;
 
@@ -22,12 +23,13 @@ namespace Pexita.Data.Entities.Brands
         public List<ProductNewsLetterModel>? ProductNewsLetters { get; set; }
 
     }
+
     public class BrandOrder
     {
         public int BrandID { get; set; }
-        public BrandModel Brand { get; set; }
+        public required BrandModel Brand { get; set; }
 
         public int OrderID { get; set; }
-        public OrdersModel Order { get; set; }
+        public required OrdersModel Order { get; set; }
     }
 }

@@ -1,4 +1,5 @@
-﻿using Pexita.Data.Entities.SMTP;
+﻿using Microsoft.Extensions.Options;
+using Pexita.Data.Entities.SMTP;
 using Pexita.Services.Interfaces;
 using System.Net;
 using System.Net.Mail;
@@ -8,9 +9,9 @@ namespace Pexita.Services
     {
         private readonly SMTPSettings _smtpSettings;
 
-        public EmailService(SMTPSettings smtpSettings)
+        public EmailService(IOptions<SMTPSettings> smtpSettings)
         {
-            _smtpSettings = smtpSettings;
+            _smtpSettings = smtpSettings.Value;
         }
 
         public void SendEmail(string to, string subject, string body)

@@ -17,10 +17,41 @@ namespace Pexita.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "7.0.9")
+                .HasAnnotation("ProductVersion", "8.0.7")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
+
+            modelBuilder.Entity("Pexita.Data.Entities.Authentication.RefreshToken", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("Created")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("Expires")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("Revoked")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Token")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("RefreshTokens");
+                });
 
             modelBuilder.Entity("Pexita.Data.Entities.Brands.BrandModel", b =>
                 {
@@ -58,6 +89,21 @@ namespace Pexita.Migrations
                     b.HasKey("ID");
 
                     b.ToTable("Brands");
+                });
+
+            modelBuilder.Entity("Pexita.Data.Entities.Brands.BrandOrder", b =>
+                {
+                    b.Property<int>("BrandID")
+                        .HasColumnType("int");
+
+                    b.Property<int>("OrderID")
+                        .HasColumnType("int");
+
+                    b.HasKey("BrandID", "OrderID");
+
+                    b.HasIndex("OrderID");
+
+                    b.ToTable("BrandOrder");
                 });
 
             modelBuilder.Entity("Pexita.Data.Entities.Comments.CommentsModel", b =>
@@ -101,6 +147,9 @@ namespace Pexita.Migrations
                     b.Property<int>("BrandID")
                         .HasColumnType("int");
 
+                    b.Property<DateTime>("SubscribedAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<int>("UserID")
                         .HasColumnType("int");
 
@@ -110,7 +159,7 @@ namespace Pexita.Migrations
 
                     b.HasIndex("UserID");
 
-                    b.ToTable("BrandNewsletterModel");
+                    b.ToTable("BrandNewsletters");
                 });
 
             modelBuilder.Entity("Pexita.Data.Entities.Newsletter.ProductNewsLetterModel", b =>
@@ -127,6 +176,9 @@ namespace Pexita.Migrations
                     b.Property<int>("ProductID")
                         .HasColumnType("int");
 
+                    b.Property<DateTime>("SubscribedAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<int>("UserID")
                         .HasColumnType("int");
 
@@ -138,7 +190,7 @@ namespace Pexita.Migrations
 
                     b.HasIndex("UserID");
 
-                    b.ToTable("NewsLetters");
+                    b.ToTable("ProductNewsletters");
                 });
 
             modelBuilder.Entity("Pexita.Data.Entities.Orders.OrdersModel", b =>
@@ -148,9 +200,6 @@ namespace Pexita.Migrations
                         .HasColumnType("int");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ID"));
-
-                    b.Property<int?>("BrandID")
-                        .HasColumnType("int");
 
                     b.Property<DateTime>("DateIssued")
                         .HasColumnType("datetime2");
@@ -168,8 +217,6 @@ namespace Pexita.Migrations
                         .HasColumnType("int");
 
                     b.HasKey("ID");
-
-                    b.HasIndex("BrandID");
 
                     b.HasIndex("PaymentID");
 
@@ -189,20 +236,41 @@ namespace Pexita.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ID"));
 
+                    b.Property<long>("Amount")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("CardNo")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<DateTime>("DateIssued")
                         .HasColumnType("datetime2");
 
-                    b.Property<long>("OperationID")
-                        .HasColumnType("bigint");
+                    b.Property<DateTime?>("DateTimePaid")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("HashedCardNo")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("IDPayTrackID")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("PaymentLink")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("PaymentOrderID")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("PaymentVerificationDate")
+                        .HasColumnType("datetime2");
 
                     b.Property<int?>("ShoppingCartID")
                         .HasColumnType("int");
 
-                    b.Property<int>("Status")
-                        .HasColumnType("int");
-
-                    b.Property<bool>("Successfull")
+                    b.Property<bool?>("Successfull")
                         .HasColumnType("bit");
+
+                    b.Property<string>("TransactionID")
+                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("ID");
 
@@ -408,6 +476,17 @@ namespace Pexita.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("PhoneNumber")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ResetPasswordCode")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("Username")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -430,6 +509,36 @@ namespace Pexita.Migrations
                     b.HasIndex("TagsID");
 
                     b.ToTable("ProductModelTagModel");
+                });
+
+            modelBuilder.Entity("Pexita.Data.Entities.Authentication.RefreshToken", b =>
+                {
+                    b.HasOne("Pexita.Data.Entities.User.UserModel", "User")
+                        .WithMany("RefreshTokens")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Pexita.Data.Entities.Brands.BrandOrder", b =>
+                {
+                    b.HasOne("Pexita.Data.Entities.Brands.BrandModel", "Brand")
+                        .WithMany("BrandOrders")
+                        .HasForeignKey("BrandID")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("Pexita.Data.Entities.Orders.OrdersModel", "Order")
+                        .WithMany("BrandOrders")
+                        .HasForeignKey("OrderID")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.Navigation("Brand");
+
+                    b.Navigation("Order");
                 });
 
             modelBuilder.Entity("Pexita.Data.Entities.Comments.CommentsModel", b =>
@@ -494,11 +603,6 @@ namespace Pexita.Migrations
 
             modelBuilder.Entity("Pexita.Data.Entities.Orders.OrdersModel", b =>
                 {
-                    b.HasOne("Pexita.Data.Entities.Brands.BrandModel", "Brand")
-                        .WithMany("Orders")
-                        .HasForeignKey("BrandID")
-                        .OnDelete(DeleteBehavior.SetNull);
-
                     b.HasOne("Pexita.Data.Entities.Payment.PaymentModel", "Payment")
                         .WithMany()
                         .HasForeignKey("PaymentID")
@@ -516,8 +620,6 @@ namespace Pexita.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
-
-                    b.Navigation("Brand");
 
                     b.Navigation("Payment");
 
@@ -616,11 +718,16 @@ namespace Pexita.Migrations
                 {
                     b.Navigation("BrandNewsLetters");
 
-                    b.Navigation("Orders");
+                    b.Navigation("BrandOrders");
 
                     b.Navigation("ProductNewsLetters");
 
                     b.Navigation("Products");
+                });
+
+            modelBuilder.Entity("Pexita.Data.Entities.Orders.OrdersModel", b =>
+                {
+                    b.Navigation("BrandOrders");
                 });
 
             modelBuilder.Entity("Pexita.Data.Entities.Products.ProductModel", b =>
@@ -655,6 +762,8 @@ namespace Pexita.Migrations
                     b.Navigation("Orders");
 
                     b.Navigation("ProductNewsletters");
+
+                    b.Navigation("RefreshTokens");
 
                     b.Navigation("ShoppingCarts");
                 });

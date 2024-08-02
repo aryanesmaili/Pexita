@@ -1,10 +1,13 @@
+using AutoMapper;
 using FluentValidation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Pexita.Data;
 using Pexita.Data.Entities.Authentication;
 using Pexita.Data.Entities.Events;
+using Pexita.Data.Entities.Payment;
 using Pexita.Data.Entities.SMTP;
 using Pexita.Services;
 using Pexita.Services.Interfaces;
@@ -21,10 +24,21 @@ builder.Services.AddSwaggerGen();
 
 builder.Services.AddHttpContextAccessor();
 
-builder.Services.AddAutoMapper(typeof(AutoMapperConfig));
+builder.Services.AddAutoMapper(cfg =>
+{
+    cfg.AddProfile<AutoMapperConfig>();
+}, typeof(Program).Assembly);
+
+builder.Services.AddTransient<AutoMapperConfig>();
+builder.Services.AddSingleton<MapperConfiguration>(sp =>
+    new MapperConfiguration(cfg =>
+    {
+        cfg.AddProfile(new AutoMapperConfig(sp));
+    })
+);
 
 builder.Services.AddDbContext<AppDBContext>
-    (options => options.UseSqlServer(builder.Configuration.GetConnectionString("DbTwo")));
+    (options => options.UseSqlServer(builder.Configuration.GetConnectionString("WebApiDB")));
 
 // Add the SMTP service to be able to send emails
 builder.Services.Configure<SMTPSettings>(builder.Configuration.GetSection("SmtpSettings"));
@@ -32,7 +46,8 @@ builder.Services.AddTransient<IEmailService, EmailService>();
 
 // Add the Event driven system services
 builder.Services.AddSingleton<EventDispatcher>();
-builder.Services.AddTransient<ProductAvailableEventHandler>();
+builder.Services.AddScoped<ProductAvailableEventHandler>();
+builder.Services.AddScoped<BrandNewProductEventHandler>();
 
 // Automatically adds all validators of this project to DI pool.
 var assembly = typeof(Program).Assembly;
@@ -44,7 +59,16 @@ builder.Services.AddTransient<ITagsService, TagsService>();
 builder.Services.AddTransient<IUserService, UserService>();
 builder.Services.AddTransient<IPexitaTools, PexitaTools>();
 builder.Services.AddTransient<IIranAPI, IranAPI>();
-builder.Services.AddTransient<IPaymentService, PaymentService>();
+
+builder.Services.Configure<PaymentSettings>(builder.Configuration.GetSection("PaymentSettings"));
+
+builder.Services.AddTransient<IPaymentService>(provider =>
+{
+    var paymentSettings = provider.GetRequiredService<IOptions<PaymentSettings>>().Value;
+    var context = provider.GetRequiredService<AppDBContext>();
+    var mapper = provider.GetRequiredService<IMapper>();
+    return new PaymentService(paymentSettings.APIKey, paymentSettings.CallbackAddress, paymentSettings.isTest, context, mapper);
+});
 
 // Authentication 
 var jwtSettings = new JwtSettings();
@@ -82,11 +106,16 @@ builder.Services.AddAuthorization(options =>
 });
 var app = builder.Build();
 
-var productAvailableEventHandler = app.Services.GetRequiredService<ProductAvailableEventHandler>();
-var BrandAvailableEventHandler = app.Services.GetRequiredService<BrandNewProductEventHandler>();
-var event_dispatcher = app.Services.GetRequiredService<EventDispatcher>();
-event_dispatcher.RegisterHandlerAsync<ProductAvailableEvent>(productAvailableEventHandler.Handle);
-event_dispatcher.RegisterHandler<BrandNewProductEvent>(BrandAvailableEventHandler.Handle);
+using(var scope = app.Services.CreateScope())
+{
+    var scopedServices = scope.ServiceProvider;
+    var productAvailableEventHandler = scopedServices.GetRequiredService<ProductAvailableEventHandler>();
+    var BrandAvailableEventHandler = scopedServices.GetRequiredService<BrandNewProductEventHandler>();
+    var event_dispatcher = scopedServices.GetRequiredService<EventDispatcher>();
+    event_dispatcher.RegisterHandlerAsync<ProductAvailableEvent>(productAvailableEventHandler.Handle);
+    event_dispatcher.RegisterHandler<BrandNewProductEvent>(BrandAvailableEventHandler.Handle);
+}
+
 
 if (app.Environment.IsDevelopment())
 {

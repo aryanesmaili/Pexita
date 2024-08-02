@@ -1,11 +1,12 @@
-﻿using Microsoft.EntityFrameworkCore.Migrations;
+﻿using System;
+using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
 namespace Pexita.Migrations
 {
     /// <inheritdoc />
-    public partial class fix : Migration
+    public partial class init : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -21,7 +22,8 @@ namespace Pexita.Migrations
                     BrandPicURL = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     Username = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     Password = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Email = table.Column<string>(type: "nvarchar(max)", nullable: false)
+                    Email = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    DateCreated = table.Column<DateTime>(type: "datetime2", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -52,7 +54,11 @@ namespace Pexita.Migrations
                     LastName = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     Username = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     Password = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Email = table.Column<string>(type: "nvarchar(max)", nullable: false)
+                    Email = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Role = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    PhoneNumber = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    DateCreated = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    ResetPasswordCode = table.Column<string>(type: "nvarchar(max)", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -68,12 +74,11 @@ namespace Pexita.Migrations
                     Title = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     Description = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     Price = table.Column<double>(type: "float", nullable: true),
-                    Quantity = table.Column<int>(type: "int", nullable: false),
+                    Quantity = table.Column<int>(type: "int", nullable: true),
                     IsAvailable = table.Column<bool>(type: "bit", nullable: false),
-                    Colors = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Rate = table.Column<double>(type: "float", nullable: true),
-                    ProductPicURL = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    DateAdded = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    Colors = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    ProductPicsURL = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    DateCreated = table.Column<DateTime>(type: "datetime2", nullable: false),
                     BrandID = table.Column<int>(type: "int", nullable: false)
                 },
                 constraints: table =>
@@ -88,7 +93,7 @@ namespace Pexita.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "Address",
+                name: "Addresses",
                 columns: table => new
                 {
                     ID = table.Column<int>(type: "int", nullable: false)
@@ -96,13 +101,15 @@ namespace Pexita.Migrations
                     UserID = table.Column<int>(type: "int", nullable: false),
                     Province = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     City = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Text = table.Column<string>(type: "nvarchar(max)", nullable: false)
+                    Text = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    PhoneNumber = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    PostalCode = table.Column<string>(type: "nvarchar(max)", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_Address", x => x.ID);
+                    table.PrimaryKey("PK_Addresses", x => x.ID);
                     table.ForeignKey(
-                        name: "FK_Address_Users_UserID",
+                        name: "FK_Addresses_Users_UserID",
                         column: x => x.UserID,
                         principalTable: "Users",
                         principalColumn: "ID",
@@ -110,26 +117,50 @@ namespace Pexita.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "BrandNewsletterModel",
+                name: "BrandNewsletters",
                 columns: table => new
                 {
                     ID = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     BrandID = table.Column<int>(type: "int", nullable: false),
-                    UserID = table.Column<int>(type: "int", nullable: false)
+                    UserID = table.Column<int>(type: "int", nullable: false),
+                    SubscribedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_BrandNewsletterModel", x => x.ID);
+                    table.PrimaryKey("PK_BrandNewsletters", x => x.ID);
                     table.ForeignKey(
-                        name: "FK_BrandNewsletterModel_Brands_BrandID",
+                        name: "FK_BrandNewsletters_Brands_BrandID",
                         column: x => x.BrandID,
                         principalTable: "Brands",
                         principalColumn: "ID",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
-                        name: "FK_BrandNewsletterModel_Users_UserID",
+                        name: "FK_BrandNewsletters_Users_UserID",
                         column: x => x.UserID,
+                        principalTable: "Users",
+                        principalColumn: "ID",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "RefreshTokens",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    Token = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Expires = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    Created = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    Revoked = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    UserId = table.Column<int>(type: "int", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_RefreshTokens", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_RefreshTokens_Users_UserId",
+                        column: x => x.UserId,
                         principalTable: "Users",
                         principalColumn: "ID",
                         onDelete: ReferentialAction.Cascade);
@@ -162,6 +193,7 @@ namespace Pexita.Migrations
                     ID = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     Text = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    DateCreated = table.Column<DateTime>(type: "datetime2", nullable: false),
                     UserID = table.Column<int>(type: "int", nullable: true),
                     ProductID = table.Column<int>(type: "int", nullable: false)
                 },
@@ -183,39 +215,7 @@ namespace Pexita.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "NewsLetters",
-                columns: table => new
-                {
-                    ID = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    ProductID = table.Column<int>(type: "int", nullable: false),
-                    UserID = table.Column<int>(type: "int", nullable: false),
-                    BrandModelID = table.Column<int>(type: "int", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_NewsLetters", x => x.ID);
-                    table.ForeignKey(
-                        name: "FK_NewsLetters_Brands_BrandModelID",
-                        column: x => x.BrandModelID,
-                        principalTable: "Brands",
-                        principalColumn: "ID");
-                    table.ForeignKey(
-                        name: "FK_NewsLetters_Products_ProductID",
-                        column: x => x.ProductID,
-                        principalTable: "Products",
-                        principalColumn: "ID",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_NewsLetters_Users_UserID",
-                        column: x => x.UserID,
-                        principalTable: "Users",
-                        principalColumn: "ID",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "ProductModelTagsModel",
+                name: "ProductModelTagModel",
                 columns: table => new
                 {
                     ProductsID = table.Column<int>(type: "int", nullable: false),
@@ -223,17 +223,70 @@ namespace Pexita.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_ProductModelTagsModel", x => new { x.ProductsID, x.TagsID });
+                    table.PrimaryKey("PK_ProductModelTagModel", x => new { x.ProductsID, x.TagsID });
                     table.ForeignKey(
-                        name: "FK_ProductModelTagsModel_Products_ProductsID",
+                        name: "FK_ProductModelTagModel_Products_ProductsID",
                         column: x => x.ProductsID,
                         principalTable: "Products",
                         principalColumn: "ID",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
-                        name: "FK_ProductModelTagsModel_Tags_TagsID",
+                        name: "FK_ProductModelTagModel_Tags_TagsID",
                         column: x => x.TagsID,
                         principalTable: "Tags",
+                        principalColumn: "ID",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "ProductNewsletters",
+                columns: table => new
+                {
+                    ID = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    ProductID = table.Column<int>(type: "int", nullable: false),
+                    UserID = table.Column<int>(type: "int", nullable: false),
+                    SubscribedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    BrandModelID = table.Column<int>(type: "int", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ProductNewsletters", x => x.ID);
+                    table.ForeignKey(
+                        name: "FK_ProductNewsletters_Brands_BrandModelID",
+                        column: x => x.BrandModelID,
+                        principalTable: "Brands",
+                        principalColumn: "ID");
+                    table.ForeignKey(
+                        name: "FK_ProductNewsletters_Products_ProductID",
+                        column: x => x.ProductID,
+                        principalTable: "Products",
+                        principalColumn: "ID",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_ProductNewsletters_Users_UserID",
+                        column: x => x.UserID,
+                        principalTable: "Users",
+                        principalColumn: "ID",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "ProductRating",
+                columns: table => new
+                {
+                    ID = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    Rating = table.Column<int>(type: "int", nullable: false),
+                    ProductID = table.Column<int>(type: "int", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ProductRating", x => x.ID);
+                    table.ForeignKey(
+                        name: "FK_ProductRating_Products_ProductID",
+                        column: x => x.ProductID,
+                        principalTable: "Products",
                         principalColumn: "ID",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -269,10 +322,17 @@ namespace Pexita.Migrations
                 {
                     ID = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    Status = table.Column<int>(type: "int", nullable: false),
-                    OperationID = table.Column<long>(type: "bigint", nullable: false),
+                    PaymentOrderID = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    PaymentLink = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Amount = table.Column<long>(type: "bigint", nullable: false),
+                    IDPayTrackID = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    TransactionID = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    CardNo = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    HashedCardNo = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     DateIssued = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    Successfull = table.Column<bool>(type: "bit", nullable: false),
+                    DateTimePaid = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    Successfull = table.Column<bool>(type: "bit", nullable: true),
+                    PaymentVerificationDate = table.Column<DateTime>(type: "datetime2", nullable: false),
                     ShoppingCartID = table.Column<int>(type: "int", nullable: true)
                 },
                 constraints: table =>
@@ -296,18 +356,11 @@ namespace Pexita.Migrations
                     Status = table.Column<int>(type: "int", nullable: false),
                     UserId = table.Column<int>(type: "int", nullable: false),
                     PaymentID = table.Column<int>(type: "int", nullable: false),
-                    BrandID = table.Column<int>(type: "int", nullable: true),
                     ShoppingCartID = table.Column<int>(type: "int", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Orders", x => x.ID);
-                    table.ForeignKey(
-                        name: "FK_Orders_Brands_BrandID",
-                        column: x => x.BrandID,
-                        principalTable: "Brands",
-                        principalColumn: "ID",
-                        onDelete: ReferentialAction.SetNull);
                     table.ForeignKey(
                         name: "FK_Orders_Payments_PaymentID",
                         column: x => x.PaymentID,
@@ -327,20 +380,47 @@ namespace Pexita.Migrations
                         principalColumn: "ID");
                 });
 
+            migrationBuilder.CreateTable(
+                name: "BrandOrder",
+                columns: table => new
+                {
+                    BrandID = table.Column<int>(type: "int", nullable: false),
+                    OrderID = table.Column<int>(type: "int", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_BrandOrder", x => new { x.BrandID, x.OrderID });
+                    table.ForeignKey(
+                        name: "FK_BrandOrder_Brands_BrandID",
+                        column: x => x.BrandID,
+                        principalTable: "Brands",
+                        principalColumn: "ID");
+                    table.ForeignKey(
+                        name: "FK_BrandOrder_Orders_OrderID",
+                        column: x => x.OrderID,
+                        principalTable: "Orders",
+                        principalColumn: "ID");
+                });
+
             migrationBuilder.CreateIndex(
-                name: "IX_Address_UserID",
-                table: "Address",
+                name: "IX_Addresses_UserID",
+                table: "Addresses",
                 column: "UserID");
 
             migrationBuilder.CreateIndex(
-                name: "IX_BrandNewsletterModel_BrandID",
-                table: "BrandNewsletterModel",
+                name: "IX_BrandNewsletters_BrandID",
+                table: "BrandNewsletters",
                 column: "BrandID");
 
             migrationBuilder.CreateIndex(
-                name: "IX_BrandNewsletterModel_UserID",
-                table: "BrandNewsletterModel",
+                name: "IX_BrandNewsletters_UserID",
+                table: "BrandNewsletters",
                 column: "UserID");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_BrandOrder_OrderID",
+                table: "BrandOrder",
+                column: "OrderID");
 
             migrationBuilder.CreateIndex(
                 name: "IX_CartItems_ProductID",
@@ -361,26 +441,6 @@ namespace Pexita.Migrations
                 name: "IX_Comments_UserID",
                 table: "Comments",
                 column: "UserID");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_NewsLetters_BrandModelID",
-                table: "NewsLetters",
-                column: "BrandModelID");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_NewsLetters_ProductID",
-                table: "NewsLetters",
-                column: "ProductID");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_NewsLetters_UserID",
-                table: "NewsLetters",
-                column: "UserID");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Orders_BrandID",
-                table: "Orders",
-                column: "BrandID");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Orders_PaymentID",
@@ -404,14 +464,39 @@ namespace Pexita.Migrations
                 column: "ShoppingCartID");
 
             migrationBuilder.CreateIndex(
-                name: "IX_ProductModelTagsModel_TagsID",
-                table: "ProductModelTagsModel",
+                name: "IX_ProductModelTagModel_TagsID",
+                table: "ProductModelTagModel",
                 column: "TagsID");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ProductNewsletters_BrandModelID",
+                table: "ProductNewsletters",
+                column: "BrandModelID");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ProductNewsletters_ProductID",
+                table: "ProductNewsletters",
+                column: "ProductID");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ProductNewsletters_UserID",
+                table: "ProductNewsletters",
+                column: "UserID");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ProductRating_ProductID",
+                table: "ProductRating",
+                column: "ProductID");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Products_BrandID",
                 table: "Products",
                 column: "BrandID");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_RefreshTokens_UserId",
+                table: "RefreshTokens",
+                column: "UserId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_ShoppingCarts_UserID",
@@ -423,10 +508,13 @@ namespace Pexita.Migrations
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(
-                name: "Address");
+                name: "Addresses");
 
             migrationBuilder.DropTable(
-                name: "BrandNewsletterModel");
+                name: "BrandNewsletters");
+
+            migrationBuilder.DropTable(
+                name: "BrandOrder");
 
             migrationBuilder.DropTable(
                 name: "CartItems");
@@ -435,28 +523,34 @@ namespace Pexita.Migrations
                 name: "Comments");
 
             migrationBuilder.DropTable(
-                name: "NewsLetters");
+                name: "ProductModelTagModel");
+
+            migrationBuilder.DropTable(
+                name: "ProductNewsletters");
+
+            migrationBuilder.DropTable(
+                name: "ProductRating");
+
+            migrationBuilder.DropTable(
+                name: "RefreshTokens");
 
             migrationBuilder.DropTable(
                 name: "Orders");
 
             migrationBuilder.DropTable(
-                name: "ProductModelTagsModel");
-
-            migrationBuilder.DropTable(
-                name: "Payments");
+                name: "Tags");
 
             migrationBuilder.DropTable(
                 name: "Products");
 
             migrationBuilder.DropTable(
-                name: "Tags");
-
-            migrationBuilder.DropTable(
-                name: "ShoppingCarts");
+                name: "Payments");
 
             migrationBuilder.DropTable(
                 name: "Brands");
+
+            migrationBuilder.DropTable(
+                name: "ShoppingCarts");
 
             migrationBuilder.DropTable(
                 name: "Users");

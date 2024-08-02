@@ -146,6 +146,8 @@ namespace Pexita.Services
                     .AsNoTracking()
                     .Take(count).Select(BrandModelToInfo)
                     .ToList();
+                if (brands.Count < count || brands.IsNullOrEmpty())
+                    throw new IndexOutOfRangeException("Database either empty or the number entered is out of range.");
                 return brands;
             }
             catch (ArgumentNullException)

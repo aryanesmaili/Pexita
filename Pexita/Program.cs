@@ -27,13 +27,8 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddAutoMapper(typeof(AutoMapperConfig));
 
 
-builder.Services.AddTransient<AutoMapperConfig>();
-builder.Services.AddSingleton<MapperConfiguration>(sp =>
-    new MapperConfiguration(cfg =>
-    {
-        cfg.AddProfile(new AutoMapperConfig(sp));
-    })
-);
+//builder.Services.AddTransient<AutoMapperConfig>();
+
 
 builder.Services.AddDbContext<AppDBContext>
     (options => options.UseSqlServer(builder.Configuration.GetConnectionString("WebApiDB")));

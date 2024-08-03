@@ -23,7 +23,7 @@ namespace Pexita.Data.Entities.Brands
         [Required]
         public DateTime DateCreated { get; set; }
         [Required]
-        public List<ProductInfoVM>? Products { get; set; }
+        public List<ProductModel>? Products { get; set; }
     }
 
     public class BrandCreateVM

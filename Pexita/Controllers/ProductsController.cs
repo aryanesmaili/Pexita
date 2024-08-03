@@ -130,7 +130,7 @@ namespace Pexita.Controllers
             var requestingUsername = _contextAccessor.HttpContext?.User.Identity?.Name;
             try
             {
-                ProductInfoVM? update = null;
+                ProductModel? update = null;
                 update = await _productService.PatchProductInfo(id, product, requestingUsername);
                 return Ok(update);
             }
@@ -150,7 +150,7 @@ namespace Pexita.Controllers
             var requestingUsername = _contextAccessor.HttpContext!.User?.Identity?.Name;
             try
             {
-                ProductInfoVM? update = null;
+                ProductModel? update = null;
 
                 await _productUpdateValidator.ValidateAndThrowAsync(product);
 

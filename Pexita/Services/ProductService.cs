@@ -42,7 +42,7 @@ namespace Pexita.Services
         /// <returns></returns>
         /// <exception cref="ValidationException"></exception>
         /// <exception cref="Exception"></exception>
-        public async Task<ProductInfoVM> AddProduct(ProductCreateDTO product, string requestingUsername)
+        public async Task<ProductModel> AddProduct(ProductCreateDTO product, string requestingUsername)
         {
             await _pexitaTools.AuthorizeProductCreationAsync(product.Brand, requestingUsername);
 
@@ -77,12 +77,12 @@ namespace Pexita.Services
         /// <returns></returns>
         /// <exception cref="NotFoundException"></exception>
         /// <exception cref="Exception"></exception>
-        public List<ProductInfoVM> GetProducts()
+        public List<ProductModel> GetProducts()
         {
             List<ProductModel> products = _Context.Products.Include(b => b.Brand).Include(c => c.Comments).Include(t => t.Tags).ToList();
             if (products.Count > 0)
             {
-                List<ProductInfoVM> productsVM = products.Select(ProductModelToInfoVM).ToList();
+                List<ProductModel> productsVM = products.Select(ProductModelToInfoVM).ToList();
                 return productsVM;
             }
             else
@@ -98,7 +98,7 @@ namespace Pexita.Services
         /// <returns></returns>
         /// <exception cref="ArgumentOutOfRangeException"></exception>
         /// <exception cref="NotFoundException"></exception>
-        public List<ProductInfoVM> GetProducts(int count)
+        public List<ProductModel> GetProducts(int count)
         {
             if (count > _Context.Products.Count())
                 throw new ArgumentOutOfRangeException(nameof(count));
@@ -121,13 +121,13 @@ namespace Pexita.Services
         /// </summary>
         /// <param name="model"></param>
         /// <returns></returns>
-        public ProductInfoVM ProductModelToInfoVM(ProductModel model)
+        public ProductModel ProductModelToInfoVM(ProductModel model)
         {
             BrandInfoVM brand = _brandService.BrandModelToInfo(model.Brand);
             double rate = _pexitaTools.GetRating(model.Rating.Select(x => x.Rating).ToList());
             List<TagInfoVM> tags = _tagsService.TagsToVM(model.Tags ?? []);
 
-            var res = _mapper.Map<ProductInfoVM>(model);
+            var res = _mapper.Map<ProductModel>(model);
             return res;
         }
         /// <summary>
@@ -136,7 +136,7 @@ namespace Pexita.Services
         /// <param name="id">Product ID</param>
         /// <returns>Product info as VM</returns>
         /// <exception cref="NotFoundException"></exception>
-        public async Task<ProductInfoVM> GetProductByID(int id)
+        public async Task<ProductModel> GetProductByID(int id)
         {
             return ProductModelToInfoVM(await _Context.Products
                                                         .Include(p => p.Brand)
@@ -152,7 +152,7 @@ namespace Pexita.Services
         /// <param name="product">new product info.</param>
         /// <param name="requestingUsername">the user requesting the edit.</param>
         /// <returns></returns>
-        public async Task<ProductInfoVM> UpdateProductInfo(int id, ProductUpdateDTO product, string requestingUsername)
+        public async Task<ProductModel> UpdateProductInfo(int id, ProductUpdateDTO product, string requestingUsername)
         {
 
             ProductModel productModel = await _pexitaTools.AuthorizeProductAccessAsync(id, requestingUsername);
@@ -242,7 +242,7 @@ namespace Pexita.Services
         /// <param name="productDTO">new product's info.</param>
         /// <param name="requestingUsername">the user requesting the edit.used in authenticating the request</param>
         /// <returns></returns>
-        public async Task<ProductInfoVM> PatchProductInfo(int id, ProductUpdateDTO productDTO, string requestingUsername)
+        public async Task<ProductModel> PatchProductInfo(int id, ProductUpdateDTO productDTO, string requestingUsername)
         {
             ProductModel product = await _pexitaTools.AuthorizeProductAccessAsync(id, requestingUsername);
             bool NotInStock = product.Quantity == 0;

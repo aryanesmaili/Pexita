@@ -22,7 +22,7 @@ namespace Pexita.Data.Entities.Products
         public int ProductID { get; set; }
         public int ProductRating { get; set; }
     }
-    public class ProductInfoVM
+    public class ProductInfoDTO
     {
         public int ID { get; set; }
         public string Title { get; set; }

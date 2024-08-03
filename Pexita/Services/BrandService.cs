@@ -21,16 +21,14 @@ namespace Pexita.Services
         private readonly IMapper _mapper;
         private readonly IUserService _userService;
         private readonly JwtSettings _jwtSettings;
-        private readonly IProductService _productService;
 
-        public BrandService(AppDBContext Context, IPexitaTools PexitaTools, IMapper Mapper, IUserService userService, JwtSettings jwtSettings, IProductService productService)
+        public BrandService(AppDBContext Context, IPexitaTools PexitaTools, IMapper Mapper, IUserService userService, JwtSettings jwtSettings)
         {
             _Context = Context;
             _pexitaTools = PexitaTools;
             _mapper = Mapper;
             _userService = userService;
             _jwtSettings = jwtSettings;
-            _productService = productService;
         }
         /// <summary>
         /// Registering a new brand.
@@ -195,9 +193,7 @@ namespace Pexita.Services
         /// <returns></returns>
         public BrandInfoVM BrandModelToInfo(BrandModel model)
         {
-            BrandInfoVM info = _mapper.Map(model, new BrandInfoVM());
-            info.Products = model.Products?.Select(_productService.ProductModelToInfoVM).ToList();
-            return info;
+            return _mapper.Map(model, new BrandInfoVM());
         }
         /// <summary>
         /// checks whether a given id exists in brand table and is a brand.

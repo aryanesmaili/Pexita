@@ -38,7 +38,7 @@ namespace Pexita.Utility
                             .ForMember(product => product.Tags, opt => opt.MapFrom(src => _pexitaTools.StringToTags(src.Tags)))
                             .ForMember(product => product.ProductPicsURL, opt => opt.MapFrom(src => _pexitaTools.SaveProductImages(src.ProductPics, $"{src.Brand}/{src.Title}", true)));*/
 
-            CreateMap<ProductModel, ProductInfoVM>();
+            CreateMap<ProductModel, ProductModel>();
 
             CreateMap<BrandCreateVM, BrandModel>()
                 .ForMember(Brand => Brand.BrandPicURL, opt => opt.MapFrom<BrandPicURLResolver>())
@@ -50,8 +50,10 @@ namespace Pexita.Utility
 
             CreateMap<BrandUpdateVM, BrandModel>();
 
-            CreateMap<BrandModel, BrandInfoVM>();
+            CreateMap<BrandModel, BrandInfoVM>()
+                .ForMember(b => b.Products, opt => opt.MapFrom<BrandProductResolver>());
 
+            
             CreateMap<UserUpdateVM, UserModel>();
 
             CreateMap<UserModel, UserInfoVM>();
@@ -105,6 +107,21 @@ namespace Pexita.Utility
                 return _pexitaTools.SaveEntityImages(source.Brandpic, $"{source.Name}/{source.Name}", false).Result;
             }
             return null; // return null if the pic is empty.
+        }
+    }
+    public class BrandProductResolver : IValueResolver<BrandModel, BrandInfoVM, List<ProductModel>?>
+    {
+        private readonly IProductService _productService;
+
+        public BrandProductResolver(IProductService productService)
+        {
+            _productService = productService;
+        }
+
+        public List<ProductModel>? Resolve(BrandModel source, BrandInfoVM destination, List<ProductModel>? destMember, ResolutionContext context)
+        {
+            var result = source.Products?.Select(_productService.ProductModelToInfoVM).ToList();
+            return result;
         }
     }
 }

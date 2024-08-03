@@ -35,5 +35,4 @@ namespace Pexita.Data.Entities.Products
         public int ProductID { get; set; }
         public ProductModel Product { get; set; }
     }
-
 }

@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Pexita.Services.Interfaces;
+using Pexita.Utility.Exceptions;
 
 namespace Pexita.Data.Entities.Events
 {
@@ -22,13 +23,11 @@ namespace Pexita.Data.Entities.Events
     {
         private readonly AppDBContext _context;
         private readonly IEmailService _emailService;
-        private readonly IProductService _productService;
 
-        public ProductAvailableEventHandler(AppDBContext context, IEmailService emailService, IProductService productService)
+        public ProductAvailableEventHandler(AppDBContext context, IEmailService emailService)
         {
             _context = context;
             _emailService = emailService;
-            _productService = productService;
         }
         /// <summary>
         /// Handles <see cref="ProductAvailableEvent"/> by sending emails to its subscribers using <see cref="IEmailService"/>.
@@ -39,7 +38,7 @@ namespace Pexita.Data.Entities.Events
             var subscribers = _context.ProductNewsletters.AsNoTracking().Where(x => x.ProductID == e.ProductId)
                 .Select(x => x.User)
                 .ToList(); // Listing the subscribers to that product.
-            string ProductName = (await _productService.GetProductByID(e.ProductId)).Title;
+            string ProductName = (await _context.Products.FindAsync(e.ProductId)?? throw new NotFoundException()).Title;
 
             string subject = $"Product {ProductName} is now available";
             string body = $"Product {ProductName} is now available for purchase";

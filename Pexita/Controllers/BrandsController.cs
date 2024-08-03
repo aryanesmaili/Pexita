@@ -1,5 +1,6 @@
 ﻿using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Pexita.Data.Entities.Brands;
 using Pexita.Data.Entities.User;
@@ -118,24 +119,26 @@ namespace Pexita.Controllers
             }
         }
         [HttpPost("AddBrand")]
-        public async Task<IActionResult> AddBrand([FromBody] BrandCreateVM createVM)
+        public async Task<IActionResult> AddBrand([FromForm] BrandCreateVM createVM)
         {
             try
             {
-                if (createVM == null)
-                    throw new ArgumentNullException(nameof(createVM));
+                ArgumentNullException.ThrowIfNull(createVM);
 
                 await _brandCreateValidator.ValidateAndThrowAsync(createVM);
 
-                await _brandService.AddBrand(createVM);
-                return RedirectToRoute("Brand/Login");
+                var result = await _brandService.AddBrand(createVM);
+                return Ok(result);
             }
 
             catch (ArgumentNullException e)
             {
                 return BadRequest($"Argument null {e.Message}");
             }
-
+            catch (ArgumentException e)
+            {
+                return BadRequest(e.Message);
+            }
             catch (ValidationException e)
             {
                 return BadRequest(e.Message);
@@ -180,7 +183,8 @@ namespace Pexita.Controllers
             string requestingUsername = _httpContextAccessor.HttpContext!.User?.Identity?.Name!;
             try
             {
-                return await _brandService.RemoveBrand(id, requestingUsername) ? NoContent() : StatusCode(StatusCodes.Status500InternalServerError);
+                await _brandService.RemoveBrand(id, requestingUsername);
+                return NoContent();
             }
 
             catch (NotFoundException)

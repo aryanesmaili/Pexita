@@ -9,9 +9,9 @@ namespace Pexita.Services.Interfaces
     {
         string GenerateRandomPassword(int length);
         double GetRating(List<int> Ratings);
-        Task<string> SaveProductImages(IFormFile file, string identifier, bool isUpdate = false);
-        Task<string> SaveProductImages(List<IFormFile> files, string identifier, bool isUpdate = false);
-        List<TagModel> StringToTags(string Tag);
+        Task<string> SaveEntityImages(IFormFile file, string identifier, bool isUpdate = false);
+        Task<string> SaveEntityImages(List<IFormFile> files, string identifier, bool isUpdate = false);
+        public Task<List<TagModel>> StringToTags(string Tag);
         Task<List<Address>> ValidateAddresses(int UserID, List<Address> VMAddresses);
         public bool PictureFileValidation(IFormFile file, int MaxSizeMB);
         public Task<ProductModel> AuthorizeProductAccessAsync(int id, string Username);

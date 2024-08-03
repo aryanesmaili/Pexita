@@ -8,12 +8,12 @@ namespace Pexita.Data.Entities.Brands
     public class BrandModel
     {
         public int ID { get; set; }
-        public string Name { get; set; }
+        public required string Name { get; set; }
         public string? Description { get; set; }
         public string? BrandPicURL { get; set; }
-        public string Username { get; set; }
-        public string Password { get; set; }
-        public string Email { get; set; }
+        public required string Username { get; set; }
+        public required string Password { get; set; }
+        public required string Email { get; set; }
         public DateTime DateCreated { get; set; }
 
         // Navigation Properties

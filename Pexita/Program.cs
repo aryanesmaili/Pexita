@@ -24,10 +24,8 @@ builder.Services.AddSwaggerGen();
 
 builder.Services.AddHttpContextAccessor();
 
-builder.Services.AddAutoMapper(cfg =>
-{
-    cfg.AddProfile<AutoMapperConfig>();
-}, typeof(Program).Assembly);
+builder.Services.AddAutoMapper(typeof(AutoMapperConfig));
+
 
 builder.Services.AddTransient<AutoMapperConfig>();
 builder.Services.AddSingleton<MapperConfiguration>(sp =>
@@ -59,6 +57,7 @@ builder.Services.AddTransient<ITagsService, TagsService>();
 builder.Services.AddTransient<IUserService, UserService>();
 builder.Services.AddTransient<IPexitaTools, PexitaTools>();
 builder.Services.AddTransient<IIranAPI, IranAPI>();
+builder.Services.AddTransient<BrandPicURLResolver>();
 
 builder.Services.Configure<PaymentSettings>(builder.Configuration.GetSection("PaymentSettings"));
 

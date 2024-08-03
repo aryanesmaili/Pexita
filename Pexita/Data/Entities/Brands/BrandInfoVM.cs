@@ -30,7 +30,7 @@ namespace Pexita.Data.Entities.Brands
     {
         public required string Name { get; set; }
         public string? Description { get; set; }
-        public IFormFile? BrandPic { get; set; }
+        public IFormFile? Brandpic { get; set; }
         public required string Username { get; set; }
         public required string Password { get; set; }
         public required string ConfirmPassword { get; set; }

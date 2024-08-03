@@ -51,7 +51,7 @@ namespace Pexita.Services
         /// <param name="isUpdate">is this an update operation or a creation.</param>
         /// <returns></returns>
         /// <exception cref="ArgumentException"></exception>
-        public async Task<string> SaveProductImages(List<IFormFile> files, string file_save_folder, bool isUpdate = false)
+        public async Task<string> SaveEntityImages(List<IFormFile> files, string file_save_folder, bool isUpdate = false)
         {
             if (string.IsNullOrWhiteSpace(file_save_folder))
                 throw new ArgumentException("Identifier cannot be null or empty.", nameof(file_save_folder));
@@ -78,7 +78,7 @@ namespace Pexita.Services
         /// <param name="isUpdate">whether this is a update or a creation operation.</param>
         /// <returns></returns>
         /// <exception cref="ArgumentException"></exception>
-        public async Task<string> SaveProductImages(IFormFile file, string identifier, bool isUpdate = false)
+        public async Task<string> SaveEntityImages(IFormFile file, string identifier, bool isUpdate = false)
         {
             if (string.IsNullOrWhiteSpace(identifier))
                 throw new ArgumentException("Identifier cannot be null or empty.", nameof(identifier));
@@ -185,25 +185,44 @@ namespace Pexita.Services
         /// <summary>
         /// given a string of tags, returns a list of <see cref="TagModel"/> objects.
         /// </summary>
-        /// <param name="Tag">a string containing list of tags.</param>
+        /// <param name="tagString">a string containing list of tags.</param>
         /// <returns>the list of tag model objects.</returns>
-        public List<TagModel> StringToTags(string Tag)
+        public async Task<List<TagModel>> StringToTags(string tagString)
         {
-            if (string.IsNullOrEmpty(Tag))
-            {
-                return new List<TagModel>();
-            }
-            var tags = Tag.Split(',');
-            List<TagModel> res = new();
+           List<TagModel> result = [];
 
-            foreach (string tag in tags)
+            if (string.IsNullOrEmpty(tagString))
             {
-                TagModel t = _Context.Tags.Single(t => t.Title == tag);
-                t.TimesUsed++;
-                res.Add(t);
+                return result;
             }
-            return res;
+
+            // Split the input string into an array of tags
+            var tags = tagString.Split(',', StringSplitOptions.RemoveEmptyEntries);
+
+            // Fetch all existing tags in a single query
+            Dictionary<string, TagModel>? existingTags = await _Context.Tags
+                .Where(t => tags.Contains(t.Title))
+                .ToDictionaryAsync(t => t.Title); //TODO: Make all ToList()s async
+
+            foreach (var tag in tags)
+            {
+                var trimmedTag = tag.Trim();
+
+                if (existingTags.TryGetValue(trimmedTag, out TagModel? tagModel))
+                {
+                    tagModel.TimesUsed++;
+                    result.Add(tagModel);
+                }
+                else
+                {
+                    TagModel newTag = new() { Title = trimmedTag, TimesUsed = 1, Products = [] };
+                    result.Add(newTag);
+                }
+            }
+            await _Context.SaveChangesAsync();
+            return result;
         }
+
         /// <summary>
         /// gets the average of list of ratings.
         /// </summary>

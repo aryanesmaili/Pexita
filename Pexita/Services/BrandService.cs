@@ -21,14 +21,16 @@ namespace Pexita.Services
         private readonly IMapper _mapper;
         private readonly IUserService _userService;
         private readonly JwtSettings _jwtSettings;
+        private readonly IProductService _productService;
 
-        public BrandService(AppDBContext Context, IPexitaTools PexitaTools, IMapper Mapper, IUserService userService, JwtSettings jwtSettings)
+        public BrandService(AppDBContext Context, IPexitaTools PexitaTools, IMapper Mapper, IUserService userService, JwtSettings jwtSettings, IProductService productService)
         {
             _Context = Context;
             _pexitaTools = PexitaTools;
             _mapper = Mapper;
             _userService = userService;
             _jwtSettings = jwtSettings;
+            _productService = productService;
         }
         /// <summary>
         /// Registering a new brand.
@@ -37,27 +39,16 @@ namespace Pexita.Services
         /// <returns> True if successful, throws Exception on failure.</returns>
         /// <exception cref="ValidationException"> Happens When a field is not as expected.</exception>
         /// <exception cref="Exception"></exception>
-        public async Task<bool> AddBrand(BrandCreateVM createDTO)
+        public async Task<BrandInfoVM> AddBrand(BrandCreateVM createDTO)
         {
-            try
-            {
-                if (await _Context.Brands.AnyAsync(u => u.Username == createDTO.Username)) // check if that user already exists.
-                    return false;
+            if (await _Context.Brands.AnyAsync(u => u.Username == createDTO.Username)) // check if that user already exists.
+                throw new ArgumentException("Brand already exists");
 
-                BrandModel Brand = _mapper.Map<BrandModel>(createDTO); // creating an object that matches our DB table.
-                Brand.Password = BCrypt.Net.BCrypt.HashPassword(Brand.Password); // Hashing user's password to ensure security
-                await _Context.Brands.AddAsync(Brand); // adding the user to Database
-                await _Context.SaveChangesAsync(); // saving changes to Database 
-                return true;
-            }
-            catch (ValidationException e)
-            {
-                throw new ValidationException(e.Message);
-            }
-            catch (Exception e)
-            {
-                throw new Exception(e.Message, e);
-            }
+            BrandModel Brand = _mapper.Map<BrandModel>(createDTO); // creating an object that matches our DB table.
+            Brand.Password = BCrypt.Net.BCrypt.HashPassword(Brand.Password); // Hashing user's password to ensure security
+            await _Context.Brands.AddAsync(Brand); // adding the user to Database
+            await _Context.SaveChangesAsync(); // saving changes to Database 
+            return BrandModelToInfo(Brand);
         }
         /// <summary>
         /// the function that validates user's input with database and returns JWT token if successful.
@@ -108,25 +99,13 @@ namespace Pexita.Services
         /// <exception cref="InvalidOperationException"></exception>
         public List<BrandInfoVM> GetBrands()
         {
-            try
-            {
-                List<BrandInfoVM> list = _Context.Brands
-                    .Include(b => b.Products)!.ThenInclude(p => p.Comments)
-                    .Include(b => b.Products)!.ThenInclude(p => p.Tags)
-                    .AsNoTracking()
-                    .Select(BrandModelToInfo)
-                    .ToList();
-                return list;
-            }
-
-            catch (ArgumentNullException)
-            {
-                throw new ArgumentNullException($"Brands Table is null or Empty!");
-            }
-            catch (InvalidOperationException e)
-            {
-                throw new InvalidOperationException(e.Message);
-            }
+            List<BrandInfoVM> list = _Context.Brands
+                .Include(b => b.Products)!.ThenInclude(p => p.Comments)
+                .Include(b => b.Products)!.ThenInclude(p => p.Tags)
+                .AsNoTracking()
+                .Select(BrandModelToInfo)
+                .ToList();
+            return list;
         }
         /// <summary>
         /// Getting a set amount of brands from database along their products, tags and comments of each product.
@@ -138,30 +117,15 @@ namespace Pexita.Services
         /// <exception cref="Exception"></exception>
         public List<BrandInfoVM> GetBrands(int count)
         {
-            try
-            {
-                List<BrandInfoVM> brands = _Context.Brands
-                    .Include(b => b.Products)!.ThenInclude(p => p.Comments)
-                    .Include(b => b.Products)!.ThenInclude(p => p.Tags)
-                    .AsNoTracking()
-                    .Take(count).Select(BrandModelToInfo)
-                    .ToList();
-                if (brands.Count < count || brands.IsNullOrEmpty())
-                    throw new IndexOutOfRangeException("Database either empty or the number entered is out of range.");
-                return brands;
-            }
-            catch (ArgumentNullException)
-            {
-                throw new ArgumentNullException($"Brands Table is null or Empty!");
-            }
-            catch (InvalidOperationException e)
-            {
-                throw new InvalidOperationException(e.Message);
-            }
-            catch (Exception e)
-            {
-                throw new Exception(e.Message);
-            }
+            List<BrandInfoVM> brands = _Context.Brands
+                .Include(b => b.Products)!.ThenInclude(p => p.Comments)
+                .Include(b => b.Products)!.ThenInclude(p => p.Tags)
+                .AsNoTracking()
+                .Take(count).Select(BrandModelToInfo)
+                .ToList();
+            if (brands.Count < count || brands.IsNullOrEmpty())
+                throw new IndexOutOfRangeException("Database either empty or the number entered is out of range.");
+            return brands;
         }
         /// <summary>
         /// Getting a brand's info from its ID
@@ -198,19 +162,15 @@ namespace Pexita.Services
         /// <exception cref="ValidationException"></exception>
         public async Task<BrandInfoVM> UpdateBrandInfo(int id, BrandUpdateVM model, string requestingUsername)
         {
-            try
-            {
-                BrandModel brand = await _pexitaTools.AuthorizeBrandAccessAsync(id, requestingUsername);
+            BrandModel brand = await _pexitaTools.AuthorizeBrandAccessAsync(id, requestingUsername);
 
-                _mapper.Map(model, brand);
-                await _Context.SaveChangesAsync();
-
-                return BrandModelToInfo(brand);
-            }
-            catch (ValidationException e)
+            var newRec = _mapper.Map(model, brand);
+            if (model.BrandPic != null)
             {
-                throw new ValidationException(e.Message);
+                newRec.BrandPicURL = await _pexitaTools.SaveEntityImages(model.BrandPic!, $"{model.Name}/{model.Name}", true);
             }
+            await _Context.SaveChangesAsync();
+            return BrandModelToInfo(brand);
         }
         /// <summary>
         /// deletes a brand from the database.
@@ -221,24 +181,12 @@ namespace Pexita.Services
         /// <exception cref="NotAuthorizedException"></exception>
         /// <exception cref="NotFoundException"></exception>
         /// <exception cref="InvalidOperationException"></exception>
-        public async Task<bool> RemoveBrand(int id, string requestingUsername)
+        public async Task RemoveBrand(int id, string requestingUsername)
         {
-            try
-            {
-                BrandModel brand = await _pexitaTools.AuthorizeBrandAccessAsync(id, requestingUsername);
+            BrandModel brand = await _pexitaTools.AuthorizeBrandAccessAsync(id, requestingUsername);
 
-                _Context.Remove(brand);
-                await _Context.SaveChangesAsync();
-                return true;
-            }
-            catch (NotFoundException)
-            {
-                throw new NotFoundException();
-            }
-            catch (InvalidOperationException e)
-            {
-                throw new InvalidOperationException(e.Message);
-            }
+            _Context.Remove(brand);
+            await _Context.SaveChangesAsync();
         }
         /// <summary>
         /// Converts a Database row into a VM able to be sent to frontend.
@@ -247,7 +195,9 @@ namespace Pexita.Services
         /// <returns></returns>
         public BrandInfoVM BrandModelToInfo(BrandModel model)
         {
-            return _mapper.Map(model, new BrandInfoVM());
+            BrandInfoVM info = _mapper.Map(model, new BrandInfoVM());
+            info.Products = model.Products?.Select(_productService.ProductModelToInfoVM).ToList();
+            return info;
         }
         /// <summary>
         /// checks whether a given id exists in brand table and is a brand.

@@ -201,8 +201,8 @@ namespace Pexita.Controllers
 
             try
             {
-                return await _productService.DeleteProduct(id, requestingUsername) ? NoContent() : BadRequest(id);
-
+                await _productService.DeleteProduct(id, requestingUsername);
+                return NoContent();
             }
             catch (NotFoundException)
             {

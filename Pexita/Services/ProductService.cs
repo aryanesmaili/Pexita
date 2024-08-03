@@ -2,9 +2,12 @@
 using FluentValidation;
 using Microsoft.CodeAnalysis;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using Pexita.Data;
+using Pexita.Data.Entities.Brands;
 using Pexita.Data.Entities.Events;
 using Pexita.Data.Entities.Products;
+using Pexita.Data.Entities.Tags;
 using Pexita.Services.Interfaces;
 using Pexita.Utility.Exceptions;
 
@@ -39,15 +42,34 @@ namespace Pexita.Services
         /// <returns></returns>
         /// <exception cref="ValidationException"></exception>
         /// <exception cref="Exception"></exception>
-        public async Task<bool> AddProduct(ProductCreateDTO product, string requestingUsername)
+        public async Task<ProductInfoVM> AddProduct(ProductCreateDTO product, string requestingUsername)
         {
             await _pexitaTools.AuthorizeProductCreationAsync(product.Brand, requestingUsername);
 
+            // resolving some values asynchronously. the reason is that auto mapper is originally made for Entity => DTO mapping not the other way around.
+            // so it doesn't support asynchronous functions. I have to resolve some values here if I want that to be done asynchronously.
+            BrandModel productBrand = await _brandService.GetBrandByName(product.Brand);
+            string ProductPicsURL = await _pexitaTools.SaveEntityImages(product.ProductPics, $"{product.Brand}/{product.Title}", false);
+            var Tags = await _pexitaTools.StringToTags(product.Tags);
+
             ProductModel NewProduct = _mapper.Map<ProductModel>(product);
-            BrandNewProductEvent Event = new() { Brand = NewProduct.Brand, BrandID = NewProduct.BrandID, Product = NewProduct, ProductID = NewProduct.ID };
+            NewProduct.Brand = productBrand;
+            NewProduct.ProductPicsURL = ProductPicsURL;
+            foreach (var tag in Tags)
+            {
+                tag.Products.Add(NewProduct);
+            }
+            NewProduct.Tags = Tags;
+
             _Context.Products.Add(NewProduct);
-            _Context.SaveChanges();
-            return true;
+            await _Context.SaveChangesAsync();
+
+            if (!productBrand.BrandNewsLetters.IsNullOrEmpty()) // we'll dispatch events only if the brand has subscribers.
+            {
+                BrandNewProductEvent Event = new() { Brand = NewProduct.Brand, BrandID = NewProduct.BrandID, Product = NewProduct, ProductID = NewProduct.ID };
+                _eventdispatcher.Dispatch(Event);
+            }
+            return ProductModelToInfoVM(NewProduct);
         }
         /// <summary>
         /// Get the list of products along with their brands, comments and tags.
@@ -101,7 +123,12 @@ namespace Pexita.Services
         /// <returns></returns>
         public ProductInfoVM ProductModelToInfoVM(ProductModel model)
         {
-            return _mapper.Map<ProductInfoVM>(model);
+            BrandInfoVM brand = _brandService.BrandModelToInfo(model.Brand);
+            double rate = _pexitaTools.GetRating(model.Rating.Select(x => x.Rating).ToList());
+            List<TagInfoVM> tags = _tagsService.TagsToVM(model.Tags ?? []);
+
+            var res = _mapper.Map<ProductInfoVM>(model);
+            return res;
         }
         /// <summary>
         /// Gets a product from database via its ID.
@@ -130,10 +157,25 @@ namespace Pexita.Services
 
             ProductModel productModel = await _pexitaTools.AuthorizeProductAccessAsync(id, requestingUsername);
             bool NotInStock = productModel.Quantity == 0;
-            _mapper.Map(product, productModel);
+
+            ProductModel newProductState = _mapper.Map(product, productModel);
+
+            if (product.ProductPics.Count > 0)
+            {
+                newProductState.ProductPicsURL = await _pexitaTools.SaveEntityImages(product.ProductPics, $"{product.Brand}/{product.Title}", true);
+            }
+            var tgs = await _pexitaTools.StringToTags(product.Tags);
+            foreach (var t in tgs)
+            {
+                if (!t.Products.Contains(newProductState))
+                {
+                    t.Products.Add(newProductState);
+                }
+            }
+            newProductState.Tags = tgs;
 
             await _Context.SaveChangesAsync();
-            if (NotInStock && product.Quantity > 0)
+            if (NotInStock && product.Quantity > 0 && newProductState.NewsLetters?.Count > 0) // only releasing an event when it has subscribers
             {
                 var eventMessage = new ProductAvailableEvent(id); // Product has changed its state to "In stock" so we're publishing an event.
                 await _eventdispatcher.DispatchAsync(eventMessage);
@@ -146,14 +188,12 @@ namespace Pexita.Services
         /// <param name="id">id of the product to be deleted</param>
         /// <param name="requestingUsername">the requester's username.used in authenticating request.</param>
         /// <returns></returns>
-        public async Task<bool> DeleteProduct(int id, string requestingUsername)
+        public async Task DeleteProduct(int id, string requestingUsername)
         {
             ProductModel Product = await _pexitaTools.AuthorizeProductAccessAsync(id, requestingUsername);
 
             _Context.Products.Remove(Product);
             await _Context.SaveChangesAsync();
-            return true;
-
         }
         /// <summary>
         /// Adds the given comment to the product.
@@ -161,13 +201,12 @@ namespace Pexita.Services
         /// <param name="commentDTO">the comment to be added.</param>
         /// <param name="requestingUsername">the requester's username.used in authenticating request.</param>
         /// <returns></returns>
-        public async Task<bool> AddCommentToProduct(ProductCommentDTO commentDTO, string requestingUsername)
+        public async Task AddCommentToProduct(ProductCommentDTO commentDTO, string requestingUsername)
         {
             ProductModel product = await _pexitaTools.AuthorizeProductAccessAsync(commentDTO.ProductID, requestingUsername);
 
-            product.Comments.Add(commentDTO.Comment);
+            product.Comments?.Add(commentDTO.Comment);
             await _Context.SaveChangesAsync();
-            return true;
         }
         /// <summary>
         /// updates a record's rating.
@@ -175,7 +214,7 @@ namespace Pexita.Services
         /// <param name="rateDTO"></param>
         /// <param name="requestingUsername"></param>
         /// <returns></returns>
-        public async Task<bool> UpdateProductRate(UpdateProductRateDTO rateDTO, string requestingUsername)
+        public async Task UpdateProductRate(UpdateProductRateDTO rateDTO, string requestingUsername)
         {
             ProductModel product = await _pexitaTools.AuthorizeProductAccessAsync(rateDTO.ProductID, requestingUsername);
 
@@ -184,8 +223,6 @@ namespace Pexita.Services
             product.Rating.Add(rating);
 
             await _Context.SaveChangesAsync();
-            return true;
-
         }
         /// <summary>
         /// checking if a product already exists in a brand's collection.
@@ -212,7 +249,7 @@ namespace Pexita.Services
             _mapper.Map(productDTO, product);
             await _Context.SaveChangesAsync();
 
-            if (NotInStock && productDTO.Quantity > 0)
+            if (NotInStock && productDTO.Quantity > 0 && product.NewsLetters?.Count > 0)
             {
                 var eventMessage = new ProductAvailableEvent(product.ID);
                 await _eventdispatcher.DispatchAsync(eventMessage);

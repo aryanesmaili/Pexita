@@ -8,7 +8,6 @@ using Pexita.Data.Entities.Comments;
 using Pexita.Data.Entities.User;
 using Pexita.Services.Interfaces;
 using Pexita.Utility.Exceptions;
-using System.Text.RegularExpressions;
 
 namespace Pexita.Services
 {
@@ -124,32 +123,31 @@ namespace Pexita.Services
             UserModel user = await _pexitaTools.AuthorizeUserAccessAsync(userInfo.ID, requestingUsername);
             string hashedpassword = BCrypt.Net.BCrypt.HashPassword(NewPassword);
             user.Password = hashedpassword;
-            user.ResetPasswordCode = string.Empty;
+            user.ResetPasswordCode = null;
             await _Context.SaveChangesAsync();
             return UserModelToInfoVM(user, userInfo.RefreshToken!, userInfo.JWToken!);
         }
         /// <summary>
         /// begins a Change password procedure for the user.
         /// </summary>
-        /// <param name="userinfo">the user whom wants to change their password.</param>
+        /// <param name="userInfo">user's input that can be either email or username.</param>
         /// <returns>a <see cref="UserInfoVM"/> object containing Info. </returns>
         /// <exception cref="ArgumentNullException"></exception>
         /// <exception cref="NotFoundException"></exception>
-        public async Task<UserInfoVM> ResetPassword(string userinfo)
+        public async Task<UserInfoVM> ResetPassword(string userInfo)
         {
-            if (userinfo.IsNullOrEmpty())
-                throw new ArgumentNullException(userinfo);
+            if (userInfo.IsNullOrEmpty())
+                throw new ArgumentNullException(userInfo);
 
-            string emailPattern = @"^[^@\s]+@[^@\s]+\.[^@\s]+$";
             UserModel? user;
 
-            if (Regex.IsMatch(userinfo, emailPattern)) // if the user has entered an email:
-                user = await _Context.Users.FirstOrDefaultAsync(u => u.Email == userinfo); // we search by email
+            if (_pexitaTools.IsEmail(userInfo)) // if the user has entered an email:
+                user = await _Context.Users.FirstOrDefaultAsync(u => u.Email == userInfo); // we search by email
             else // if it's not an email then the user has entered their username
-                user = await _Context.Users.FirstOrDefaultAsync(user => user.Username == userinfo); // we search by username
+                user = await _Context.Users.FirstOrDefaultAsync(user => user.Username == userInfo); // we search by username
 
             if (user == null) // if no user exists with that email/username:
-                throw new NotFoundException($"User {userinfo} does not exist.");
+                throw new NotFoundException($"User {userInfo} does not exist.");
 
             user.ResetPasswordCode = _pexitaTools.GenerateRandomPassword(8); // we generate a reset password code for them,
             string Subject = "Pexita Authentication code";
@@ -163,44 +161,42 @@ namespace Pexita.Services
         /// <summary>
         /// checks if the given code matches the one in Database.
         /// </summary>
-        /// <param name="userID">user whom we want to reset.</param>
-        /// <param name="Code">the ResetCode</param>
-        /// <returns>True if match, false otherwise.</returns>
+        /// <param name="userID">user whom we want to edit.</param>
+        /// <param name="Code">the ResetCode. entered by user.</param>
+        /// <returns>a <see cref="UserInfoVM"/> object containing tokens. the user is verified after this.</returns>
         /// <exception cref="ArgumentNullException"></exception>
         /// <exception cref="NotFoundException"></exception>
         public async Task<UserInfoVM> CheckResetCode(UserInfoVM user, string Code)
         {
             if (Code.IsNullOrEmpty())
-                throw new ArgumentNullException(Code);
+                throw new ArgumentNullException(nameof(Code));
 
-            UserModel userRec = await _Context.Users.AsNoTracking().FirstOrDefaultAsync(u => u.ID == user.ID)
+            UserModel userRec = await _Context.Users.FirstOrDefaultAsync(u => u.ID == user.ID)
                 ?? throw new NotFoundException($"User {user.ID} does not exist.");
 
             string ResetCode = userRec.ResetPasswordCode ?? throw new ArgumentNullException("ResetCode");
 
-            if (ResetCode == Code)
+            if (ResetCode != Code)
+                throw new ArgumentException("Code is Wrong.");
+
+            var result = UserModelToInfoVM(userRec);
+            string token = _pexitaTools.GenerateJWToken(userRec.Username, userRec.Role, userRec.Email);
+            string refToken = _pexitaTools.GenerateRefreshToken();
+            UserRefreshToken refreshToken = new()
             {
-                var result = UserModelToInfoVM(userRec);
-                string token = _pexitaTools.GenerateJWToken(userRec.Username, userRec.Role, userRec.Email);
-                string refToken = _pexitaTools.GenerateRefreshToken();
-                RefreshToken refreshToken = new()
-                {
-                    Token = token,
-                    User = userRec,
-                    UserId = userRec.ID,
-                    Created = DateTime.UtcNow,
-                    Expires = DateTime.UtcNow.AddDays(7)
-                };
-                _Context.RefreshTokens.Add(refreshToken);
-                await _Context.SaveChangesAsync();
+                Token = refToken,
+                User = userRec,
+                UserId = userRec.ID,
+                Created = DateTime.UtcNow,
+                Expires = DateTime.UtcNow.AddDays(7)
+            };
+            _Context.UserRefreshTokens.Add(refreshToken);
+            await _Context.SaveChangesAsync();
 
-                result.RefreshToken = refreshToken;
-                result.JWToken = token;
-                return result;
-            }
-            throw new ArgumentException("Code is Wrong.");
-
-        } 
+            result.RefreshToken = refreshToken;
+            result.JWToken = token;
+            return result;
+        }
         /// <summary>
         /// updates a user's cred in database.
         /// </summary>
@@ -261,7 +257,7 @@ namespace Pexita.Services
         /// <param name="RefreshToken">RefreshToken of the user.</param>
         /// <param name="AccessToken">JWToken given to user to authenticate their requests.</param>
         /// <returns>a <see cref="UserInfoVM"/> object containing information.</returns>
-        public UserInfoVM UserModelToInfoVM(UserModel userModel, RefreshToken RefreshToken, string AccessToken)
+        public UserInfoVM UserModelToInfoVM(UserModel userModel, UserRefreshToken RefreshToken, string AccessToken)
         {
             var result = _mapper.Map<UserInfoVM>(userModel);
             result.RefreshToken = RefreshToken;
@@ -291,10 +287,10 @@ namespace Pexita.Services
                 throw new NotAuthorizedException("Username or Password is not correct");
             }
 
-            var result = UserModelToInfoVM(user);
-            result.JWToken = _pexitaTools.GenerateJWToken(user.Username, user.Role, user.Email);
+            var result = UserModelToInfoVM(user!);
+            result.JWToken = _pexitaTools.GenerateJWToken(user!.Username, user.Role, user.Email);
             string rawRefreshToken = _pexitaTools.GenerateRefreshToken();
-            RefreshToken refreshToken = new RefreshToken()
+            UserRefreshToken refreshToken = new UserRefreshToken()
             {
                 Token = rawRefreshToken,
                 User = user,
@@ -302,7 +298,7 @@ namespace Pexita.Services
                 Created = DateTime.UtcNow,
                 UserId = user.ID
             };
-            _Context.RefreshTokens.Add(refreshToken);
+            _Context.UserRefreshTokens.Add(refreshToken);
             result.RefreshToken = refreshToken;
             return result;
         }
@@ -310,7 +306,7 @@ namespace Pexita.Services
         /// Generates a fresh JWToken for the user given the refreshToken.
         /// </summary>
         /// <param name="refreshToken">the string containing user's given refreshToken.</param>
-        /// <returns>a fresh JWToken.</returns>
+        /// <returns>an object containing fresh JWToken.</returns>
         /// <exception cref="ArgumentNullException"></exception>
         /// <exception cref="NotFoundException"></exception>
         public async Task<UserInfoVM> TokenRefresher(string refreshToken)
@@ -318,7 +314,7 @@ namespace Pexita.Services
             if (refreshToken.IsNullOrEmpty())
                 throw new ArgumentNullException(refreshToken);
 
-            RefreshToken? currentRefreshToken = await _Context.RefreshTokens.FirstOrDefaultAsync(t => t.Token == refreshToken);
+            UserRefreshToken? currentRefreshToken = await _Context.UserRefreshTokens.FirstOrDefaultAsync(t => t.Token == refreshToken);
             if (currentRefreshToken == null || !currentRefreshToken.IsActive)
                 throw new NotFoundException($"token {refreshToken} is not valid.");
             UserModel user = await _Context.Users.FindAsync(currentRefreshToken.UserId) ?? throw new NotFoundException($"User {currentRefreshToken.UserId} Does not exist");
@@ -330,9 +326,9 @@ namespace Pexita.Services
 
             // Revoking the current token that the user had.
             currentRefreshToken.Revoked = DateTime.UtcNow;
-            _Context.RefreshTokens.Update(currentRefreshToken);
+            _Context.UserRefreshTokens.Update(currentRefreshToken);
             // Creating the new Refresh token object for the user.
-            var newToken = new RefreshToken()
+            var newToken = new UserRefreshToken()
             {
                 Token = newRefreshTokenStr,
                 User = user,
@@ -340,7 +336,7 @@ namespace Pexita.Services
                 Created = DateTime.UtcNow,
                 Expires = DateTime.UtcNow.AddDays(7)
             };
-            _Context.RefreshTokens.Add(newToken);
+            _Context.UserRefreshTokens.Add(newToken);
             result.RefreshToken = newToken;
 
             await _Context.SaveChangesAsync();
@@ -355,14 +351,16 @@ namespace Pexita.Services
         /// <exception cref="NotFoundException"></exception>
         public async Task RevokeToken(string token)
         {
-            if (token == null) throw new ArgumentNullException(token);
-            var tokenRecord = await _Context.RefreshTokens.FirstOrDefaultAsync(t => t.Token == token) ?? throw new NotFoundException();
+            if (token == null)
+                throw new ArgumentNullException(token);
+            var tokenRecord = await _Context.UserRefreshTokens.FirstOrDefaultAsync(t => t.Token == token) ?? throw new NotFoundException();
             if (tokenRecord != null && tokenRecord.IsActive)
             {
                 tokenRecord.Revoked = DateTime.UtcNow;
-                _Context.RefreshTokens.Update(tokenRecord);
+                _Context.UserRefreshTokens.Update(tokenRecord);
                 await _Context.SaveChangesAsync();
             }
+            throw new Exception("Operation cannot be done.");
         }
         /// <summary>
         /// registers a new user.
@@ -371,15 +369,13 @@ namespace Pexita.Services
         /// <returns>a <see cref="UserInfoVM"/> object containing information about the new user.</returns>
         public async Task<UserInfoVM> Register(UserCreateVM userCreateVM)
         {
-            if (await _Context.Users.AnyAsync(u => u.Username == userCreateVM.Username))
+            if (await _Context.Users.AnyAsync(u => u.Username == userCreateVM.Username)) // check if that user already exists.
                 throw new ArgumentException("User already exists.");
 
-            UserModel User = _mapper.Map<UserModel>(userCreateVM);
-            User.Password = BCrypt.Net.BCrypt.HashPassword(User.Password);
-            _Context.Users.Add(User);
-
+            UserModel User = _mapper.Map<UserModel>(userCreateVM); // creating an object that matches our DB table.
+            User.Password = BCrypt.Net.BCrypt.HashPassword(User.Password); // Hashing user's password to ensure security
+            await _Context.Users.AddAsync(User);
             await _Context.SaveChangesAsync();
-
             return UserModelToInfoVM(User);
 
         }

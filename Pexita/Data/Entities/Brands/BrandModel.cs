@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Pexita.Data.Entities.Authentication;
 using Pexita.Data.Entities.Newsletter;
 using Pexita.Data.Entities.Orders;
 using Pexita.Data.Entities.Products;
@@ -15,12 +15,14 @@ namespace Pexita.Data.Entities.Brands
         public required string Password { get; set; }
         public required string Email { get; set; }
         public DateTime DateCreated { get; set; }
+        public string? ResetPasswordCode { get; set; }
 
         // Navigation Properties
         public List<ProductModel>? Products { get; set; }
         public List<BrandOrder>? BrandOrders { get; set; }
         public List<BrandNewsletterModel>? BrandNewsLetters { get; set; }
         public List<ProductNewsLetterModel>? ProductNewsLetters { get; set; }
+        public List<BrandRefreshToken>? BrandRefreshTokens { get; set; }
 
     }
 

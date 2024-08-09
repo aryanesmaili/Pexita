@@ -12,6 +12,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace Pexita.Services
 {
@@ -93,7 +94,7 @@ namespace Pexita.Services
                 return imagePath;
 
             // Generate a unique filename
-            string uniqueFileName = $"{identifier}_{DateTime.UtcNow.Ticks}{Path.GetExtension(file.FileName)}";
+            string uniqueFileName = $"{identifier.Split("/")[1]}_{DateTime.UtcNow.Ticks}{Path.GetExtension(file.FileName)}";
             string filePath = Path.Combine(imagePath, uniqueFileName);
 
             // If it's an update, remove the old file (if it exists)
@@ -189,7 +190,7 @@ namespace Pexita.Services
         /// <returns>the list of tag model objects.</returns>
         public async Task<List<TagModel>> StringToTags(string tagString)
         {
-           List<TagModel> result = [];
+            List<TagModel> result = [];
 
             if (string.IsNullOrEmpty(tagString))
             {
@@ -222,7 +223,6 @@ namespace Pexita.Services
             await _Context.SaveChangesAsync();
             return result;
         }
-
         /// <summary>
         /// gets the average of list of ratings.
         /// </summary>
@@ -254,27 +254,22 @@ namespace Pexita.Services
         public async Task<List<Address>> ValidateAddresses(int UserID, List<Address> VMAddresses)
         {
 
-            try
+            HashSet<Address> addresses = new(VMAddresses);
+
+            UserModel user = await _Context.Users.Include(u => u.Addresses).FirstOrDefaultAsync(u => u.ID == UserID) ?? throw new NotFoundException($"user {UserID} does not exist.");
+
+            foreach (var address in addresses)
             {
-                HashSet<Address> addresses = new(VMAddresses);
-
-                UserModel user = await _Context.Users.Include(u => u.Addresses).FirstOrDefaultAsync(u => u.ID == UserID);
-
-                foreach (var address in addresses)
+                if (user.Addresses?.FirstOrDefault(a => a.ID == address.ID) == null)
                 {
-                    if (user.Addresses.FirstOrDefault(a => a.ID == address.ID) == null)
-                    {
-                        user.Addresses.Add(address);
-                    }
+                    user.Addresses?.Add(address);
                 }
-                _Context.SaveChanges();
+            }
+            _Context.SaveChanges();
 
-                return user.Addresses.ToList();
-            }
-            catch (InvalidOperationException)
-            {
-                throw new NotFoundException($"User With ID:{UserID} Not Found");
-            }
+            return user.Addresses?.ToList()!;
+
+
         }
         /// <summary>
         /// checks if a product row can be accessed and modified by a certain user. the user can only make changes if they're an admin or owner of the record.
@@ -447,6 +442,16 @@ namespace Pexita.Services
                 rng.GetBytes(randomBytes);
                 return Convert.ToBase64String(randomBytes);
             }
+        }
+        /// <summary>
+        /// validates if a given string is an Email or not.
+        /// </summary>
+        /// <param name="input"></param>
+        /// <returns>True if it is an emailf false otherwise.</returns>
+        public bool IsEmail(string input)
+        {
+            string emailPattern = @"^[^@\s]+@[^@\s]+\.[^@\s]+$";
+            return Regex.IsMatch(input, emailPattern);
         }
     }
 }

@@ -29,7 +29,7 @@ namespace Pexita.Controllers
             _contextAccessor = contextAccessor;
         }
 
-        [HttpGet("products")]
+        [HttpGet()]
         public IActionResult GetAllProducts()
         {
             try
@@ -47,7 +47,7 @@ namespace Pexita.Controllers
             }
         }
 
-        [HttpGet("products/get/{count:int}")]
+        [HttpGet("get/{count:int}")]
         public IActionResult GetProducts(int count)
         {
             try
@@ -69,16 +69,16 @@ namespace Pexita.Controllers
             }
         }
 
-        [HttpGet("products/{id:int}")]
-        public IActionResult GetProductByID(int id)
+        [HttpGet("{id:int}")]
+        public async Task<IActionResult> GetProductByID(int id)
         {
             try
             {
-                return Ok(_productService.GetProductByID(id));
+                return Ok(await _productService.GetProductByID(id));
             }
             catch (NotFoundException)
             {
-                return NotFound(nameof(id));
+                return NotFound(id);
             }
             catch (Exception e)
             {
@@ -87,8 +87,8 @@ namespace Pexita.Controllers
         }
 
         [Authorize(Policy = "Brand")]
-        [HttpPost("product/add")]
-        public async Task<IActionResult> AddProduct([FromBody] ProductCreateDTO product)
+        [HttpPost("add")]
+        public async Task<IActionResult> AddProduct([FromForm] ProductCreateDTO product)
         {
             var requestingUsername = _contextAccessor.HttpContext?.User.Identity?.Name;
             try
@@ -98,7 +98,7 @@ namespace Pexita.Controllers
 
                 await _productCreateValidator.ValidateAndThrowAsync(product);
 
-                _productService.AddProduct(product, requestingUsername);
+                await _productService.AddProduct(product, requestingUsername!);
 
                 return Ok();
             }
@@ -124,8 +124,8 @@ namespace Pexita.Controllers
             }
         }
         [Authorize(Policy = "Brand")]
-        [HttpPatch("product/patch/{id}")]
-        public async Task<IActionResult> UpdateProductPartially(int id, [FromBody] ProductUpdateDTO product)
+        [HttpPatch("patch/{id}")]
+        public async Task<IActionResult> UpdateProductPartially(int id, [FromForm] ProductUpdateDTO product)
         {
             var requestingUsername = _contextAccessor.HttpContext?.User.Identity?.Name;
             try
@@ -144,8 +144,8 @@ namespace Pexita.Controllers
             }
         }
         [Authorize(Policy = "Brand")]
-        [HttpPut("product/update/{id}")]
-        public async Task<IActionResult> UpdateProduct(int id, [FromBody] ProductUpdateDTO product)
+        [HttpPut("update/{id}")]
+        public async Task<IActionResult> UpdateProduct(int id, [FromForm] ProductUpdateDTO product)
         {
             var requestingUsername = _contextAccessor.HttpContext!.User?.Identity?.Name;
             try
@@ -170,7 +170,7 @@ namespace Pexita.Controllers
         }
 
         [Authorize(Policy = "OnlyUsers")]
-        [HttpPut("product/update/rate/{id:int}")]
+        [HttpPut("update/rate")]
         public async Task<IActionResult> UpdateProductRate([FromBody] UpdateProductRateDTO rateDTO)
         {
             string requestingUsername = _contextAccessor.HttpContext!.User?.Identity?.Name!;
@@ -194,7 +194,7 @@ namespace Pexita.Controllers
             }
         }
         [Authorize(Policy = "Brand")]
-        [HttpDelete("products/delete/{id}")]
+        [HttpDelete("delete/{id}")]
         public async Task<IActionResult> DeleteProduct(int id)
         {
             string requestingUsername = _contextAccessor.HttpContext!.User?.Identity?.Name!;
@@ -214,7 +214,7 @@ namespace Pexita.Controllers
             }
         }
         [Authorize(Policy = "AllUsers")]
-        [HttpPost("/product/Comments/Add/{id:int}")]
+        [HttpPost("Comments/Add/{id:int}")]
         public async Task<IActionResult> AddCommentToProduct(ProductCommentDTO commentDTO)
         {
             string requestingUsername = _contextAccessor.HttpContext!.User?.Identity?.Name!;

@@ -1,7 +1,6 @@
 ﻿using FluentValidation;
 using Microsoft.IdentityModel.Tokens;
 using Pexita.Data.Entities.Products;
-using Pexita.Services;
 using Pexita.Services.Interfaces;
 
 namespace Pexita.Utility.Validators

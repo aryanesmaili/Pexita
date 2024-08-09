@@ -20,5 +20,6 @@ namespace Pexita.Services.Interfaces
         public Task<UserModel> AuthorizeUserAccessAsync(int userID, string Username);
         public string GenerateJWToken(string Username, string Role, string Email);
         public string GenerateRefreshToken();
+        public bool IsEmail(string input);
     }
 }

@@ -26,7 +26,7 @@ namespace Pexita.Data.Entities.User
         public List<BrandNewsletterModel>? BrandNewsletters { get; set; }
         public List<ProductNewsLetterModel>? ProductNewsletters { get; set; }
         public List<CommentsModel>? Comments { get; set; }
-        public List<RefreshToken>? RefreshTokens { get; set; }
+        public List<UserRefreshToken>? RefreshTokens { get; set; }
     }
     public class Address
     {

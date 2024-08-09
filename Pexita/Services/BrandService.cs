@@ -8,9 +8,6 @@ using Pexita.Data.Entities.Brands;
 using Pexita.Data.Entities.User;
 using Pexita.Services.Interfaces;
 using Pexita.Utility.Exceptions;
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using System.Text;
 
 namespace Pexita.Services
 {
@@ -21,14 +18,16 @@ namespace Pexita.Services
         private readonly IMapper _mapper;
         private readonly IUserService _userService;
         private readonly JwtSettings _jwtSettings;
+        private readonly IEmailService _emailService;
 
-        public BrandService(AppDBContext Context, IPexitaTools PexitaTools, IMapper Mapper, IUserService userService, JwtSettings jwtSettings)
+        public BrandService(AppDBContext Context, IPexitaTools PexitaTools, IMapper Mapper, IUserService userService, JwtSettings jwtSettings, IEmailService emailService)
         {
             _Context = Context;
             _pexitaTools = PexitaTools;
             _mapper = Mapper;
             _userService = userService;
             _jwtSettings = jwtSettings;
+            _emailService = emailService;
         }
         /// <summary>
         /// Registering a new brand.
@@ -37,7 +36,7 @@ namespace Pexita.Services
         /// <returns> True if successful, throws Exception on failure.</returns>
         /// <exception cref="ValidationException"> Happens When a field is not as expected.</exception>
         /// <exception cref="Exception"></exception>
-        public async Task<BrandInfoVM> AddBrand(BrandCreateVM createDTO)
+        public async Task<BrandInfoVM> Register(BrandCreateDTO createDTO)
         {
             if (await _Context.Brands.AnyAsync(u => u.Username == createDTO.Username)) // check if that user already exists.
                 throw new ArgumentException("Brand already exists");
@@ -55,7 +54,7 @@ namespace Pexita.Services
         /// <returns>string containing JWT token if successful.</returns>
         /// <exception cref="NotFoundException">if the user does not exist.</exception>
         /// <exception cref="NotAuthorizedException"></exception>
-        public async Task<string> Login(UserLoginVM userLoginVM)
+        public async Task<BrandInfoVM> Login(UserLoginVM userLoginVM)
         {
             BrandModel? brand = null;
 
@@ -69,25 +68,178 @@ namespace Pexita.Services
             {
                 throw new NotAuthorizedException("Username or Password is not correct");
             }
-
-            var tokenHandler = new JwtSecurityTokenHandler();
-            var key = Encoding.ASCII.GetBytes(_jwtSettings.SecretKey); // getting the encryption key from app settings.
-
-            var tokenDescriptor = new SecurityTokenDescriptor
+            var result = BrandModelToInfo(brand!);
+            result.JWToken = _pexitaTools.GenerateJWToken(brand.Username, "Brand", brand.Email);
+            string rawRefreshToken = _pexitaTools.GenerateRefreshToken();
+            BrandRefreshToken refreshToken = new()
             {
-                Subject = new ClaimsIdentity(new[] // Defining the information being carried by the token.
-                {
-                    new Claim(ClaimTypes.Name, brand.Username),
-                    new Claim(ClaimTypes.Role, "Brand"),
-                    new Claim(ClaimTypes.Email, brand.Email),
-                }),
-                Expires = DateTime.UtcNow.AddMinutes(_jwtSettings.ExpiresInMinutes), // defining when the token is going to expire.
-                SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature),
-                Issuer = _jwtSettings.Issuer,
-                Audience = _jwtSettings.Audience,
+                Token = rawRefreshToken,
+                Brand = brand,
+                BrandID = brand.ID,
+                Expires = DateTime.UtcNow.AddDays(7),
+                Created = DateTime.UtcNow,
             };
-            var token = tokenHandler.CreateToken(tokenDescriptor);
-            return tokenHandler.WriteToken(token);
+            _Context.BrandRefreshTokens.Add(refreshToken);
+            result.RefreshToken = refreshToken;
+            return result;
+        }
+
+        /// <summary>
+        /// begins a Change password procedure for the user.
+        /// </summary>
+        /// <param name="loginInfo">user's input that can be either email or username.</param>
+        /// <returns> a <see cref="BrandInfoVM"/> object containing info about the brand.</returns>
+        /// <exception cref="ArgumentNullException"></exception>
+        /// <exception cref="NotFoundException"></exception>
+        public async Task<BrandInfoVM> ResetPassword(string loginInfo)
+        {
+            if (loginInfo.IsNullOrEmpty())
+                throw new ArgumentNullException(nameof(loginInfo));
+            BrandModel? brand;
+
+            if (_pexitaTools.IsEmail(loginInfo)) // if the user has entered an email:
+                brand = await _Context.Brands.FirstOrDefaultAsync(b => b.Email == loginInfo); // we search by email
+            else // if it's not an email then the user has entered their username
+                brand = await _Context.Brands.FirstOrDefaultAsync(u => u.Username == loginInfo); // we search by username
+
+            if (brand == null) // if no user exists with that email/username:
+                throw new NotFoundException($"Brand {loginInfo} does not exist");
+
+            brand.ResetPasswordCode = _pexitaTools.GenerateRandomPassword(8); // we generate a reset password code for them,
+            string Subject = "Pexita Authentication code";
+            string Body = $"Your Authentication Code Is {brand.ResetPasswordCode}";
+
+            _emailService.SendEmail(brand.Email, Subject, Body); // we send the code to the user.
+
+            await _Context.SaveChangesAsync();
+            return BrandModelToInfo(brand);
+        }
+        /// <summary>
+        /// Changes a brand's password after making sure the input is valid.
+        /// </summary>
+        /// <param name="brandInfo"> <see cref="BrandInfoVM"/> object containing info about the brand being edited.</param>
+        /// <param name="NewPassword"></param>
+        /// <param name="ConfirmPassword"></param>
+        /// <param name="requestingUsername">the username requesting the change.</param>
+        /// <returns><see cref="BrandInfoVM"/> object containing information about the record we just edited.</returns>
+        /// <exception cref="ArgumentNullException"></exception>
+        /// <exception cref="ArgumentException"></exception>
+        public async Task<BrandInfoVM> ChangePassword(BrandInfoVM brandInfo, string NewPassword, string ConfirmPassword, string requestingUsername)
+        {
+            if (NewPassword.IsNullOrEmpty() || ConfirmPassword.IsNullOrEmpty())
+                throw new ArgumentNullException("Password fields should not be empty");
+            else if (NewPassword != ConfirmPassword)
+                throw new ArgumentException($"Entered values {NewPassword} and {ConfirmPassword} Do not match.");
+
+            BrandModel brand = await _pexitaTools.AuthorizeBrandAccessAsync(brandInfo.ID, requestingUsername); // checking if the user requesting the change has authorization to modify this record
+            string HashedPassword = BCrypt.Net.BCrypt.HashPassword(NewPassword); // Hashing the password using SHA256
+            brand.Password = HashedPassword;
+            brand.ResetPasswordCode = null;
+            await _Context.SaveChangesAsync();
+            return BrandModelToInfo(brand, brandInfo.RefreshToken!, brandInfo.JWToken!);
+        }
+        //TODO: add controllers for password reset procedure to brand controller.
+        /// <summary>
+        /// checks if the given code matches the one in Database.
+        /// </summary>
+        /// <param name="brand">brand whom we want to edit.</param>
+        /// <param name="Code">the ResetCode entered by user.</param>
+        /// <returns> a <see cref="BrandInfoVM"/> object containing tokens. the user is verified after this.</returns>
+        /// <exception cref="ArgumentNullException"></exception>
+        /// <exception cref="NotFoundException"></exception>
+        /// <exception cref="ArgumentException"></exception>
+        public async Task<BrandInfoVM> CheckResetCode(BrandInfoVM brand, string Code)
+        {
+            if (Code.IsNullOrEmpty())
+                throw new ArgumentNullException(nameof(Code));
+
+            BrandModel brandRec = await _Context.Brands.FirstOrDefaultAsync(u => u.ID == brand.ID)
+                 ?? throw new NotFoundException($"Brand {brand.ID} Does not Exist");
+
+            string ResetCode = brandRec.ResetPasswordCode ?? throw new ArgumentNullException("Reset Code");
+
+            if (ResetCode != Code)
+                throw new ArgumentException("Code is Wrong.");
+
+            var result = BrandModelToInfo(brandRec);
+            string token = _pexitaTools.GenerateJWToken(brandRec.Username, "Brand", brandRec.Email);
+            string refToken = _pexitaTools.GenerateRefreshToken();
+
+            BrandRefreshToken refreshToken = new()
+            {
+                Brand = brandRec,
+                BrandID = brandRec.ID,
+                Token = refToken,
+                Created = DateTime.UtcNow,
+                Expires = DateTime.UtcNow.AddDays(7),
+            };
+            _Context.BrandRefreshTokens.Add(refreshToken);
+            await _Context.SaveChangesAsync();
+
+            result.RefreshToken = refreshToken;
+            result.JWToken = token;
+            return result;
+        }
+        /// <summary>
+        /// Generates a fresh JWToken for the user given the refreshToken.
+        /// </summary>
+        /// <param name="refreshToken">the string containing user's given refreshToken.</param>
+        /// <returns>an object containing fresh JWToken.</returns>
+        /// <exception cref="ArgumentNullException"></exception>
+        /// <exception cref="NotFoundException"></exception>
+        public async Task<BrandInfoVM> TokenRefresher(string refreshToken)
+        {
+            if (refreshToken.IsNullOrEmpty())
+                throw new ArgumentNullException(refreshToken);
+
+            BrandRefreshToken? currentRefreshToken = await _Context.BrandRefreshTokens.FirstOrDefaultAsync(t => t.Token == refreshToken);
+            if (currentRefreshToken == null || !currentRefreshToken.IsActive)
+                throw new NotFoundException($"token {refreshToken} is not valid.");
+            BrandModel brand = await _Context.Brands.FindAsync(currentRefreshToken.BrandID) ?? throw new NotFoundException($"User {currentRefreshToken.BrandID} Does not exist");
+
+            var result = BrandModelToInfo(brand);
+            // Generating both new JWToken and RefreshToken
+            var newRefreshTokenStr = _pexitaTools.GenerateRefreshToken();
+            result.JWToken = _pexitaTools.GenerateJWToken(brand.Username, "Brand", brand.Email);
+
+            // Revoking the current token that the user had.
+            currentRefreshToken.Revoked = DateTime.UtcNow;
+            _Context.BrandRefreshTokens.Update(currentRefreshToken);
+            // Creating the new Refresh token object for the user.
+            var newToken = new BrandRefreshToken()
+            {
+                Token = newRefreshTokenStr,
+                Brand = brand,
+                BrandID = brand.ID,
+                Created = DateTime.UtcNow,
+                Expires = DateTime.UtcNow.AddDays(7)
+            };
+            _Context.BrandRefreshTokens.Add(newToken);
+            result.RefreshToken = newToken;
+
+            await _Context.SaveChangesAsync();
+            return result;
+        }
+        /// <summary>
+        /// revokes a user's refresh token on their logout
+        /// </summary>
+        /// <param name="token"></param>
+        /// <returns></returns>
+        /// <exception cref="ArgumentNullException"></exception>
+        /// <exception cref="NotFoundException"></exception>
+        public async Task RevokeToken(string token)
+        {
+            if (token == null)
+                throw new ArgumentNullException(token);
+
+            var tokenRecord = await _Context.BrandRefreshTokens.FirstOrDefaultAsync(t => t.Token == token) ?? throw new NotFoundException();
+            if (tokenRecord != null && tokenRecord.IsActive)
+            {
+                tokenRecord.Revoked = DateTime.UtcNow;
+                _Context.BrandRefreshTokens.Update(tokenRecord);
+                await _Context.SaveChangesAsync();
+            }
+            throw new Exception("Operation cannot be done.");
         }
         /// <summary>
         /// Get the list of all brands along with their products, tags and comments of each product.
@@ -165,7 +317,7 @@ namespace Pexita.Services
             var newRec = _mapper.Map(model, brand);
             if (model.BrandPic != null)
             {
-                newRec.BrandPicURL = await _pexitaTools.SaveEntityImages(model.BrandPic!, $"{model.Name}/{model.Name}", true);
+                newRec.BrandPicURL = await _pexitaTools.SaveEntityImages(model.BrandPic!, $"Brands/{model.Name}", true);
             }
             await _Context.SaveChangesAsync();
             return BrandModelToInfo(brand);
@@ -196,6 +348,17 @@ namespace Pexita.Services
             return _mapper.Map(model, new BrandInfoVM());
         }
         /// <summary>
+        /// Maps a BrandModel database record to a representable object.
+        /// </summary>
+        /// <param name="model">the database record.</param>
+        /// <param name="refreshToken">RefreshToken of the Brand.</param>
+        /// <param name="AccessToken">JWToken given to user to authenticate their requests.</param>
+        /// <returns>a <see cref="BrandInfoVM"/> object containing information.</returns>
+        public BrandInfoVM BrandModelToInfo(BrandModel model, BrandRefreshToken refreshToken, string AccessToken)
+        {
+            return _mapper.Map(model, new BrandInfoVM() { RefreshToken = refreshToken, JWToken = AccessToken });
+        }
+        /// <summary>
         /// checks whether a given id exists in brand table and is a brand.
         /// </summary>
         /// <param name="id">the id to be checked.</param>
@@ -213,5 +376,6 @@ namespace Pexita.Services
         {
             return _Context.Brands.FirstOrDefault(x => x.Name == BrandName) != null;
         }
+
     }
 }

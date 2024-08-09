@@ -1,5 +1,4 @@
 ﻿using AutoMapper;
-using Elfie.Serialization;
 using Pexita.Data.Entities.Brands;
 using Pexita.Data.Entities.Comments;
 using Pexita.Data.Entities.Newsletter;
@@ -40,7 +39,7 @@ namespace Pexita.Utility
 
             CreateMap<ProductModel, ProductModel>();
 
-            CreateMap<BrandCreateVM, BrandModel>()
+            CreateMap<BrandCreateDTO, BrandModel>()
                 .ForMember(Brand => Brand.BrandPicURL, opt => opt.MapFrom<BrandPicURLResolver>())
                 .ForMember(Brand => Brand.DateCreated, opt => opt.MapFrom(src => DateTime.UtcNow))
                 .ForMember(Brand => Brand.Products, opt => opt.MapFrom(src => new List<ProductModel>()))
@@ -53,7 +52,7 @@ namespace Pexita.Utility
             CreateMap<BrandModel, BrandInfoVM>()
                 .ForMember(b => b.Products, opt => opt.MapFrom<BrandProductResolver>());
 
-            
+
             CreateMap<UserUpdateVM, UserModel>();
 
             CreateMap<UserModel, UserInfoVM>();
@@ -91,7 +90,7 @@ namespace Pexita.Utility
                 .ForMember(p => p.Successfull, opt => opt.MapFrom(src => transactionStatus[src.Status]));
         }
     }
-    public class BrandPicURLResolver : IValueResolver<BrandCreateVM, BrandModel, string?>
+    public class BrandPicURLResolver : IValueResolver<BrandCreateDTO, BrandModel, string?>
     {
         private readonly IPexitaTools _pexitaTools;
 
@@ -99,12 +98,12 @@ namespace Pexita.Utility
         {
             _pexitaTools = pexitaTools;
         }
-        public string? Resolve(BrandCreateVM source, BrandModel destination, string? destinationMember, ResolutionContext context)
+        public string? Resolve(BrandCreateDTO source, BrandModel destination, string? destinationMember, ResolutionContext context)
         {
             // Only set the URL if BrandPic is not null or empty
             if (source.Brandpic != null && source.Brandpic.Length > 0)
             {
-                return _pexitaTools.SaveEntityImages(source.Brandpic, $"{source.Name}/{source.Name}", false).Result;
+                return _pexitaTools.SaveEntityImages(source.Brandpic, $"Brands/{source.Name}", false).Result;
             }
             return null; // return null if the pic is empty.
         }

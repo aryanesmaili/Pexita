@@ -3,18 +3,19 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Pexita.Services;
 using Pexita.Services.Interfaces;
+using static Pexita.Utility.Exceptions.PaymentException;
 
 namespace Pexita.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class PaymentController : ControllerBase
+    public class PaymentsController : ControllerBase
     {
         private readonly IPaymentService _paymentService;
         private readonly IValidator<PaymentRequest> _validator;
         private readonly IHttpContextAccessor _httpContextAccessor;
 
-        public PaymentController(IPaymentService paymentService, IValidator<PaymentRequest> validator, IHttpContextAccessor httpContextAccessor)
+        public PaymentsController(IPaymentService paymentService, IValidator<PaymentRequest> validator, IHttpContextAccessor httpContextAccessor)
         {
             _paymentService = paymentService;
             _validator = validator;
@@ -22,21 +23,29 @@ namespace Pexita.Controllers
         }
 
         [Authorize(Policy = "AllUsers")]
-        [HttpGet("Payments")]
+        [HttpGet]
         public IActionResult GetPayments()
         {
-            return Ok(_paymentService.GetPayments());
+            try
+            {
+                return Ok(_paymentService.GetPayments());
+            }
+            catch (EmptyResultException)
+            {
+                return StatusCode(500, "No records");
+            }
+            catch (Exception ex) { return BadRequest(ex.Message); }
         }
 
         [Authorize(Policy = "AllUsers")]
-        [HttpGet("Payments/get/{id:int}")]
+        [HttpGet("get/{id:int}")]
         public IActionResult GetPayment(int id)
         {
             return Ok(_paymentService.GetPayment(id));
         }
 
         [Authorize(Policy = "AllUsers")]
-        [HttpPost("Payments/new")]
+        [HttpPost("new")]
         public async Task<IActionResult> CreateNewPaymentRequest([FromBody] PaymentRequest request)
         {
             string requestingUsername = _httpContextAccessor.HttpContext!.User?.Identity?.Name!;
@@ -59,7 +68,7 @@ namespace Pexita.Controllers
 
         }
         [Authorize]
-        [HttpPost("Payments/callback")]
+        [HttpPost("callback")]
         public IActionResult PaymentOutcome([FromBody] PaymentOutcomeValidationResponse response)
         {
             try

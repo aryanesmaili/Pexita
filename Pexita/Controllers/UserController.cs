@@ -37,7 +37,7 @@ namespace Pexita.Controllers
         }
 
 
-        [HttpGet("Users")]
+        [HttpGet]
         public IActionResult GetUsers()
         {
             try
@@ -53,8 +53,7 @@ namespace Pexita.Controllers
                 return StatusCode(500, e.Message);
             }
         }
-
-        [HttpGet("Users/get/{id:int}")]
+        [HttpGet("get")]
         public IActionResult GetUsers(int count)
         {
             try
@@ -70,8 +69,7 @@ namespace Pexita.Controllers
                 return StatusCode(500, e.Message);
             }
         }
-
-        [HttpGet("User/{id:int}")]
+        [HttpGet("{id:int}")]
         public IActionResult GetUserByID(int id)
         {
             try
@@ -147,7 +145,7 @@ namespace Pexita.Controllers
             }
         }
         [Authorize(Policy = "AllUsers")]
-        [HttpPost("User/Logout")]
+        [HttpPost("Logout")]
         public async Task<IActionResult> Logout([FromBody] string logout)
         {
             try
@@ -170,7 +168,7 @@ namespace Pexita.Controllers
             }
         }
         [Authorize(Policy = "AllUsers")]
-        [HttpPut("User/Edit")]
+        [HttpPut("Edit")]
         public async Task<IActionResult> UpdateUser([FromBody] UserUpdateVM userUpdateVM)
         {
             var requestingUsername = _contextAccessor.HttpContext!.User?.Identity?.Name;
@@ -209,7 +207,7 @@ namespace Pexita.Controllers
                 return StatusCode(500, e.Message);
             }
         }
-        [HttpPut("User/ResetPassword")]
+        [HttpPut("ResetPassword")]
         public async Task<IActionResult> ResetPassword([FromBody] string userInfo)
         {
             try
@@ -234,7 +232,7 @@ namespace Pexita.Controllers
                 return StatusCode(500, e.Message);
             }
         }
-        [HttpPost("User/CheckResetCode")]
+        [HttpPost("CheckResetCode")]
         public async Task<IActionResult> CheckResetCode([FromBody] UserInfoVM user, [FromQuery] string Code)
         {
             try
@@ -255,8 +253,8 @@ namespace Pexita.Controllers
                 return StatusCode(500, e.Message);
             }
         }
-        [Authorize(Policy = "AllUsers")]
-        [HttpPut("User/ChangePassword")]
+        [Authorize(Policy = "OnlyUsers")]
+        [HttpPut("ChangePassword")]
         public async Task<IActionResult> ChangePassword([FromBody] UserInfoVM userID, [FromForm] string newPassword, [FromForm] string confirmPassword)
         {
             var requestingUsername = _contextAccessor.HttpContext!.User?.Identity?.Name;
@@ -284,8 +282,8 @@ namespace Pexita.Controllers
                 return StatusCode(500, e.Message);
             }
         }
-        [Authorize(Policy = "AllUsers")]
-        [HttpPost("User/RefreshToken")]
+        [Authorize(Policy = "OnlyUsers")]
+        [HttpPost("RefreshToken")]
         public async Task<IActionResult> RefreshToken([FromBody] string refreshToken)
         {
             try
@@ -309,8 +307,8 @@ namespace Pexita.Controllers
                 return StatusCode(500, e.Message);
             }
         }
-        [Authorize(Policy = "AllUsers")]
-        [HttpDelete("User/Delete/{id:int}")]
+        [Authorize(Policy = "OnlyUsers")]
+        [HttpDelete("Delete/{id:int}")]
         public async Task<IActionResult> DeleteUser(int id)
         {
             var requestingUsername = _contextAccessor.HttpContext!.User?.Identity?.Name;
@@ -333,8 +331,8 @@ namespace Pexita.Controllers
                 return StatusCode(500, e.Message);
             }
         }
-        [Authorize(Policy = "AllUsers")]
-        [HttpGet("User/Addresses/{id:int}")]
+        [Authorize(Policy = "OnlyUsers")]
+        [HttpGet("Addresses/{id:int}")]
         public async Task<IActionResult> GetAddresses(int id)
         {
             var requestingUsername = _contextAccessor.HttpContext!.User?.Identity?.Name;
@@ -356,8 +354,8 @@ namespace Pexita.Controllers
                 return StatusCode(500, e.Message);
             }
         }
-        [Authorize(Policy = "AllUsers")]
-        [HttpPost("User/Addresses/{id:int}")]
+        [Authorize(Policy = "OnlyUsers")]
+        [HttpPost("Addresses/{id:int}")]
         public async Task<IActionResult> AddAddress(int id, [FromBody] Address address)
         {
             var requestingUsername = _contextAccessor.HttpContext!.User?.Identity?.Name;
@@ -367,7 +365,7 @@ namespace Pexita.Controllers
                 if (address == null)
                     throw new ArgumentNullException($"{nameof(address)} is Null");
 
-                await _addressValidator.ValidateAndThrowAsync(address); 
+                await _addressValidator.ValidateAndThrowAsync(address);
                 await _userService.AddAddress(id, address, requestingUsername!);
 
                 return Ok();
@@ -396,8 +394,8 @@ namespace Pexita.Controllers
                 return StatusCode(500, e.Message);
             }
         }
-        [Authorize(Policy = "AllUsers")]
-        [HttpPut("User/Address/Edit/{id:int}")]
+        [Authorize(Policy = "OnlyUsers")]
+        [HttpPut("Address/Edit/{id:int}")]
         public async Task<IActionResult> UpdateAddress(int id, [FromBody] Address address)
         {
             var requestingUsername = _contextAccessor.HttpContext!.User?.Identity?.Name;
@@ -420,8 +418,8 @@ namespace Pexita.Controllers
                 return StatusCode(500, e.Message);
             }
         }
-        [Authorize(Policy = "AllUsers")]
-        [HttpDelete("User/Address/Delete/{id:int}")]
+        [Authorize(Policy = "OnlyUsers")]
+        [HttpDelete("Address/Delete/{id:int}")]
         public async Task<IActionResult> RemoveAddress(int id, [FromBody] Address address)
         {
             var requestingUsername = _contextAccessor.HttpContext!.User?.Identity?.Name;
@@ -445,7 +443,7 @@ namespace Pexita.Controllers
                 return BadRequest(e.Message);
             }
         }
-        [HttpGet("User/Comments/{id:int}")]
+        [HttpGet("Comments/{id:int}")]
         public IActionResult GetComments(int id)
         {
             try
@@ -463,7 +461,7 @@ namespace Pexita.Controllers
             }
         }
         [Authorize(Policy = "OnlyUsers")]
-        [HttpPost("User/Newsletters/Add/Product")]
+        [HttpPost("Newsletters/Add/Product")]
         public async Task<IActionResult> AddProductNewsletter([FromQuery] int UserID, [FromQuery] int ProductID)
         {
             var requestingUsername = _contextAccessor.HttpContext!.User?.Identity?.Name;
@@ -491,7 +489,7 @@ namespace Pexita.Controllers
             }
         }
         [Authorize(Policy = "OnlyUsers")]
-        [HttpPost("User/Newsletters/Add/Brand")]
+        [HttpPost("Newsletters/Add/Brand")]
         public async Task<IActionResult> AddBrandNewsletter([FromQuery] int UserID, [FromQuery] int ProductID)
         {
             var requestingUsername = _contextAccessor.HttpContext!.User?.Identity?.Name;

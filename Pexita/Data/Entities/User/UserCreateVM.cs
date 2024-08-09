@@ -25,7 +25,7 @@ namespace Pexita.Data.Entities.User
     {
         public required int ID { get; set; }
         public string? JWToken { get; set; }
-        public RefreshToken? RefreshToken { get; set; }
+        public UserRefreshToken? RefreshToken { get; set; }
         public required string FirstName { get; set; }
         public required string LastName { get; set; }
         public required string Username { get; set; }
@@ -38,6 +38,7 @@ namespace Pexita.Data.Entities.User
         public List<BrandNewsletterModel>? BrandNewsletters { get; set; }
         public List<ProductNewsLetterModel>? ProductNewsletters { get; set; }
     }
+
     public class UserUpdateVM
     {
         public int ID { get; set; }

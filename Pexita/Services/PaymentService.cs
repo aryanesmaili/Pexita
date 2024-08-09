@@ -41,7 +41,9 @@ namespace Pexita.Services
         /// <returns>The list of all payments.</returns>
         public async Task<List<PaymentModel>> GetPayments()
         {
-            return await _Context.Payments.ToListAsync();
+            var result = await _Context.Payments.ToListAsync();
+            return result.Count > 0 ? result : throw new EmptyResultException();
+
         }
         /// <summary>
         /// Get info about a certain payment by its Id.

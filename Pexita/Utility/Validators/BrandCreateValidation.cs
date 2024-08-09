@@ -4,7 +4,7 @@ using Pexita.Services.Interfaces;
 
 namespace Pexita.Utility.Validators
 {
-    public class BrandCreateValidation : AbstractValidator<BrandCreateVM>
+    public class BrandCreateValidation : AbstractValidator<BrandCreateDTO>
     {
         private readonly IBrandService _brandService;
         private readonly IPexitaTools _pexitaTools;

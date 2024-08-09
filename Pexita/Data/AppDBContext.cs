@@ -143,6 +143,12 @@ namespace Pexita.Data
                 .WithOne(u => u.User)
                 .HasForeignKey(user => user.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<BrandModel>()
+                .HasMany(t => t.BrandRefreshTokens)
+                .WithOne(b => b.Brand)
+                .HasForeignKey(fk => fk.BrandID)
+                .OnDelete(DeleteBehavior.Cascade);
         }
         public virtual DbSet<ProductModel> Products { get; set; }
         public DbSet<BrandModel> Brands { get; set; }
@@ -156,6 +162,7 @@ namespace Pexita.Data
         public DbSet<UserModel> Users { get; set; }
         public DbSet<Address> Addresses { get; set; }
         public DbSet<BrandOrder> BrandOrder { get; set; }
-        public DbSet<RefreshToken> RefreshTokens { get; set; }
+        public DbSet<UserRefreshToken> UserRefreshTokens { get; set; }
+        public DbSet<BrandRefreshToken> BrandRefreshTokens { get; set; }
     }
 }

@@ -144,11 +144,19 @@ namespace Pexita.Data
                 .HasForeignKey(user => user.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
 
+            modelBuilder.Entity<UserRefreshToken>()
+                .HasOne(u => u.User)
+                .WithMany(u => u.RefreshTokens);
+
             modelBuilder.Entity<BrandModel>()
                 .HasMany(t => t.BrandRefreshTokens)
                 .WithOne(b => b.Brand)
                 .HasForeignKey(fk => fk.BrandID)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<BrandRefreshToken>()
+                .HasOne(b => b.Brand)
+                .WithMany(rt => rt.BrandRefreshTokens);
         }
         public virtual DbSet<ProductModel> Products { get; set; }
         public DbSet<BrandModel> Brands { get; set; }

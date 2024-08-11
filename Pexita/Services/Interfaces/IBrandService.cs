@@ -20,7 +20,7 @@ namespace Pexita.Services.Interfaces
         public Task<BrandInfoVM> UpdateBrandInfo(int id, BrandUpdateVM model, string requestingUsername);
         public Task RemoveBrand(int id, string requestingUsername);
         public BrandInfoVM BrandModelToInfo(BrandModel model);
-        public BrandInfoVM BrandModelToInfo(BrandModel mode, BrandRefreshToken refreshToken, string AccessToken);
+        public BrandInfoVM BrandModelToInfo(BrandModel mode, BrandRefreshTokenDTO refreshToken, string AccessToken);
         public bool IsBrand(int id);
         public bool IsBrand(string BrandName);
     }

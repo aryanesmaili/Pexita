@@ -58,7 +58,7 @@ namespace Pexita.Services
                 throw new ArgumentException("Identifier cannot be null or empty.", nameof(file_save_folder));
 
             string imagePath = Path.Combine(_webHostEnvironment.WebRootPath, $"Images/{file_save_folder}");
-
+            
             // this is for POST requests or when the directory doesn't exist
             if (!isUpdate || !Directory.Exists(imagePath))
             {
@@ -85,6 +85,7 @@ namespace Pexita.Services
                 throw new ArgumentException("Identifier cannot be null or empty.", nameof(identifier));
 
             string imagePath = Path.Combine(_webHostEnvironment.WebRootPath, $"Images/{identifier}");
+            
 
             if (!Directory.Exists(imagePath))
                 Directory.CreateDirectory(imagePath);
@@ -362,11 +363,16 @@ namespace Pexita.Services
                 ?? throw new NotFoundException($"Entity {id} not found in Brands.");
 
             var reqUser = await _Context.Users.AsNoTracking()
-                .FirstOrDefaultAsync(x => x.Username == username)
-                ?? throw new NotFoundException($"User {username} not found in Users.");
+                .FirstOrDefaultAsync(x => x.Username == username);
 
-            bool isAdmin = reqUser.Role == "admin";
-            bool isOwner = reqUser.ID == brand.ID;
+            bool isAdmin = reqUser?.Role == "admin";
+            bool isOwner = false;
+            BrandModel reqBrand;
+            if (reqUser == null || !isAdmin)
+            {
+                reqBrand = _Context.Brands.AsNoTracking().FirstOrDefault(b => b.Username == username) ?? throw new NotFoundException($"Brand {username} not found in Brands."); ;
+                isOwner = reqBrand.ID == brand.ID;
+            }
 
             if (!isAdmin && !isOwner) // only an admin or the owner of the record can modify it.
             {
@@ -410,7 +416,7 @@ namespace Pexita.Services
         public string GenerateJWToken(string Username, string Role, string Email)
         {
             var tokenHandler = new JwtSecurityTokenHandler();
-            var key = Encoding.ASCII.GetBytes(_jwtSettings.SecretKey);
+            var key = Encoding.ASCII.GetBytes(_jwtSettings.SecretKey!);
 
             var tokenDescriptor = new SecurityTokenDescriptor
             {

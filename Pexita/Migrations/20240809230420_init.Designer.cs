@@ -12,8 +12,8 @@ using Pexita.Data;
 namespace Pexita.Migrations
 {
     [DbContext(typeof(AppDBContext))]
-    [Migration("20240809220830_sc1")]
-    partial class sc1
+    [Migration("20240809230420_init")]
+    partial class init
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)

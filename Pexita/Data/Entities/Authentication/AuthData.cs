@@ -26,6 +26,14 @@ namespace Pexita.Data.Entities.Authentication
         public required int UserId { get; set; }
         public required UserModel User { get; set; }
     }
+
+    public class UserRefreshTokenDTO
+    {
+        public required string Token { get; set; }
+        public DateTime Expires { get; set; }
+        public DateTime Created { get; set; }
+    }
+
     public class BrandRefreshToken
     {
         public int Id { get; set; }
@@ -39,6 +47,11 @@ namespace Pexita.Data.Entities.Authentication
         public required int BrandID { get; set; }
         public required BrandModel Brand { get; set; }
     }
-
+    public class BrandRefreshTokenDTO
+    {
+        public required string Token { get; set; }
+        public DateTime Expires { get; set; }
+        public DateTime Created { get; set; }
+    }
 
 }

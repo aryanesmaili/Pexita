@@ -6,6 +6,7 @@ using Pexita.Data.Entities.User;
 using Pexita.Services;
 using Pexita.Services.Interfaces;
 using Pexita.Utility.Exceptions;
+using System.Security.Claims;
 
 namespace Pexita.Controllers
 {
@@ -114,13 +115,17 @@ namespace Pexita.Controllers
             {
                 return NotFound(brand);
             }
-            catch (ValidationException)
+            catch (ValidationException e)
             {
-                return BadRequest(brand);
+                return StatusCode(400, e.Message);
             }
-            catch (Exception)
+            catch (ArgumentException e)
             {
-                return StatusCode(500);
+                return BadRequest(e.Message);
+            }
+            catch (Exception e)
+            {
+                return StatusCode(500, new {error = e.Message});
             }
         }
 
@@ -134,9 +139,9 @@ namespace Pexita.Controllers
 
                 return Ok();
             }
-            catch (ArgumentNullException)
+            catch (ArgumentNullException e)
             {
-                return BadRequest(logout);
+                return BadRequest(e.Message);
             }
             catch (NotFoundException e)
             {
@@ -175,7 +180,7 @@ namespace Pexita.Controllers
             }
         }
 
-        [HttpPut("ResetPassword")]
+        [HttpPost("ResetPassword")]
         public async Task<IActionResult> ResetPassword([FromBody] string userInfo)
         {
             try
@@ -201,7 +206,7 @@ namespace Pexita.Controllers
             }
         }
 
-        [HttpPost("CheckResetCode")]
+        [HttpPost("CheckResetCode")] 
         public async Task<IActionResult> CheckResetCode([FromBody] BrandInfoVM user, [FromQuery] string Code)
         {
             try
@@ -225,9 +230,9 @@ namespace Pexita.Controllers
 
         [Authorize(Policy = "Brand")]
         [HttpPut("ChangePassword")]
-        public async Task<IActionResult> ChangePassword([FromBody] BrandInfoVM brandID, [FromForm] string newPassword, [FromForm] string confirmPassword)
+        public async Task<IActionResult> ChangePassword([FromBody] BrandInfoVM brandID, [FromQuery] string newPassword, [FromQuery] string confirmPassword)
         {
-            var requestingUsername = _contextAccessor.HttpContext!.User?.Identity?.Name;
+            var requestingUsername = User.FindFirstValue(ClaimTypes.Name);
             try
             {
                 var result = await _brandService.ChangePassword(brandID, newPassword, confirmPassword, requestingUsername!);
@@ -253,7 +258,6 @@ namespace Pexita.Controllers
             }
         }
 
-        [Authorize(Policy = "Brand")]
         [HttpPost("RefreshToken")]
         public async Task<IActionResult> RefreshToken([FromBody] string refreshToken)
         {
@@ -281,24 +285,24 @@ namespace Pexita.Controllers
 
         [Authorize(Policy = "Brand")]
         [HttpPut("Edit/{id:int}")]
-        public async Task<IActionResult> EditBrand(int id, [FromForm] BrandUpdateVM brand)
+        public async Task<IActionResult> EditBrand([FromRoute]int id, [FromForm] BrandUpdateVM brand)
         {
-            string requestingUsername = _httpContextAccessor.HttpContext!.User?.Identity?.Name!;
+            var requestingUsername = User.FindFirstValue(ClaimTypes.Name);
             try
             {
                 await _brandUpdateValidator.ValidateAndThrowAsync(brand);
 
-                await _brandService.UpdateBrandInfo(id, brand, requestingUsername);
-                return Ok();
+                var result = await _brandService.UpdateBrandInfo(id, brand, requestingUsername!);
+                return Ok(result);
             }
 
             catch (ValidationException e)
             {
                 return BadRequest(e.Message);
             }
-            catch (NotFoundException)
+            catch (NotFoundException e)
             {
-                return NotFound(nameof(id));
+                return NotFound(e.StackTrace);
             }
             catch (InvalidOperationException e)
             {
@@ -306,7 +310,7 @@ namespace Pexita.Controllers
             }
             catch (Exception e)
             {
-                return BadRequest(e.Message);
+                return BadRequest(e.StackTrace);
             }
         }
 
@@ -314,10 +318,10 @@ namespace Pexita.Controllers
         [HttpDelete("Delete/{id:int}")]
         public async Task<IActionResult> DeleteBrand(int id)
         {
-            string requestingUsername = _httpContextAccessor.HttpContext!.User?.Identity?.Name!;
+            var requestingUsername = User.FindFirstValue(ClaimTypes.Name);
             try
             {
-                await _brandService.RemoveBrand(id, requestingUsername);
+                await _brandService.RemoveBrand(id, requestingUsername!);
                 return NoContent();
             }
 

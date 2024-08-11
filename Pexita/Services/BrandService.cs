@@ -29,6 +29,7 @@ namespace Pexita.Services
             _jwtSettings = jwtSettings;
             _emailService = emailService;
         }
+        // TODO: add _context.Update() to all services.
         /// <summary>
         /// Registering a new brand.
         /// </summary>
@@ -61,12 +62,12 @@ namespace Pexita.Services
             if (!string.IsNullOrEmpty(userLoginVM.UserName)) // we find the user based on their username if they've entered username.
                 brand = await _Context.Brands.FirstOrDefaultAsync(u => u.Username == userLoginVM.UserName) ?? throw new NotFoundException();
 
-            else if (string.IsNullOrEmpty(userLoginVM.Email)) // we find the user based on their email if they've entered email.
+            else if (!string.IsNullOrEmpty(userLoginVM.Email)) // we find the user based on their email if they've entered email.
                 brand = await _Context.Brands.FirstOrDefaultAsync(u => u.Email == userLoginVM.Email) ?? throw new NotFoundException();
 
-            if (brand == null && !BCrypt.Net.BCrypt.Verify(userLoginVM.Password, brand?.Password)) // verifying password with its hash in database.
+            if (brand == null || !BCrypt.Net.BCrypt.Verify(userLoginVM.Password, brand?.Password)) // verifying password with its hash in database.
             {
-                throw new NotAuthorizedException("Username or Password is not correct");
+                throw new ArgumentException("Username or Password is not correct");
             }
             var result = BrandModelToInfo(brand!);
             result.JWToken = _pexitaTools.GenerateJWToken(brand.Username, "Brand", brand.Email);
@@ -80,10 +81,10 @@ namespace Pexita.Services
                 Created = DateTime.UtcNow,
             };
             _Context.BrandRefreshTokens.Add(refreshToken);
-            result.RefreshToken = refreshToken;
+            await _Context.SaveChangesAsync();
+            result.RefreshToken = _mapper.Map<BrandRefreshTokenDTO>(refreshToken);
             return result;
         }
-
         /// <summary>
         /// begins a Change password procedure for the user.
         /// </summary>
@@ -109,8 +110,8 @@ namespace Pexita.Services
             string Subject = "Pexita Authentication code";
             string Body = $"Your Authentication Code Is {brand.ResetPasswordCode}";
 
-            _emailService.SendEmail(brand.Email, Subject, Body); // we send the code to the user.
-
+            //_emailService.SendEmail(brand.Email, Subject, Body); // we send the code to the user.
+            _Context.Update(brand);
             await _Context.SaveChangesAsync();
             return BrandModelToInfo(brand);
         }
@@ -135,6 +136,7 @@ namespace Pexita.Services
             string HashedPassword = BCrypt.Net.BCrypt.HashPassword(NewPassword); // Hashing the password using SHA256
             brand.Password = HashedPassword;
             brand.ResetPasswordCode = null;
+            _Context.Update(brand);
             await _Context.SaveChangesAsync();
             return BrandModelToInfo(brand, brandInfo.RefreshToken!, brandInfo.JWToken!);
         }
@@ -176,7 +178,7 @@ namespace Pexita.Services
             _Context.BrandRefreshTokens.Add(refreshToken);
             await _Context.SaveChangesAsync();
 
-            result.RefreshToken = refreshToken;
+            result.RefreshToken = _mapper.Map<BrandRefreshTokenDTO>(refreshToken);
             result.JWToken = token;
             return result;
         }
@@ -206,7 +208,7 @@ namespace Pexita.Services
             currentRefreshToken.Revoked = DateTime.UtcNow;
             _Context.BrandRefreshTokens.Update(currentRefreshToken);
             // Creating the new Refresh token object for the user.
-            var newToken = new BrandRefreshToken()
+            BrandRefreshToken newToken = new BrandRefreshToken()
             {
                 Token = newRefreshTokenStr,
                 Brand = brand,
@@ -215,7 +217,7 @@ namespace Pexita.Services
                 Expires = DateTime.UtcNow.AddDays(7)
             };
             _Context.BrandRefreshTokens.Add(newToken);
-            result.RefreshToken = newToken;
+            result.RefreshToken = _mapper.Map<BrandRefreshTokenDTO>(newToken);
 
             await _Context.SaveChangesAsync();
             return result;
@@ -238,6 +240,7 @@ namespace Pexita.Services
                 tokenRecord.Revoked = DateTime.UtcNow;
                 _Context.BrandRefreshTokens.Update(tokenRecord);
                 await _Context.SaveChangesAsync();
+                return;
             }
             throw new Exception("Operation cannot be done.");
         }
@@ -319,8 +322,11 @@ namespace Pexita.Services
             {
                 newRec.BrandPicURL = await _pexitaTools.SaveEntityImages(model.BrandPic!, $"Brands/{model.Name}", true);
             }
+            _Context.Update(brand);
             await _Context.SaveChangesAsync();
-            return BrandModelToInfo(brand);
+            var result = BrandModelToInfo(brand);
+            result.JWToken = _pexitaTools.GenerateJWToken(brand.Username, "Brand", brand.Email);
+            return result;
         }
         /// <summary>
         /// deletes a brand from the database.
@@ -354,7 +360,7 @@ namespace Pexita.Services
         /// <param name="refreshToken">RefreshToken of the Brand.</param>
         /// <param name="AccessToken">JWToken given to user to authenticate their requests.</param>
         /// <returns>a <see cref="BrandInfoVM"/> object containing information.</returns>
-        public BrandInfoVM BrandModelToInfo(BrandModel model, BrandRefreshToken refreshToken, string AccessToken)
+        public BrandInfoVM BrandModelToInfo(BrandModel model, BrandRefreshTokenDTO refreshToken, string AccessToken)
         {
             return _mapper.Map(model, new BrandInfoVM() { RefreshToken = refreshToken, JWToken = AccessToken });
         }

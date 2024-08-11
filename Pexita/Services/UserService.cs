@@ -193,7 +193,7 @@ namespace Pexita.Services
             _Context.UserRefreshTokens.Add(refreshToken);
             await _Context.SaveChangesAsync();
 
-            result.RefreshToken = refreshToken;
+            result.RefreshToken = _mapper.Map<UserRefreshTokenDTO>(refreshToken);
             result.JWToken = token;
             return result;
         }
@@ -257,7 +257,7 @@ namespace Pexita.Services
         /// <param name="RefreshToken">RefreshToken of the user.</param>
         /// <param name="AccessToken">JWToken given to user to authenticate their requests.</param>
         /// <returns>a <see cref="UserInfoVM"/> object containing information.</returns>
-        public UserInfoVM UserModelToInfoVM(UserModel userModel, UserRefreshToken RefreshToken, string AccessToken)
+        public UserInfoVM UserModelToInfoVM(UserModel userModel, UserRefreshTokenDTO RefreshToken, string AccessToken)
         {
             var result = _mapper.Map<UserInfoVM>(userModel);
             result.RefreshToken = RefreshToken;
@@ -299,7 +299,7 @@ namespace Pexita.Services
                 UserId = user.ID
             };
             _Context.UserRefreshTokens.Add(refreshToken);
-            result.RefreshToken = refreshToken;
+            result.RefreshToken = _mapper.Map<UserRefreshTokenDTO>(refreshToken);
             return result;
         }
         /// <summary>
@@ -328,7 +328,7 @@ namespace Pexita.Services
             currentRefreshToken.Revoked = DateTime.UtcNow;
             _Context.UserRefreshTokens.Update(currentRefreshToken);
             // Creating the new Refresh token object for the user.
-            var newToken = new UserRefreshToken()
+            UserRefreshToken newToken = new UserRefreshToken()
             {
                 Token = newRefreshTokenStr,
                 User = user,
@@ -337,7 +337,7 @@ namespace Pexita.Services
                 Expires = DateTime.UtcNow.AddDays(7)
             };
             _Context.UserRefreshTokens.Add(newToken);
-            result.RefreshToken = newToken;
+            result.RefreshToken = _mapper.Map<UserRefreshTokenDTO>(newToken);
 
             await _Context.SaveChangesAsync();
             return result;

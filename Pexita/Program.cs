@@ -69,7 +69,7 @@ var jwtSettings = new JwtSettings();
 builder.Configuration.Bind(nameof(JwtSettings), jwtSettings);
 builder.Services.AddSingleton(jwtSettings);
 
-var key = Encoding.ASCII.GetBytes(jwtSettings.SecretKey);
+var key = Encoding.ASCII.GetBytes(jwtSettings.SecretKey!);
 
 builder.Services.AddAuthentication(auth =>
 {
@@ -93,10 +93,10 @@ builder.Services.AddAuthentication(auth =>
 
 builder.Services.AddAuthorization(options =>
 {
-    options.AddPolicy("AdminOnly", policy => policy.RequireClaim("admin"));
-    options.AddPolicy("Brand", policy => policy.RequireClaim("admin", "brand"));
-    options.AddPolicy("AllUsers", policy => policy.RequireClaim("admin", "user", "brand"));
-    options.AddPolicy("OnlyUsers", policy => policy.RequireClaim("admin", "user"));
+    options.AddPolicy("AdminOnly", policy => policy.RequireRole("admin"));
+    options.AddPolicy("Brand", policy => policy.RequireRole("admin", "Brand"));
+    options.AddPolicy("AllUsers", policy => policy.RequireRole("admin", "user", "Brand"));
+    options.AddPolicy("OnlyUsers", policy => policy.RequireRole("admin", "user"));
 });
 var app = builder.Build();
 
@@ -123,5 +123,4 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
-InitialData.Seed(app);
 app.Run();

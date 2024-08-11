@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using Pexita.Data.Entities.Authentication;
 using Pexita.Data.Entities.Brands;
 using Pexita.Data.Entities.Comments;
 using Pexita.Data.Entities.Newsletter;
@@ -37,7 +38,7 @@ namespace Pexita.Utility
                             .ForMember(product => product.Tags, opt => opt.MapFrom(src => _pexitaTools.StringToTags(src.Tags)))
                             .ForMember(product => product.ProductPicsURL, opt => opt.MapFrom(src => _pexitaTools.SaveProductImages(src.ProductPics, $"{src.Brand}/{src.Title}", true)));*/
 
-            CreateMap<ProductModel, ProductModel>();
+            CreateMap<ProductModel, ProductInfoDTO>();
 
             CreateMap<BrandCreateDTO, BrandModel>()
                 .ForMember(Brand => Brand.BrandPicURL, opt => opt.MapFrom<BrandPicURLResolver>())
@@ -65,6 +66,9 @@ namespace Pexita.Utility
                 .ForMember(u => u.BrandNewsletters, opt => opt.MapFrom(src => new List<BrandNewsletterModel>()))
                 .ForMember(u => u.ProductNewsletters, opt => opt.MapFrom(src => new List<ProductNewsLetterModel>()))
                 .ForMember(u => u.Comments, opt => opt.MapFrom(src => new List<CommentsModel>()));
+
+            CreateMap<BrandRefreshToken, BrandRefreshTokenDTO>();
+            CreateMap<UserRefreshToken, UserRefreshTokenDTO>();
 
             Dictionary<int, bool> transactionStatus = new()
             {
@@ -108,7 +112,7 @@ namespace Pexita.Utility
             return null; // return null if the pic is empty.
         }
     }
-    public class BrandProductResolver : IValueResolver<BrandModel, BrandInfoVM, List<ProductModel>?>
+    public class BrandProductResolver : IValueResolver<BrandModel, BrandInfoVM, List<ProductInfoDTO>?>
     {
         private readonly IProductService _productService;
 
@@ -117,7 +121,7 @@ namespace Pexita.Utility
             _productService = productService;
         }
 
-        public List<ProductModel>? Resolve(BrandModel source, BrandInfoVM destination, List<ProductModel>? destMember, ResolutionContext context)
+        public List<ProductInfoDTO>? Resolve(BrandModel source, BrandInfoVM destination, List<ProductInfoDTO>? destMember, ResolutionContext context)
         {
             var result = source.Products?.Select(_productService.ProductModelToInfoVM).ToList();
             return result;

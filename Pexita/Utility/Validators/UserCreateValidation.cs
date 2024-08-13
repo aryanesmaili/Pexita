@@ -4,7 +4,7 @@ using Pexita.Services.Interfaces;
 
 namespace Pexita.Utility.Validators
 {
-    public class UserCreateValidation : AbstractValidator<UserCreateVM>
+    public class UserCreateValidation : AbstractValidator<UserCreateDTO>
     {
         private readonly IUserService _userService;
         public UserCreateValidation(IUserService userService)
@@ -26,25 +26,29 @@ namespace Pexita.Utility.Validators
 
             RuleFor(x => x.Password).NotEmpty()
                 .Equal(x => x.ConfirmPassword)
-                .MinimumLength(5).MaximumLength(32); ;
+                .MinimumLength(5).MaximumLength(32);
+
+            RuleFor(x => x.PhoneNumber)
+                .NotEmpty()
+                .Matches(@"(0|\+98)?([ ]|-|[()]){0,2}9[1|2|3|4]([ ]|-|[()]){0,2}(?:[0-9]([ ]|-|[()]){0,2}){8}"); // regex for IR Phone Numbers
         }
     }
-    public class UserLoginValidation : AbstractValidator<UserLoginVM>
+    public class UserLoginValidation : AbstractValidator<LoginDTO>
     {
         public UserLoginValidation()
         {
-            RuleFor(vm => vm.Email)
-                .NotEmpty().When(vm => string.IsNullOrEmpty(vm.UserName))
-                .EmailAddress().When(vm => !string.IsNullOrEmpty(vm.Email));
+            RuleFor(DTO => DTO.Email)
+                .NotEmpty().When(DTO => string.IsNullOrEmpty(DTO.UserName))
+                .EmailAddress().When(DTO => !string.IsNullOrEmpty(DTO.Email));
 
-            RuleFor(vm => vm.UserName)
-                .NotEmpty().When(vm => string.IsNullOrEmpty(vm.Email));
+            RuleFor(DTO => DTO.UserName)
+                .NotEmpty().When(DTO => string.IsNullOrEmpty(DTO.Email));
 
             RuleFor(u => u.Password).NotEmpty()
                 .MinimumLength(5).MaximumLength(32); ;
         }
     }
-    public class UserUpdateValidator : AbstractValidator<UserUpdateVM>
+    public class UserUpdateValidator : AbstractValidator<UserUpdateDTO>
     {
         private readonly IUserService _userService;
         public UserUpdateValidator(IUserService userService)

@@ -27,17 +27,6 @@ namespace Pexita.Utility
 
             CreateMap<ProductUpdateDTO, ProductModel>();
 
-            /*            CreateMap<ProductPatchDTO, ProductModel>()
-                            .ForMember(product => product.Title, opt => opt.MapFrom((src, dest) => string.IsNullOrEmpty(src.Title) ? dest.Title : src.Title))
-                            .ForMember(product => product.Description, opt => opt.MapFrom((src, dest) => src.Description ?? dest.Description))
-                            .ForMember(product => product.Price, opt => opt.MapFrom((src, dest) => src.Price ?? dest.Price))
-                            .ForMember(product => product.Quantity, opt => opt.MapFrom((src, dest) => src.Quantity ?? dest.Quantity))
-                            .ForMember(product => product.Brand, opt => opt.Ignore())
-                            .ForMember(product => product.IsAvailable, opt => opt.MapFrom((src, dest) => src.IsAvailable))
-                            .ForMember(product => product.Colors, opt => opt.MapFrom((src, dest) => src.Colors ?? dest.Colors))
-                            .ForMember(product => product.Tags, opt => opt.MapFrom(src => _pexitaTools.StringToTags(src.Tags)))
-                            .ForMember(product => product.ProductPicsURL, opt => opt.MapFrom(src => _pexitaTools.SaveProductImages(src.ProductPics, $"{src.Brand}/{src.Title}", true)));*/
-
             CreateMap<ProductModel, ProductInfoDTO>();
 
             CreateMap<BrandCreateDTO, BrandModel>()
@@ -48,17 +37,17 @@ namespace Pexita.Utility
                 .ForMember(Brand => Brand.BrandNewsLetters, opt => opt.MapFrom(src => new List<BrandNewsletterModel>()))
                 .ForMember(Brand => Brand.ProductNewsLetters, opt => opt.MapFrom(src => new List<ProductNewsLetterModel>()));
 
-            CreateMap<BrandUpdateVM, BrandModel>();
+            CreateMap<BrandUpdateDTO, BrandModel>();
 
-            CreateMap<BrandModel, BrandInfoVM>()
+            CreateMap<BrandModel, BrandInfoDTO>()
                 .ForMember(b => b.Products, opt => opt.MapFrom<BrandProductResolver>());
 
 
-            CreateMap<UserUpdateVM, UserModel>();
+            CreateMap<UserUpdateDTO, UserModel>();
 
-            CreateMap<UserModel, UserInfoVM>();
+            CreateMap<UserModel, UserInfoDTO>();
 
-            CreateMap<UserCreateVM, UserModel>()
+            CreateMap<UserCreateDTO, UserModel>()
                 .ForMember(u => u.Addresses, opt => opt.MapFrom(src => new List<Address>()))
                 .ForMember(u => u.DateCreated, opt => opt.MapFrom(src => DateTime.UtcNow))
                 .ForMember(u => u.Orders, opt => opt.MapFrom(src => new List<OrdersModel>()))
@@ -91,7 +80,7 @@ namespace Pexita.Utility
                 .ForMember(p => p.CardNo, opt => opt.MapFrom(src => src.CardNo))
                 .ForMember(p => p.HashedCardNo, opt => opt.MapFrom(src => src.HashedCardNo))
                 .ForMember(p => p.DateTimePaid, opt => opt.MapFrom(src => DateTimeOffset.FromUnixTimeSeconds(src.TransactionTime).DateTime))
-                .ForMember(p => p.Successfull, opt => opt.MapFrom(src => transactionStatus[src.Status]));
+                .ForMember(p => p.Successful, opt => opt.MapFrom(src => transactionStatus[src.Status]));
         }
     }
     public class BrandPicURLResolver : IValueResolver<BrandCreateDTO, BrandModel, string?>
@@ -112,7 +101,24 @@ namespace Pexita.Utility
             return null; // return null if the pic is empty.
         }
     }
-    public class BrandProductResolver : IValueResolver<BrandModel, BrandInfoVM, List<ProductInfoDTO>?>
+    public class UserPicURLResolver : IValueResolver<UserCreateDTO, UserModel, string?>
+    {
+        private readonly IPexitaTools _pexitaTools;
+
+        public UserPicURLResolver(IPexitaTools pexitaTools)
+        {
+            _pexitaTools = pexitaTools;
+        }
+
+        public string? Resolve(UserCreateDTO source, UserModel destination, string? destMember, ResolutionContext context)
+        {
+            if (source.ProfilePic != null && source.ProfilePic.Length > 0)
+                return _pexitaTools.SaveEntityImages(source.ProfilePic, $"Users/{source.Username}", false).Result;
+
+            return null;
+        }
+    }
+    public class BrandProductResolver : IValueResolver<BrandModel, BrandInfoDTO, List<ProductInfoDTO>?>
     {
         private readonly IProductService _productService;
 
@@ -121,9 +127,9 @@ namespace Pexita.Utility
             _productService = productService;
         }
 
-        public List<ProductInfoDTO>? Resolve(BrandModel source, BrandInfoVM destination, List<ProductInfoDTO>? destMember, ResolutionContext context)
+        public List<ProductInfoDTO>? Resolve(BrandModel source, BrandInfoDTO destination, List<ProductInfoDTO>? destMember, ResolutionContext context)
         {
-            var result = source.Products?.Select(_productService.ProductModelToInfoVM).ToList();
+            var result = source.Products?.Select(_productService.ProductModelToInfoDTO).ToList();
             return result;
         }
     }

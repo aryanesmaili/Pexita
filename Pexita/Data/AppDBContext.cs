@@ -26,6 +26,42 @@ namespace Pexita.Data
                 .HasForeignKey(ui => ui.UserID)
                 .OnDelete(DeleteBehavior.Cascade);
 
+            modelBuilder.Entity<UserModel>()
+                .HasMany(c => c.Comments)
+                .WithOne(u => u.User)
+                .HasForeignKey(ui => ui.UserID)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            modelBuilder.Entity<UserModel>()
+                .HasMany(sc => sc.ShoppingCarts)
+                .WithOne(u => u.User)
+                .HasForeignKey(ui => ui.UserID)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<UserModel>()
+                .HasMany(pnl => pnl.ProductNewsletters)
+                .WithOne(u => u.User)
+                .HasForeignKey(u => u.UserID)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<UserModel>()
+                .HasMany(bnl => bnl.BrandNewsletters)
+                .WithOne(u => u.User)
+                .HasForeignKey(u => u.UserID)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<UserModel>()
+                .HasMany(o => o.Orders)
+                .WithOne(u => u.User)
+                .HasForeignKey(ui => ui.UserId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            modelBuilder.Entity<UserModel>()
+                .HasMany(t => t.RefreshTokens)
+                .WithOne(u => u.User)
+                .HasForeignKey(user => user.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
             modelBuilder.Entity<BrandOrder>()
                 .HasKey(bo => new { bo.BrandID, bo.OrderID });
 
@@ -47,23 +83,6 @@ namespace Pexita.Data
                 .HasForeignKey(p => p.BrandID);
 
             modelBuilder.Entity<ProductModel>()
-                .HasMany(ci => ci.CartItems)
-                .WithOne(ci => ci.Product)
-                .HasForeignKey(ci => ci.ProductID);
-
-            modelBuilder.Entity<ShoppingCartModel>()
-                .HasMany(ci => ci.CartItems)
-                .WithOne(sc => sc.ShoppingCart)
-                .HasForeignKey(ci => ci.ShoppingCartID)
-                .OnDelete(DeleteBehavior.NoAction);
-
-
-            modelBuilder.Entity<ShoppingCartModel>()
-                .HasOne(sc => sc.Order)
-                .WithOne(o => o.ShoppingCart)
-                .HasForeignKey<OrdersModel>(sci => sci.ShoppingCartID);
-
-            modelBuilder.Entity<ProductModel>()
                 .HasMany(c => c.Comments)
                 .WithOne(p => p.Product)
                 .HasForeignKey(pi => pi.ProductID)
@@ -73,17 +92,10 @@ namespace Pexita.Data
                 .HasMany(t => t.Tags)
                 .WithMany(p => p.Products);
 
-            modelBuilder.Entity<ShoppingCartModel>()
-                .HasMany(p => p.Payments)
-                .WithOne(sc => sc.ShoppingCart)
-                .HasForeignKey(sci => sci.ShoppingCartID)
-                .OnDelete(DeleteBehavior.SetNull);
-
-            modelBuilder.Entity<UserModel>()
-                .HasMany(c => c.Comments)
-                .WithOne(u => u.User)
-                .HasForeignKey(ui => ui.UserID)
-                .OnDelete(DeleteBehavior.SetNull);
+            modelBuilder.Entity<ProductModel>()
+                .HasMany(ci => ci.CartItems)
+                .WithOne(ci => ci.Product)
+                .HasForeignKey(ci => ci.ProductID);
 
             modelBuilder.Entity<ProductModel>()
                 .HasMany(pnl => pnl.NewsLetters)
@@ -91,11 +103,27 @@ namespace Pexita.Data
                 .HasForeignKey(pi => pi.ProductID)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            modelBuilder.Entity<UserModel>()
-                .HasMany(pnl => pnl.ProductNewsletters)
-                .WithOne(u => u.User)
-                .HasForeignKey(ui => ui.UserID)
-                .OnDelete(DeleteBehavior.Cascade);
+            modelBuilder.Entity<ProductModel>()
+                .HasMany(p => p.Rating)
+                .WithOne(r => r.Product)
+                .HasForeignKey(r => r.ProductID);
+
+            modelBuilder.Entity<ShoppingCartModel>()
+                .HasMany(ci => ci.CartItems)
+                .WithOne(sc => sc.ShoppingCart)
+                .HasForeignKey(ci => ci.ShoppingCartID)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            modelBuilder.Entity<ShoppingCartModel>()
+                .HasOne(sc => sc.Order)
+                .WithOne(o => o.ShoppingCart)
+                .HasForeignKey<OrdersModel>(sci => sci.ShoppingCartID);
+
+            modelBuilder.Entity<ShoppingCartModel>()
+                .HasMany(p => p.Payments)
+                .WithOne(sc => sc.ShoppingCart)
+                .HasForeignKey(sci => sci.ShoppingCartID)
+                .OnDelete(DeleteBehavior.SetNull);
 
             modelBuilder.Entity<BrandModel>()
                 .HasMany(bnl => bnl.BrandNewsLetters)
@@ -103,60 +131,17 @@ namespace Pexita.Data
                 .HasForeignKey(bi => bi.BrandID)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            modelBuilder.Entity<UserModel>()
-                .HasMany(bnl => bnl.BrandNewsletters)
-                .WithOne(u => u.User)
-                .HasForeignKey(ui => ui.UserID)
+            modelBuilder.Entity<BrandModel>()
+                .HasMany(rt => rt.BrandRefreshTokens)
+                .WithOne(u => u.Brand)
+                .HasForeignKey(fk => fk.BrandID)
                 .OnDelete(DeleteBehavior.Cascade);
-
-            modelBuilder.Entity<UserModel>()
-                .HasMany(o => o.Orders)
-                .WithOne(u => u.User)
-                .HasForeignKey(ui => ui.UserId)
-                .OnDelete(DeleteBehavior.NoAction);
-
-            modelBuilder.Entity<ProductModel>()
-                .HasMany(p => p.Rating)
-                .WithOne(r => r.Product)
-                .HasForeignKey(r => r.ProductID);
-
-            modelBuilder.Entity<UserModel>()
-                .HasMany(a => a.Addresses)
-                .WithOne(u => u.User)
-                .HasForeignKey(u => u.UserID)
-                .OnDelete(DeleteBehavior.Cascade);
-
-            modelBuilder.Entity<UserModel>()
-                .HasMany(pnl => pnl.ProductNewsletters)
-                .WithOne(u => u.User)
-                .HasForeignKey(u => u.UserID)
-                .OnDelete(DeleteBehavior.Cascade);
-
-            modelBuilder.Entity<UserModel>()
-                .HasMany(bnl => bnl.BrandNewsletters)
-                .WithOne(u => u.User)
-                .HasForeignKey(u => u.UserID)
-                .OnDelete(DeleteBehavior.Cascade);
-
-            modelBuilder.Entity<UserModel>()
-                .HasMany(t => t.RefreshTokens)
-                .WithOne(u => u.User)
-                .HasForeignKey(user => user.UserId)
-                .OnDelete(DeleteBehavior.Cascade);
-
-            modelBuilder.Entity<UserRefreshToken>()
-                .HasOne(u => u.User)
-                .WithMany(u => u.RefreshTokens);
 
             modelBuilder.Entity<BrandModel>()
                 .HasMany(t => t.BrandRefreshTokens)
                 .WithOne(b => b.Brand)
                 .HasForeignKey(fk => fk.BrandID)
                 .OnDelete(DeleteBehavior.Cascade);
-
-            modelBuilder.Entity<BrandRefreshToken>()
-                .HasOne(b => b.Brand)
-                .WithMany(rt => rt.BrandRefreshTokens);
         }
         public virtual DbSet<ProductModel> Products { get; set; }
         public DbSet<BrandModel> Brands { get; set; }

@@ -31,7 +31,7 @@ namespace Pexita.Utility.Validators
         }
     }
 
-    public class BrandUpdateValidation : AbstractValidator<BrandUpdateVM>
+    public class BrandUpdateValidation : AbstractValidator<BrandUpdateDTO>
     {
         private readonly IBrandService _brandService;
         private readonly IPexitaTools _pexitaTools;

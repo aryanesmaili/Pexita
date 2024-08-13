@@ -37,11 +37,8 @@ namespace Pexita.Services
         /// <returns> True if successful, throws Exception on failure.</returns>
         /// <exception cref="ValidationException"> Happens When a field is not as expected.</exception>
         /// <exception cref="Exception"></exception>
-        public async Task<BrandInfoVM> Register(BrandCreateDTO createDTO)
+        public async Task<BrandInfoDTO> Register(BrandCreateDTO createDTO)
         {
-            if (await _Context.Brands.AnyAsync(u => u.Username == createDTO.Username)) // check if that user already exists.
-                throw new ArgumentException("Brand already exists");
-
             BrandModel Brand = _mapper.Map<BrandModel>(createDTO); // creating an object that matches our DB table.
             Brand.Password = BCrypt.Net.BCrypt.HashPassword(Brand.Password); // Hashing user's password to ensure security
             await _Context.Brands.AddAsync(Brand); // adding the user to Database
@@ -51,21 +48,21 @@ namespace Pexita.Services
         /// <summary>
         /// the function that validates user's input with database and returns JWT token if successful.
         /// </summary>
-        /// <param name="userLoginVM">info that user has entered in our form.</param>
+        /// <param name="userLoginDTO">info that user has entered in our form.</param>
         /// <returns>string containing JWT token if successful.</returns>
         /// <exception cref="NotFoundException">if the user does not exist.</exception>
         /// <exception cref="NotAuthorizedException"></exception>
-        public async Task<BrandInfoVM> Login(UserLoginVM userLoginVM)
+        public async Task<BrandInfoDTO> Login(LoginDTO userLoginDTO)
         {
             BrandModel? brand = null;
 
-            if (!string.IsNullOrEmpty(userLoginVM.UserName)) // we find the user based on their username if they've entered username.
-                brand = await _Context.Brands.FirstOrDefaultAsync(u => u.Username == userLoginVM.UserName) ?? throw new NotFoundException();
+            if (!string.IsNullOrEmpty(userLoginDTO.UserName)) // we find the user based on their username if they've entered username.
+                brand = await _Context.Brands.FirstOrDefaultAsync(u => u.Username == userLoginDTO.UserName) ?? throw new NotFoundException();
 
-            else if (!string.IsNullOrEmpty(userLoginVM.Email)) // we find the user based on their email if they've entered email.
-                brand = await _Context.Brands.FirstOrDefaultAsync(u => u.Email == userLoginVM.Email) ?? throw new NotFoundException();
+            else if (!string.IsNullOrEmpty(userLoginDTO.Email)) // we find the user based on their email if they've entered email.
+                brand = await _Context.Brands.FirstOrDefaultAsync(u => u.Email == userLoginDTO.Email) ?? throw new NotFoundException();
 
-            if (brand == null || !BCrypt.Net.BCrypt.Verify(userLoginVM.Password, brand?.Password)) // verifying password with its hash in database.
+            if (brand == null || !BCrypt.Net.BCrypt.Verify(userLoginDTO.Password, brand?.Password)) // verifying password with its hash in database.
             {
                 throw new ArgumentException("Username or Password is not correct");
             }
@@ -89,10 +86,10 @@ namespace Pexita.Services
         /// begins a Change password procedure for the user.
         /// </summary>
         /// <param name="loginInfo">user's input that can be either email or username.</param>
-        /// <returns> a <see cref="BrandInfoVM"/> object containing info about the brand.</returns>
+        /// <returns> a <see cref="BrandInfoDTO"/> object containing info about the brand.</returns>
         /// <exception cref="ArgumentNullException"></exception>
         /// <exception cref="NotFoundException"></exception>
-        public async Task<BrandInfoVM> ResetPassword(string loginInfo)
+        public async Task<BrandInfoDTO> ResetPassword(string loginInfo)
         {
             if (loginInfo.IsNullOrEmpty())
                 throw new ArgumentNullException(nameof(loginInfo));
@@ -118,14 +115,14 @@ namespace Pexita.Services
         /// <summary>
         /// Changes a brand's password after making sure the input is valid.
         /// </summary>
-        /// <param name="brandInfo"> <see cref="BrandInfoVM"/> object containing info about the brand being edited.</param>
+        /// <param name="brandInfo"> <see cref="BrandInfoDTO"/> object containing info about the brand being edited.</param>
         /// <param name="NewPassword"></param>
         /// <param name="ConfirmPassword"></param>
         /// <param name="requestingUsername">the username requesting the change.</param>
-        /// <returns><see cref="BrandInfoVM"/> object containing information about the record we just edited.</returns>
+        /// <returns><see cref="BrandInfoDTO"/> object containing information about the record we just edited.</returns>
         /// <exception cref="ArgumentNullException"></exception>
         /// <exception cref="ArgumentException"></exception>
-        public async Task<BrandInfoVM> ChangePassword(BrandInfoVM brandInfo, string NewPassword, string ConfirmPassword, string requestingUsername)
+        public async Task<BrandInfoDTO> ChangePassword(BrandInfoDTO brandInfo, string NewPassword, string ConfirmPassword, string requestingUsername)
         {
             if (NewPassword.IsNullOrEmpty() || ConfirmPassword.IsNullOrEmpty())
                 throw new ArgumentNullException("Password fields should not be empty");
@@ -146,11 +143,11 @@ namespace Pexita.Services
         /// </summary>
         /// <param name="brand">brand whom we want to edit.</param>
         /// <param name="Code">the ResetCode entered by user.</param>
-        /// <returns> a <see cref="BrandInfoVM"/> object containing tokens. the user is verified after this.</returns>
+        /// <returns> a <see cref="BrandInfoDTO"/> object containing tokens. the user is verified after this.</returns>
         /// <exception cref="ArgumentNullException"></exception>
         /// <exception cref="NotFoundException"></exception>
         /// <exception cref="ArgumentException"></exception>
-        public async Task<BrandInfoVM> CheckResetCode(BrandInfoVM brand, string Code)
+        public async Task<BrandInfoDTO> CheckResetCode(BrandInfoDTO brand, string Code)
         {
             if (Code.IsNullOrEmpty())
                 throw new ArgumentNullException(nameof(Code));
@@ -189,7 +186,7 @@ namespace Pexita.Services
         /// <returns>an object containing fresh JWToken.</returns>
         /// <exception cref="ArgumentNullException"></exception>
         /// <exception cref="NotFoundException"></exception>
-        public async Task<BrandInfoVM> TokenRefresher(string refreshToken)
+        public async Task<BrandInfoDTO> TokenRefresher(string refreshToken)
         {
             if (refreshToken.IsNullOrEmpty())
                 throw new ArgumentNullException(refreshToken);
@@ -250,9 +247,9 @@ namespace Pexita.Services
         /// <returns>List of all brands along with their products, tags and comments of each product. </returns>
         /// <exception cref="ArgumentNullException"></exception>
         /// <exception cref="InvalidOperationException"></exception>
-        public List<BrandInfoVM> GetBrands()
+        public List<BrandInfoDTO> GetBrands()
         {
-            List<BrandInfoVM> list = _Context.Brands
+            List<BrandInfoDTO> list = _Context.Brands
                 .Include(b => b.Products)!.ThenInclude(p => p.Comments)
                 .Include(b => b.Products)!.ThenInclude(p => p.Tags)
                 .AsNoTracking()
@@ -268,9 +265,9 @@ namespace Pexita.Services
         /// <exception cref="ArgumentNullException"></exception>
         /// <exception cref="InvalidOperationException"></exception>
         /// <exception cref="Exception"></exception>
-        public List<BrandInfoVM> GetBrands(int count)
+        public List<BrandInfoDTO> GetBrands(int count)
         {
-            List<BrandInfoVM> brands = _Context.Brands
+            List<BrandInfoDTO> brands = _Context.Brands
                 .Include(b => b.Products)!.ThenInclude(p => p.Comments)
                 .Include(b => b.Products)!.ThenInclude(p => p.Tags)
                 .AsNoTracking()
@@ -286,7 +283,7 @@ namespace Pexita.Services
         /// <param name="id">brand's id</param>
         /// <returns></returns>
         /// <exception cref="NotFoundException"></exception>
-        public async Task<BrandInfoVM> GetBrandByID(int id)
+        public async Task<BrandInfoDTO> GetBrandByID(int id)
         {
             return BrandModelToInfo(await _Context.Brands
                 .Include(b => b.Products!).ThenInclude(pc => pc.Tags)
@@ -313,7 +310,7 @@ namespace Pexita.Services
         /// <exception cref="NotAuthorizedException"></exception>
         /// <exception cref="NotFoundException"></exception>
         /// <exception cref="ValidationException"></exception>
-        public async Task<BrandInfoVM> UpdateBrandInfo(int id, BrandUpdateVM model, string requestingUsername)
+        public async Task<BrandInfoDTO> UpdateBrandInfo(int id, BrandUpdateDTO model, string requestingUsername)
         {
             BrandModel brand = await _pexitaTools.AuthorizeBrandAccessAsync(id, requestingUsername);
 
@@ -349,9 +346,9 @@ namespace Pexita.Services
         /// </summary>
         /// <param name="model">the brand model to be converted.</param>
         /// <returns></returns>
-        public BrandInfoVM BrandModelToInfo(BrandModel model)
+        public BrandInfoDTO BrandModelToInfo(BrandModel model)
         {
-            return _mapper.Map(model, new BrandInfoVM());
+            return _mapper.Map(model, new BrandInfoDTO());
         }
         /// <summary>
         /// Maps a BrandModel database record to a representable object.
@@ -359,10 +356,10 @@ namespace Pexita.Services
         /// <param name="model">the database record.</param>
         /// <param name="refreshToken">RefreshToken of the Brand.</param>
         /// <param name="AccessToken">JWToken given to user to authenticate their requests.</param>
-        /// <returns>a <see cref="BrandInfoVM"/> object containing information.</returns>
-        public BrandInfoVM BrandModelToInfo(BrandModel model, BrandRefreshTokenDTO refreshToken, string AccessToken)
+        /// <returns>a <see cref="BrandInfoDTO"/> object containing information.</returns>
+        public BrandInfoDTO BrandModelToInfo(BrandModel model, BrandRefreshTokenDTO refreshToken, string AccessToken)
         {
-            return _mapper.Map(model, new BrandInfoVM() { RefreshToken = refreshToken, JWToken = AccessToken });
+            return _mapper.Map(model, new BrandInfoDTO() { RefreshToken = refreshToken, JWToken = AccessToken });
         }
         /// <summary>
         /// checks whether a given id exists in brand table and is a brand.

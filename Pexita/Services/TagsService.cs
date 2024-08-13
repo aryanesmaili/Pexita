@@ -11,7 +11,7 @@ namespace Pexita.Services
         {
             _Context = Context;
         }
-        public bool AddTag(TagCreateVM product)
+        public bool AddTag(TagCreateDTO product)
         {
             throw new NotImplementedException();
         }
@@ -21,23 +21,23 @@ namespace Pexita.Services
             throw new NotImplementedException();
         }
 
-        public List<TagInfoVM> GetAllTags()
+        public List<TagInfoDTO> GetAllTags()
         {
             throw new NotImplementedException();
         }
 
-        public TagInfoVM GetTagByID(int id)
+        public TagInfoDTO GetTagByID(int id)
         {
             throw new NotImplementedException();
         }
 
-        public TagInfoVM UpdateTag(int id, TagCreateVM product, string requestingUsername)
+        public TagInfoDTO UpdateTag(int id, TagCreateDTO product, string requestingUsername)
         {
             throw new NotImplementedException();
         }
-        public List<TagInfoVM> TagsToVM(List<TagModel> tags)
+        public List<TagInfoDTO> TagsToDTO(List<TagModel> tags)
         {
-            return tags.Select(x => new TagInfoVM { ID = x.ID, Title = x.Title, TimesUsed = x.TimesUsed }).ToList();
+            return tags.Select(x => new TagInfoDTO { ID = x.ID, Title = x.Title, TimesUsed = x.TimesUsed }).ToList();
         }
 
         public bool IsTag(int id)
@@ -49,7 +49,7 @@ namespace Pexita.Services
         {
             if (_Context.Tags.FirstOrDefault(t => t.Title == TagName) == null)
             {
-                _Context.Tags.Add(new TagModel() { Title = TagName });
+                _Context.Tags.Add(new TagModel() { Title = TagName, Products = [] });
             }
             return true;
         }

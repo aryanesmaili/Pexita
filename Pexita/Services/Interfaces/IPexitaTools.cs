@@ -12,7 +12,7 @@ namespace Pexita.Services.Interfaces
         Task<string> SaveEntityImages(IFormFile file, string identifier, bool isUpdate = false);
         Task<string> SaveEntityImages(List<IFormFile> files, string identifier, bool isUpdate = false);
         public Task<List<TagModel>> StringToTags(string Tag);
-        Task<List<Address>> ValidateAddresses(int UserID, List<Address> VMAddresses);
+        Task<List<Address>> ValidateAddresses(int UserID, List<Address> AddressesDTO);
         public bool PictureFileValidation(IFormFile file, int MaxSizeMB);
         public Task<ProductModel> AuthorizeProductAccessAsync(int id, string Username);
         public Task AuthorizeProductCreationAsync(string targetBrand, string reqUser);

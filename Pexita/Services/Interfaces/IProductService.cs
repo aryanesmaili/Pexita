@@ -10,7 +10,7 @@ namespace Pexita.Services.Interfaces
         public Task<ProductInfoDTO> UpdateProductInfo(int id, ProductUpdateDTO product, string requestingUsername);
         public Task<ProductInfoDTO> PatchProductInfo(int id, ProductUpdateDTO product, string requestingUsername);
         public Task DeleteProduct(int id, string requestingUsername);
-        public ProductInfoDTO ProductModelToInfoVM(ProductModel model);
+        public ProductInfoDTO ProductModelToInfoDTO(ProductModel model);
         public Task AddCommentToProduct(ProductCommentDTO commentDTO, string requestingUsername);
         public Task UpdateProductRate(UpdateProductRateDTO rateDTO, string requestingUsername);
         public bool IsProductAlready(string BrandName, string ProductTitle);

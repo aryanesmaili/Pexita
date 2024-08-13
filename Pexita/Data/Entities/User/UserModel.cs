@@ -19,6 +19,7 @@ namespace Pexita.Data.Entities.User
         public List<Address>? Addresses { get; set; }
         public DateTime DateCreated { get; set; }
         public string? ResetPasswordCode { get; set; }
+        public string? ProfilePicURL { get; set; }
 
         //Navigation Properties
         public List<OrdersModel>? Orders { get; set; }

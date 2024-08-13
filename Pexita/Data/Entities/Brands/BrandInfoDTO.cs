@@ -3,7 +3,7 @@ using Pexita.Data.Entities.Products;
 
 namespace Pexita.Data.Entities.Brands
 {
-    public class BrandInfoVM
+    public class BrandInfoDTO
     {
         public int ID { get; set; }
         public string? JWToken { get; set; }
@@ -28,7 +28,7 @@ namespace Pexita.Data.Entities.Brands
         public required string Email { get; set; }
     }
 
-    public class BrandUpdateVM
+    public class BrandUpdateDTO
     {
         public required string Name { get; set; }
         public string? Description { get; set; }

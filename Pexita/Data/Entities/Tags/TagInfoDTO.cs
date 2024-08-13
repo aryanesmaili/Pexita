@@ -1,11 +1,11 @@
 ﻿namespace Pexita.Data.Entities.Tags
 {
-    public class TagCreateVM
+    public class TagCreateDTO
     {
         public required string Title { get; set; }
 
     }
-    public class TagInfoVM
+    public class TagInfoDTO
     {
         public required int ID { get; set; }
         public required string Title { get; set; }

@@ -9,7 +9,16 @@ namespace Pexita.Data.Entities.Newsletter
         public int ProductID { get; set; }
         public ProductModel? Product { get; set; }
         public int UserID { get; set; }
-        public UserModel User { get; set; }
+        public required UserModel User { get; set; }
+        public DateTime SubscribedAt { get; set; }
+    }
+    public class ProductNewsLetterDTO
+    {
+        public int ID { get; set; }
+        public int ProductID { get; set; }
+        public ProductInfoDTO? Product { get; set; }
+        public int UserID { get; set; }
+        public required UserInfoDTO User { get; set; }
         public DateTime SubscribedAt { get; set; }
     }
 }

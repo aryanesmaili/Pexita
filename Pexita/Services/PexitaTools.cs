@@ -58,7 +58,6 @@ namespace Pexita.Services
                 throw new ArgumentException("Identifier cannot be null or empty.", nameof(file_save_folder));
 
             string imagePath = Path.Combine(_webHostEnvironment.WebRootPath, $"Images/{file_save_folder}");
-            
             // this is for POST requests or when the directory doesn't exist
             if (!isUpdate || !Directory.Exists(imagePath))
             {
@@ -84,8 +83,8 @@ namespace Pexita.Services
             if (string.IsNullOrWhiteSpace(identifier))
                 throw new ArgumentException("Identifier cannot be null or empty.", nameof(identifier));
 
-            string imagePath = Path.Combine(_webHostEnvironment.WebRootPath, $"Images/{identifier}");
-            
+            //string imagePath = Path.Combine(_webHostEnvironment.WebRootPath, $"Images/{identifier}");
+            string imagePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), $"Images/{identifier}");
 
             if (!Directory.Exists(imagePath))
                 Directory.CreateDirectory(imagePath);
@@ -249,13 +248,13 @@ namespace Pexita.Services
         /// Validates if an address
         /// </summary>
         /// <param name="UserID"></param>
-        /// <param name="VMAddresses"></param>
+        /// <param name="AddressesDTO"></param>
         /// <returns></returns>
         /// <exception cref="NotFoundException"></exception>
-        public async Task<List<Address>> ValidateAddresses(int UserID, List<Address> VMAddresses)
+        public async Task<List<Address>> ValidateAddresses(int UserID, List<Address> AddressesDTO)
         {
 
-            HashSet<Address> addresses = new(VMAddresses);
+            HashSet<Address> addresses = new(AddressesDTO);
 
             UserModel user = await _Context.Users.Include(u => u.Addresses).FirstOrDefaultAsync(u => u.ID == UserID) ?? throw new NotFoundException($"user {UserID} does not exist.");
 

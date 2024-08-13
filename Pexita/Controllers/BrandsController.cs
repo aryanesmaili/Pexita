@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Pexita.Data.Entities.Brands;
 using Pexita.Data.Entities.User;
-using Pexita.Services;
 using Pexita.Services.Interfaces;
 using Pexita.Utility.Exceptions;
 using System.Security.Claims;
@@ -16,16 +15,16 @@ namespace Pexita.Controllers
     {
         private readonly IBrandService _brandService;
         private readonly IValidator<BrandCreateDTO> _brandCreateValidator;
-        private readonly IValidator<BrandUpdateVM> _brandUpdateValidator;
+        private readonly IValidator<BrandUpdateDTO> _brandUpdateValidator;
         private readonly IHttpContextAccessor _httpContextAccessor;
-        private readonly IValidator<UserLoginVM> _userLoginValidator;
+        private readonly IValidator<LoginDTO> _userLoginValidator;
         private readonly IHttpContextAccessor _contextAccessor;
 
         public BrandsController(IBrandService brandService,
             IValidator<BrandCreateDTO> brandCreateValidator,
-            IValidator<BrandUpdateVM> brandUpdateValidator,
+            IValidator<BrandUpdateDTO> brandUpdateValidator,
             IHttpContextAccessor httpContextAccessor,
-            IValidator<UserLoginVM> userLoginValidator,
+            IValidator<LoginDTO> userLoginValidator,
             IHttpContextAccessor contextAccessor)
         {
             _brandService = brandService;
@@ -103,7 +102,7 @@ namespace Pexita.Controllers
         }
 
         [HttpPost("Login")]
-        public async Task<IActionResult> Login([FromForm] UserLoginVM brand)
+        public async Task<IActionResult> Login([FromForm] LoginDTO brand)
         {
             try
             {
@@ -125,7 +124,7 @@ namespace Pexita.Controllers
             }
             catch (Exception e)
             {
-                return StatusCode(500, new {error = e.Message});
+                return StatusCode(500, new { error = e.Message });
             }
         }
 
@@ -154,15 +153,15 @@ namespace Pexita.Controllers
         }
 
         [HttpPost("AddBrand")]
-        public async Task<IActionResult> AddBrand([FromForm] BrandCreateDTO createVM)
+        public async Task<IActionResult> AddBrand([FromForm] BrandCreateDTO createDTO)
         {
             try
             {
-                ArgumentNullException.ThrowIfNull(createVM);
+                ArgumentNullException.ThrowIfNull(createDTO);
 
-                await _brandCreateValidator.ValidateAndThrowAsync(createVM);
+                await _brandCreateValidator.ValidateAndThrowAsync(createDTO);
 
-                var result = await _brandService.Register(createVM);
+                var result = await _brandService.Register(createDTO);
                 return Ok(result);
             }
 
@@ -186,7 +185,7 @@ namespace Pexita.Controllers
             try
             {
 
-                BrandInfoVM user = await _brandService.ResetPassword(userInfo);
+                BrandInfoDTO user = await _brandService.ResetPassword(userInfo);
 
                 return Ok(user);
             }
@@ -206,8 +205,8 @@ namespace Pexita.Controllers
             }
         }
 
-        [HttpPost("CheckResetCode")] 
-        public async Task<IActionResult> CheckResetCode([FromBody] BrandInfoVM user, [FromQuery] string Code)
+        [HttpPost("CheckResetCode")]
+        public async Task<IActionResult> CheckResetCode([FromBody] BrandInfoDTO user, [FromQuery] string Code)
         {
             try
             {
@@ -230,7 +229,7 @@ namespace Pexita.Controllers
 
         [Authorize(Policy = "Brand")]
         [HttpPut("ChangePassword")]
-        public async Task<IActionResult> ChangePassword([FromBody] BrandInfoVM brandID, [FromQuery] string newPassword, [FromQuery] string confirmPassword)
+        public async Task<IActionResult> ChangePassword([FromBody] BrandInfoDTO brandID, [FromQuery] string newPassword, [FromQuery] string confirmPassword)
         {
             var requestingUsername = User.FindFirstValue(ClaimTypes.Name);
             try
@@ -285,7 +284,7 @@ namespace Pexita.Controllers
 
         [Authorize(Policy = "Brand")]
         [HttpPut("Edit/{id:int}")]
-        public async Task<IActionResult> EditBrand([FromRoute]int id, [FromForm] BrandUpdateVM brand)
+        public async Task<IActionResult> EditBrand([FromRoute] int id, [FromForm] BrandUpdateDTO brand)
         {
             var requestingUsername = User.FindFirstValue(ClaimTypes.Name);
             try

@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Pexita.Data;
 using Pexita.Data.Entities.Brands;
+using Pexita.Data.Entities.Comments;
 using Pexita.Data.Entities.Events;
 using Pexita.Data.Entities.Products;
 using Pexita.Data.Entities.Tags;
@@ -69,7 +70,7 @@ namespace Pexita.Services
                 BrandNewProductEvent Event = new() { Brand = NewProduct.Brand, BrandID = NewProduct.BrandID, Product = NewProduct, ProductID = NewProduct.ID };
                 _eventdispatcher.Dispatch(Event);
             }
-            return ProductModelToInfoVM(NewProduct);
+            return ProductModelToInfoDTO(NewProduct);
         }
         /// <summary>
         /// Get the list of products along with their brands, comments and tags.
@@ -82,8 +83,8 @@ namespace Pexita.Services
             List<ProductModel> products = _Context.Products.Include(b => b.Brand).Include(c => c.Comments).Include(t => t.Tags).ToList();
             if (products.Count > 0)
             {
-                List<ProductInfoDTO> productsVM = products.Select(ProductModelToInfoVM).ToList();
-                return productsVM;
+                List<ProductInfoDTO> productsDTO = products.Select(ProductModelToInfoDTO).ToList();
+                return productsDTO;
             }
             else
             {
@@ -107,7 +108,7 @@ namespace Pexita.Services
 
             if (prods.Count > 0)
             {
-                return prods.Select(ProductModelToInfoVM).ToList();
+                return prods.Select(ProductModelToInfoDTO).ToList();
             }
 
             else
@@ -117,15 +118,15 @@ namespace Pexita.Services
 
         }
         /// <summary>
-        /// Converts a database table to a VM to be sent to frontend.
+        /// Converts a database table to a DTO to be sent to frontend.
         /// </summary>
         /// <param name="model"></param>
         /// <returns></returns>
-        public ProductInfoDTO ProductModelToInfoVM(ProductModel model)
+        public ProductInfoDTO ProductModelToInfoDTO(ProductModel model)
         {
-            BrandInfoVM brand = _brandService.BrandModelToInfo(model.Brand);
+            BrandInfoDTO brand = _brandService.BrandModelToInfo(model.Brand);
             double rate = _pexitaTools.GetRating(model.Rating.Select(x => x.Rating).ToList());
-            List<TagInfoVM> tags = _tagsService.TagsToVM(model.Tags ?? []);
+            List<TagInfoDTO> tags = _tagsService.TagsToDTO(model.Tags ?? []);
 
             var res = _mapper.Map<ProductInfoDTO>(model);
             return res;
@@ -134,11 +135,11 @@ namespace Pexita.Services
         /// Gets a product from database via its ID.
         /// </summary>
         /// <param name="id">Product ID</param>
-        /// <returns>Product info as VM</returns>
+        /// <returns>Product info as DTO</returns>
         /// <exception cref="NotFoundException"></exception>
         public async Task<ProductInfoDTO> GetProductByID(int id)
         {
-            return ProductModelToInfoVM(await _Context.Products
+            return ProductModelToInfoDTO(await _Context.Products
                                                         .Include(p => p.Brand)
                                                         .Include(p => p.Comments)
                                                         .Include(p => p.Tags)
@@ -180,7 +181,7 @@ namespace Pexita.Services
                 var eventMessage = new ProductAvailableEvent(id); // Product has changed its state to "In stock" so we're publishing an event.
                 await _eventdispatcher.DispatchAsync(eventMessage);
             }
-            return ProductModelToInfoVM(productModel);
+            return ProductModelToInfoDTO(productModel);
         }
         /// <summary>
         /// Deletes a record from database after checking if the requester has authorization to do so.
@@ -204,8 +205,8 @@ namespace Pexita.Services
         public async Task AddCommentToProduct(ProductCommentDTO commentDTO, string requestingUsername)
         {
             ProductModel product = await _pexitaTools.AuthorizeProductAccessAsync(commentDTO.ProductID, requestingUsername);
-
-            product.Comments?.Add(commentDTO.Comment);
+            CommentsModel commentsModel = _mapper.Map<CommentsModel>(commentDTO); // TODO: add configuration 
+            product.Comments?.Add(commentsModel);
             await _Context.SaveChangesAsync();
         }
         /// <summary>
@@ -255,7 +256,7 @@ namespace Pexita.Services
                 await _eventdispatcher.DispatchAsync(eventMessage);
             }
 
-            return ProductModelToInfoVM(product);
+            return ProductModelToInfoDTO(product);
         }
     }
 }

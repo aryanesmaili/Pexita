@@ -32,7 +32,7 @@ namespace Pexita.Services
         /// </summary>
         /// <returns></returns>
         /// <exception cref="NotFoundException"></exception>
-        public List<UserInfoVM> GetUsers()
+        public List<UserInfoDTO> GetUsers()
         {
             var users = _Context.Users
                 .Include(u => u.Orders)
@@ -43,15 +43,15 @@ namespace Pexita.Services
             {
                 throw new NotFoundException("No User Found");
             }
-            return users.Select(UserModelToInfoVM).ToList();
+            return users.Select(UserModelToInfoDTO).ToList();
         }
         /// <summary>
         /// gets a certain number of users from database along with their orders and addresses. 
         /// </summary>
         /// <param name="Count"></param>
-        /// <returns>a list of UserinfoVM object containing accessible data from that user.</returns>
+        /// <returns>a list of <see cref="UserInfoDTO"/> object containing accessible data from that user.</returns>
         /// <exception cref="NotFoundException"></exception>
-        public List<UserInfoVM> GetUsers(int Count)
+        public List<UserInfoDTO> GetUsers(int Count)
         {
             var users = _Context.Users
                 .Include(u => u.Orders)
@@ -65,16 +65,16 @@ namespace Pexita.Services
                 throw new NotFoundException("No User Found");
             }
 
-            return users.Select(UserModelToInfoVM).ToList();
+            return users.Select(UserModelToInfoDTO).ToList();
         }
         /// <summary>
         /// Gets a certain user's info using their ID.
         /// AS NO TRACKING.
         /// </summary>
         /// <param name="UserID">ID of the user you want to access.</param>
-        /// <returns>a UserinfoVM object containing accessible data from that user.</returns>
+        /// <returns>a <see cref="UserInfoDTO"/> object containing accessible data from that user.</returns>
         /// <exception cref="NotFoundException"></exception>
-        public async Task<UserInfoVM> GetUserByID(int UserID)
+        public async Task<UserInfoDTO> GetUserByID(int UserID)
         {
             UserModel user = await _Context.Users
                 .Include(u => u.Orders).Include(u => u.Addresses)
@@ -82,15 +82,15 @@ namespace Pexita.Services
                 .AsNoTracking()
                 .FirstOrDefaultAsync(u => u.ID == UserID) ?? throw new NotFoundException($"User With ID:{UserID} Not Found");
 
-            return UserModelToInfoVM(user);
+            return UserModelToInfoDTO(user);
         }
         /// <summary>
         /// finding a user By using user's Username.
         /// </summary>
         /// <param name="userName"></param>
-        /// <returns>returns a <see cref="UserInfoVM"/> object containing accessible info.</returns>
+        /// <returns>returns a <see cref="UserInfoDTO"/> object containing accessible info.</returns>
         /// <exception cref="NotFoundException"></exception>
-        public UserInfoVM GetUserByUserName(string userName)
+        public UserInfoDTO GetUserByUserName(string userName)
         {
             UserModel user = _Context.Users
                 .Include(u => u.Orders).Include(u => u.Addresses)
@@ -100,7 +100,7 @@ namespace Pexita.Services
                 .FirstOrDefault(u => u.Username == userName)
                 ?? throw new NotFoundException($"User With Username:{userName} Not Found");
 
-            return UserModelToInfoVM(user);
+            return UserModelToInfoDTO(user);
         }
         /// <summary>
         /// changes a user's password after making sure they're valid.
@@ -112,7 +112,7 @@ namespace Pexita.Services
         /// <returns></returns>
         /// <exception cref="ArgumentNullException"></exception>
         /// <exception cref="ArgumentException"></exception>
-        public async Task<UserInfoVM> ChangePassword(UserInfoVM userInfo, string NewPassword, string ConfirmPassword, string requestingUsername)
+        public async Task<UserInfoDTO> ChangePassword(UserInfoDTO userInfo, string NewPassword, string ConfirmPassword, string requestingUsername)
         {
             if (NewPassword.IsNullOrEmpty() || ConfirmPassword.IsNullOrEmpty())
                 throw new ArgumentNullException(nameof(NewPassword));
@@ -125,16 +125,16 @@ namespace Pexita.Services
             user.Password = hashedpassword;
             user.ResetPasswordCode = null;
             await _Context.SaveChangesAsync();
-            return UserModelToInfoVM(user, userInfo.RefreshToken!, userInfo.JWToken!);
+            return UserModelToInfoDTO(user, userInfo.RefreshToken!, userInfo.JWToken!);
         }
         /// <summary>
         /// begins a Change password procedure for the user.
         /// </summary>
         /// <param name="userInfo">user's input that can be either email or username.</param>
-        /// <returns>a <see cref="UserInfoVM"/> object containing Info. </returns>
+        /// <returns>a <see cref="UserInfoDTO"/> object containing Info. </returns>
         /// <exception cref="ArgumentNullException"></exception>
         /// <exception cref="NotFoundException"></exception>
-        public async Task<UserInfoVM> ResetPassword(string userInfo)
+        public async Task<UserInfoDTO> ResetPassword(string userInfo)
         {
             if (userInfo.IsNullOrEmpty())
                 throw new ArgumentNullException(userInfo);
@@ -156,17 +156,17 @@ namespace Pexita.Services
 
             await _Context.SaveChangesAsync();
 
-            return UserModelToInfoVM(user);
+            return UserModelToInfoDTO(user);
         }
         /// <summary>
         /// checks if the given code matches the one in Database.
         /// </summary>
         /// <param name="userID">user whom we want to edit.</param>
         /// <param name="Code">the ResetCode. entered by user.</param>
-        /// <returns>a <see cref="UserInfoVM"/> object containing tokens. the user is verified after this.</returns>
+        /// <returns>a <see cref="UserInfoDTO"/> object containing tokens. the user is verified after this.</returns>
         /// <exception cref="ArgumentNullException"></exception>
         /// <exception cref="NotFoundException"></exception>
-        public async Task<UserInfoVM> CheckResetCode(UserInfoVM user, string Code)
+        public async Task<UserInfoDTO> CheckResetCode(UserInfoDTO user, string Code)
         {
             if (Code.IsNullOrEmpty())
                 throw new ArgumentNullException(nameof(Code));
@@ -179,7 +179,7 @@ namespace Pexita.Services
             if (ResetCode != Code)
                 throw new ArgumentException("Code is Wrong.");
 
-            var result = UserModelToInfoVM(userRec);
+            var result = UserModelToInfoDTO(userRec);
             string token = _pexitaTools.GenerateJWToken(userRec.Username, userRec.Role, userRec.Email);
             string refToken = _pexitaTools.GenerateRefreshToken();
             UserRefreshToken refreshToken = new()
@@ -200,22 +200,22 @@ namespace Pexita.Services
         /// <summary>
         /// updates a user's cred in database.
         /// </summary>
-        /// <param name="userUpdateVM">new information and changes.</param>
+        /// <param name="userUpdateDTO">new information and changes.</param>
         /// <param name="requestingUsername">the username requesting the change.</param>
-        /// <returns>a <see cref="UserInfoVM"/> object containing new record's info.</returns>
+        /// <returns>a <see cref="UserInfoDTO"/> object containing new record's info.</returns>
         /// <exception cref="ValidationException"></exception>
         /// <exception cref="NotFoundException"></exception>
-        public async Task<UserInfoVM> UpdateUser(UserUpdateVM userUpdateVM, string requestingUsername)
+        public async Task<UserInfoDTO> UpdateUser(UserUpdateDTO userUpdateDTO, string requestingUsername)
         {
             try
             {
-                UserModel User = await _pexitaTools.AuthorizeUserAccessAsync(userUpdateVM.ID, requestingUsername);
+                UserModel User = await _pexitaTools.AuthorizeUserAccessAsync(userUpdateDTO.ID, requestingUsername);
 
-                _mapper.Map(userUpdateVM, User);
+                _mapper.Map(userUpdateDTO, User);
 
                 await _Context.SaveChangesAsync();
 
-                return UserModelToInfoVM(User);
+                return UserModelToInfoDTO(User);
             }
 
             catch (ValidationException e)
@@ -225,7 +225,7 @@ namespace Pexita.Services
 
             catch (InvalidOperationException)
             {
-                throw new NotFoundException($"User With ID:{userUpdateVM.ID} Not Found");
+                throw new NotFoundException($"User With ID:{userUpdateDTO.ID} Not Found");
             }
         }
         /// <summary>
@@ -245,10 +245,10 @@ namespace Pexita.Services
         /// Maps a UserModel database record to a representable object.
         /// </summary>
         /// <param name="userModel">the database record.</param>
-        /// <returns>a <see cref="UserInfoVM"/> object containing information.</returns>
-        public UserInfoVM UserModelToInfoVM(UserModel userModel)
+        /// <returns>a <see cref="UserInfoDTO"/> object containing information.</returns>
+        public UserInfoDTO UserModelToInfoDTO(UserModel userModel)
         {
-            return _mapper.Map<UserInfoVM>(userModel);
+            return _mapper.Map<UserInfoDTO>(userModel);
         }
         /// <summary>
         /// Maps a UserModel database record to a representable object.
@@ -256,10 +256,10 @@ namespace Pexita.Services
         /// <param name="userModel">the database record.</param>
         /// <param name="RefreshToken">RefreshToken of the user.</param>
         /// <param name="AccessToken">JWToken given to user to authenticate their requests.</param>
-        /// <returns>a <see cref="UserInfoVM"/> object containing information.</returns>
-        public UserInfoVM UserModelToInfoVM(UserModel userModel, UserRefreshTokenDTO RefreshToken, string AccessToken)
+        /// <returns>a <see cref="UserInfoDTO"/> object containing information.</returns>
+        public UserInfoDTO UserModelToInfoDTO(UserModel userModel, UserRefreshTokenDTO RefreshToken, string AccessToken)
         {
-            var result = _mapper.Map<UserInfoVM>(userModel);
+            var result = _mapper.Map<UserInfoDTO>(userModel);
             result.RefreshToken = RefreshToken;
             result.JWToken = AccessToken;
             return result;
@@ -267,27 +267,27 @@ namespace Pexita.Services
         /// <summary>
         /// logs a user in and gives them respective tokens to surf across webpages.
         /// </summary>
-        /// <param name="userLoginVM">user login info</param>
-        /// <returns>a <see cref="UserInfoVM"/> object containing information.</returns>
+        /// <param name="userLoginDTO">user login info</param>
+        /// <returns>a <see cref="UserInfoDTO"/> object containing information.</returns>
         /// <exception cref="NotFoundException"></exception>
         /// <exception cref="NotAuthorizedException"></exception>
-        public async Task<UserInfoVM> Login(UserLoginVM userLoginVM)
+        public async Task<UserInfoDTO> Login(LoginDTO userLoginDTO)
         {
             // TODO: Implement token service and refresh token for Brands too.
             UserModel? user = null;
 
-            if (!string.IsNullOrEmpty(userLoginVM.UserName))
-                user = await _Context.Users.FirstOrDefaultAsync(u => u.Username == userLoginVM.UserName) ?? throw new NotFoundException();
+            if (!string.IsNullOrEmpty(userLoginDTO.UserName))
+                user = await _Context.Users.FirstOrDefaultAsync(u => u.Username == userLoginDTO.UserName) ?? throw new NotFoundException();
 
-            else if (string.IsNullOrEmpty(userLoginVM.Email))
-                user = await _Context.Users.FirstOrDefaultAsync(u => u.Email == userLoginVM.Email) ?? throw new NotFoundException();
+            else if (string.IsNullOrEmpty(userLoginDTO.Email))
+                user = await _Context.Users.FirstOrDefaultAsync(u => u.Email == userLoginDTO.Email) ?? throw new NotFoundException();
 
-            if (user == null && !BCrypt.Net.BCrypt.Verify(userLoginVM.Password, user?.Password))
+            if (user == null && !BCrypt.Net.BCrypt.Verify(userLoginDTO.Password, user?.Password))
             {
                 throw new NotAuthorizedException("Username or Password is not correct");
             }
 
-            var result = UserModelToInfoVM(user!);
+            var result = UserModelToInfoDTO(user!);
             result.JWToken = _pexitaTools.GenerateJWToken(user!.Username, user.Role, user.Email);
             string rawRefreshToken = _pexitaTools.GenerateRefreshToken();
             UserRefreshToken refreshToken = new UserRefreshToken()
@@ -309,7 +309,7 @@ namespace Pexita.Services
         /// <returns>an object containing fresh JWToken.</returns>
         /// <exception cref="ArgumentNullException"></exception>
         /// <exception cref="NotFoundException"></exception>
-        public async Task<UserInfoVM> TokenRefresher(string refreshToken)
+        public async Task<UserInfoDTO> TokenRefresher(string refreshToken)
         {
             if (refreshToken.IsNullOrEmpty())
                 throw new ArgumentNullException(refreshToken);
@@ -319,7 +319,7 @@ namespace Pexita.Services
                 throw new NotFoundException($"token {refreshToken} is not valid.");
             UserModel user = await _Context.Users.FindAsync(currentRefreshToken.UserId) ?? throw new NotFoundException($"User {currentRefreshToken.UserId} Does not exist");
 
-            var result = UserModelToInfoVM(user);
+            var result = UserModelToInfoDTO(user);
             // Generating both new JWToken and RefreshToken
             var newRefreshTokenStr = _pexitaTools.GenerateRefreshToken();
             result.JWToken = _pexitaTools.GenerateJWToken(user.Username, user.Role, user.Email);
@@ -365,19 +365,16 @@ namespace Pexita.Services
         /// <summary>
         /// registers a new user.
         /// </summary>
-        /// <param name="userCreateVM">object containing information about the new user.</param>
-        /// <returns>a <see cref="UserInfoVM"/> object containing information about the new user.</returns>
-        public async Task<UserInfoVM> Register(UserCreateVM userCreateVM)
+        /// <param name="userCreateDTO">object containing information about the new user.</param>
+        /// <returns>a <see cref="UserInfoDTO"/> object containing information about the new user.</returns>
+        public async Task<UserInfoDTO> Register(UserCreateDTO userCreateDTO)
         {
-            if (await _Context.Users.AnyAsync(u => u.Username == userCreateVM.Username)) // check if that user already exists.
-                throw new ArgumentException("User already exists.");
 
-            UserModel User = _mapper.Map<UserModel>(userCreateVM); // creating an object that matches our DB table.
+            UserModel User = _mapper.Map<UserModel>(userCreateDTO); // creating an object that matches our DB table.
             User.Password = BCrypt.Net.BCrypt.HashPassword(User.Password); // Hashing user's password to ensure security
             await _Context.Users.AddAsync(User);
             await _Context.SaveChangesAsync();
-            return UserModelToInfoVM(User);
-
+            return UserModelToInfoDTO(User);
         }
         // TODO: make sure all user controllers have unAuthorized catch
         /// <summary>

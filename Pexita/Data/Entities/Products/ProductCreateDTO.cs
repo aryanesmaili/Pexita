@@ -29,9 +29,9 @@ namespace Pexita.Data.Entities.Products
         public string? Description { get; set; }
         public double? Price { get; set; }
         public int? Quantity { get; set; }
-        public required BrandInfoVM Brand { get; set; }
+        public required BrandInfoDTO Brand { get; set; }
         public double? Rate { get; set; }
-        public List<TagInfoVM>? Tags { get; set; }
+        public List<TagInfoDTO>? Tags { get; set; }
         public string? ProductPics { get; set; }
         public bool IsAvailable { get; set; }
         public DateTime DateCreated { get; set; }
@@ -65,6 +65,6 @@ namespace Pexita.Data.Entities.Products
     public class ProductCommentDTO
     {
         public int ProductID { get; set; }
-        public required CommentsModel Comment { get; set; }
+        public required CommentsDTO Comment { get; set; }
     }
 }

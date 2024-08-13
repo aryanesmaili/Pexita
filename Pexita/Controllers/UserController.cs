@@ -12,17 +12,17 @@ namespace Pexita.Controllers
     public class UserController : ControllerBase
     {
         private readonly IUserService _userService;
-        private readonly IValidator<UserCreateVM> _createValidator;
-        private readonly IValidator<UserLoginVM> _loginValidator;
-        private readonly IValidator<UserUpdateVM> _updateValidator;
+        private readonly IValidator<UserCreateDTO> _createValidator;
+        private readonly IValidator<LoginDTO> _loginValidator;
+        private readonly IValidator<UserUpdateDTO> _updateValidator;
         private readonly IValidator<Address> _addressValidator;
         private readonly IHttpContextAccessor _contextAccessor;
         private readonly INewsletterService _newsletterService;
 
         public UserController(IUserService userService,
-            IValidator<UserCreateVM> CreateValidator,
-            IValidator<UserLoginVM> LoginValidator,
-            IValidator<UserUpdateVM> UpdateValidator,
+            IValidator<UserCreateDTO> CreateValidator,
+            IValidator<LoginDTO> LoginValidator,
+            IValidator<UserUpdateDTO> UpdateValidator,
             IValidator<Address> addressValidator,
             IHttpContextAccessor contextAccessor,
             INewsletterService newsletterService)
@@ -88,18 +88,18 @@ namespace Pexita.Controllers
             }
         }
         [HttpPost("Auth/Login")]
-        public async Task<IActionResult> Login(UserLoginVM loginVM)
+        public async Task<IActionResult> Login(LoginDTO loginDTO)
         {
             try
             {
-                await _loginValidator.ValidateAndThrowAsync(loginVM);
+                await _loginValidator.ValidateAndThrowAsync(loginDTO);
 
-                var token = await _userService.Login(loginVM);
+                var token = await _userService.Login(loginDTO);
                 return Ok(token);
             }
             catch (NotFoundException e)
             {
-                return NotFound(nameof(loginVM.UserName));
+                return NotFound(nameof(loginDTO.UserName));
             }
 
             catch (Exception e)
@@ -109,15 +109,15 @@ namespace Pexita.Controllers
 
         }
         [HttpPost("Auth/Register")]
-        public async Task<IActionResult> Register([FromForm] UserCreateVM userCreateVM)
+        public async Task<IActionResult> Register([FromForm] UserCreateDTO userCreateDTO)
         {
             try
             {
-                if (userCreateVM == null)
-                    throw new ArgumentNullException($"{nameof(userCreateVM)} is Null");
+                if (userCreateDTO == null)
+                    throw new ArgumentNullException($"{nameof(userCreateDTO)} is Null");
 
-                await _createValidator.ValidateAndThrowAsync(userCreateVM);
-                var result = await _userService.Register(userCreateVM);
+                await _createValidator.ValidateAndThrowAsync(userCreateDTO);
+                var result = await _userService.Register(userCreateDTO);
 
                 return Ok(result);
             }
@@ -145,7 +145,7 @@ namespace Pexita.Controllers
             }
         }
         [Authorize(Policy = "AllUsers")]
-        [HttpPost("Logout")]
+        [HttpPost("Auth/Logout")]
         public async Task<IActionResult> Logout([FromBody] string logout)
         {
             try
@@ -169,18 +169,18 @@ namespace Pexita.Controllers
         }
         [Authorize(Policy = "AllUsers")]
         [HttpPut("Edit")]
-        public async Task<IActionResult> UpdateUser([FromBody] UserUpdateVM userUpdateVM)
+        public async Task<IActionResult> UpdateUser([FromBody] UserUpdateDTO userUpdateDTO)
         {
             var requestingUsername = _contextAccessor.HttpContext!.User?.Identity?.Name;
             try
             {
-                UserInfoVM? result = null;
+                UserInfoDTO? result = null;
 
-                if (userUpdateVM == null)
-                    throw new ArgumentNullException($"{nameof(userUpdateVM)} is Null");
+                if (userUpdateDTO == null)
+                    throw new ArgumentNullException($"{nameof(userUpdateDTO)} is Null");
 
-                await _updateValidator.ValidateAndThrowAsync(userUpdateVM);
-                result = await _userService.UpdateUser(userUpdateVM, requestingUsername!);
+                await _updateValidator.ValidateAndThrowAsync(userUpdateDTO);
+                result = await _userService.UpdateUser(userUpdateDTO, requestingUsername!);
 
                 return Ok(result);
             }
@@ -213,7 +213,7 @@ namespace Pexita.Controllers
             try
             {
 
-                UserInfoVM user = await _userService.ResetPassword(userInfo);
+                UserInfoDTO user = await _userService.ResetPassword(userInfo);
 
                 return Ok(user);
             }
@@ -233,7 +233,7 @@ namespace Pexita.Controllers
             }
         }
         [HttpPost("CheckResetCode")]
-        public async Task<IActionResult> CheckResetCode([FromBody] UserInfoVM user, [FromQuery] string Code)
+        public async Task<IActionResult> CheckResetCode([FromBody] UserInfoDTO user, [FromQuery] string Code)
         {
             try
             {
@@ -255,7 +255,7 @@ namespace Pexita.Controllers
         }
         [Authorize(Policy = "OnlyUsers")]
         [HttpPut("ChangePassword")]
-        public async Task<IActionResult> ChangePassword([FromBody] UserInfoVM userID, [FromForm] string newPassword, [FromForm] string confirmPassword)
+        public async Task<IActionResult> ChangePassword([FromBody] UserInfoDTO userID, [FromForm] string newPassword, [FromForm] string confirmPassword)
         {
             var requestingUsername = _contextAccessor.HttpContext!.User?.Identity?.Name;
             try

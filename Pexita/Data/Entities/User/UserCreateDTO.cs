@@ -33,11 +33,11 @@ namespace Pexita.Data.Entities.User
         public required string Email { get; set; }
         public string? PhoneNumber { get; set; }
         public string? ProfilePicURL { get; set; }
-        public List<Address>? Addresses { get; set; }
+        public List<AddressDTO>? Addresses { get; set; }
         public DateTime DateCreated { get; set; }
-        public List<OrdersModel>? Orders { get; set; }
+        public List<OrdersDTO>? Orders { get; set; }
 
-        public List<BrandNewsletterModel>? BrandNewsletters { get; set; }
+        public List<BrandNewsLetterDTO>? BrandNewsletters { get; set; }
         public List<ProductNewsLetterDTO>? ProductNewsletters { get; set; }
     }
 

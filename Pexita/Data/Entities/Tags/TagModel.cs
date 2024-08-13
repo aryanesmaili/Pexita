@@ -6,7 +6,7 @@ namespace Pexita.Data.Entities.Tags
     {
         public int ID { get; set; }
         public required string Title { get; set; }
-        public required List<ProductModel> Products { get; set; }
+        public List<ProductModel>? Products { get; set; }
         public int TimesUsed { get; set; }
     }
 }

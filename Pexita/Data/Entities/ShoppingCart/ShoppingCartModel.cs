@@ -8,7 +8,7 @@ namespace Pexita.Data.Entities.ShoppingCart
     public class ShoppingCartModel
     { // TODO: shopping carts need their own controllers
         public int ID { get; set; }
-        public List<CartItems>? CartItems { get; set; }
+        public required List<CartItems> CartItems { get; set; }
         public double TotalPrice { get; set; }
 
         // Navigation Properties
@@ -22,7 +22,7 @@ namespace Pexita.Data.Entities.ShoppingCart
     {
         public int ID { get; set; }
         public int ProductID { get; set; }
-        public ProductModel? Product { get; set; }
+        public required ProductModel Product { get; set; }
         public int Count { get; set; }
 
         public int ShoppingCartID { get; set; }
@@ -31,10 +31,10 @@ namespace Pexita.Data.Entities.ShoppingCart
     public class ShoppingCartDTO
     {
         public int ID { get; set; }
-        public List<CartItemsDTO>? Items { get; set; }
+        public required List<CartItemsDTO> Items { get; set; }
         public double TotalPrice { get; set; }
         public int UserID { get; set; }
-        public required UserInfoDTO User {  get; set; }
+        public required UserInfoDTO User { get; set; }
         public List<PaymentDTO>? Payments { get; set; }
         public OrdersDTO? Order { get; set; }
     }

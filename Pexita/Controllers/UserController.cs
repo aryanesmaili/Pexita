@@ -70,11 +70,11 @@ namespace Pexita.Controllers
             }
         }
         [HttpGet("{id:int}")]
-        public IActionResult GetUserByID(int id)
+        public async Task<IActionResult> GetUserByID(int id)
         {
             try
             {
-                return Ok(_userService.GetUserByID(id));
+                return Ok(await _userService.GetUserByID(id));
             }
 
             catch (NotFoundException e)
@@ -88,7 +88,7 @@ namespace Pexita.Controllers
             }
         }
         [HttpPost("Auth/Login")]
-        public async Task<IActionResult> Login(LoginDTO loginDTO)
+        public async Task<IActionResult> Login([FromForm] LoginDTO loginDTO)
         {
             try
             {
@@ -101,10 +101,13 @@ namespace Pexita.Controllers
             {
                 return NotFound(nameof(loginDTO.UserName));
             }
-
-            catch (Exception e)
+            catch (ValidationException e)
             {
                 return BadRequest(e.Message);
+            }
+            catch (Exception e)
+            {
+                return StatusCode(500, e.StackTrace);
             }
 
         }

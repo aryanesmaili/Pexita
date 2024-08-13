@@ -228,7 +228,7 @@ namespace Pexita.Services
         /// </summary>
         /// <param name="Ratings">List of ratings.</param>
         /// <returns></returns>
-        public double GetRating(List<int> Ratings) => Ratings.Average();
+        public double? GetRating(List<int>? Ratings) => Ratings.Average();
         public string GenerateRandomPassword(int length)
         {
             Random random = new();
@@ -260,16 +260,14 @@ namespace Pexita.Services
 
             foreach (var address in addresses)
             {
-                if (user.Addresses?.FirstOrDefault(a => a.ID == address.ID) == null)
+                if (user.Addresses.FirstOrDefault(a => a.ID == address.ID) == null)
                 {
                     user.Addresses?.Add(address);
                 }
             }
             _Context.SaveChanges();
 
-            return user.Addresses?.ToList()!;
-
-
+            return user.Addresses?.ToList() ?? [];
         }
         /// <summary>
         /// checks if a product row can be accessed and modified by a certain user. the user can only make changes if they're an admin or owner of the record.

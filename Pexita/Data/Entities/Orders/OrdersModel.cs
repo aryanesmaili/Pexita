@@ -25,6 +25,7 @@ namespace Pexita.Data.Entities.Orders
         public int ShoppingCartID { get; set; }
         public required ShoppingCartModel ShoppingCart { get; set; }
     }
+
     public class OrdersDTO
     {
         public int ID { get; set; }
@@ -33,7 +34,7 @@ namespace Pexita.Data.Entities.Orders
         public int UserID { get; set; }
         public required UserInfoDTO User { get; set; }
         public int PaymentID { get; set; }
-        public required PaymentDTO Payment {  get; set; }
+        public required PaymentDTO Payment { get; set; }
         public required List<BrandOrder> BrandOrders { get; set; }
         public int ShoppingCartID { get; set; }
         public required ShoppingCartDTO ShoppingCart { get; set; }

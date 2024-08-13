@@ -17,10 +17,10 @@ namespace Pexita.Utility.Validators
             RuleFor(x => x.Username).NotEmpty()
                 .MinimumLength(5)
                 .MaximumLength(32)
-                .Must(user => !_userService.IsUser(user));
+                .Must(user => !_userService.IsUser(user)).WithMessage("Username already taken.");
 
             RuleFor(x => x.Email).NotEmpty().EmailAddress()
-                .Must(Email => !_userService.IsEmailInUse(Email));
+                .Must(Email => !_userService.IsEmailInUse(Email)).WithMessage("Email already in use.");
 
             RuleFor(x => x.ConfirmPassword).NotEmpty();
 

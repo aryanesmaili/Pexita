@@ -8,7 +8,7 @@ namespace Pexita.Services.Interfaces
     public interface IPexitaTools
     {
         string GenerateRandomPassword(int length);
-        double GetRating(List<int> Ratings);
+        double? GetRating(List<int>? Ratings);
         Task<string> SaveEntityImages(IFormFile file, string identifier, bool isUpdate = false);
         Task<string> SaveEntityImages(List<IFormFile> files, string identifier, bool isUpdate = false);
         public Task<List<TagModel>> StringToTags(string Tag);

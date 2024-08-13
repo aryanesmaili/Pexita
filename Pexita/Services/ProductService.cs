@@ -8,7 +8,6 @@ using Pexita.Data.Entities.Brands;
 using Pexita.Data.Entities.Comments;
 using Pexita.Data.Entities.Events;
 using Pexita.Data.Entities.Products;
-using Pexita.Data.Entities.Tags;
 using Pexita.Services.Interfaces;
 using Pexita.Utility.Exceptions;
 
@@ -22,7 +21,7 @@ namespace Pexita.Services
         private readonly IPexitaTools _pexitaTools;
         private readonly IMapper _mapper;
         private readonly IUserService _userService;
-        private readonly EventDispatcher _eventdispatcher;
+        private readonly EventDispatcher _eventDispatcher;
 
         public ProductService(AppDBContext Context, IBrandService brandService,
             ITagsService tagsService, IPexitaTools pexitaTools, IMapper Mapper, IUserService userService, EventDispatcher dispatcher)
@@ -33,7 +32,7 @@ namespace Pexita.Services
             _pexitaTools = pexitaTools;
             _mapper = Mapper;
             _userService = userService;
-            _eventdispatcher = dispatcher;
+            _eventDispatcher = dispatcher;
         }
 
         /// <summary>
@@ -50,15 +49,15 @@ namespace Pexita.Services
             // resolving some values asynchronously. the reason is that auto mapper is originally made for Entity => DTO mapping not the other way around.
             // so it doesn't support asynchronous functions. I have to resolve some values here if I want that to be done asynchronously.
             BrandModel productBrand = await _brandService.GetBrandByName(product.Brand);
-            string ProductPicsURL = await _pexitaTools.SaveEntityImages(product.ProductPics, $"{product.Brand}/{product.Title}", false);
-            var Tags = await _pexitaTools.StringToTags(product.Tags);
+            string ProductPicsURL = await _pexitaTools.SaveEntityImages(product.ProductPics ?? [], $"{product.Brand}/{product.Title}", false);
+            var Tags = await _pexitaTools.StringToTags(product.Tags ?? "");
 
             ProductModel NewProduct = _mapper.Map<ProductModel>(product);
             NewProduct.Brand = productBrand;
             NewProduct.ProductPicsURL = ProductPicsURL;
             foreach (var tag in Tags)
             {
-                tag.Products.Add(NewProduct);
+                tag.Products?.Add(NewProduct);
             }
             NewProduct.Tags = Tags;
 
@@ -68,7 +67,7 @@ namespace Pexita.Services
             if (!productBrand.BrandNewsLetters.IsNullOrEmpty()) // we'll dispatch events only if the brand has subscribers.
             {
                 BrandNewProductEvent Event = new() { Brand = NewProduct.Brand, BrandID = NewProduct.BrandID, Product = NewProduct, ProductID = NewProduct.ID };
-                _eventdispatcher.Dispatch(Event);
+                _eventDispatcher.Dispatch(Event);
             }
             return ProductModelToInfoDTO(NewProduct);
         }
@@ -124,12 +123,7 @@ namespace Pexita.Services
         /// <returns></returns>
         public ProductInfoDTO ProductModelToInfoDTO(ProductModel model)
         {
-            BrandInfoDTO brand = _brandService.BrandModelToInfo(model.Brand);
-            double rate = _pexitaTools.GetRating(model.Rating.Select(x => x.Rating).ToList());
-            List<TagInfoDTO> tags = _tagsService.TagsToDTO(model.Tags ?? []);
-
-            var res = _mapper.Map<ProductInfoDTO>(model);
-            return res;
+            return _mapper.Map<ProductInfoDTO>(model);
         }
         /// <summary>
         /// Gets a product from database via its ID.
@@ -159,27 +153,27 @@ namespace Pexita.Services
             ProductModel productModel = await _pexitaTools.AuthorizeProductAccessAsync(id, requestingUsername);
             bool NotInStock = productModel.Quantity == 0;
 
-            ProductModel newProductState = _mapper.Map(product, productModel);
+            productModel = _mapper.Map(product, productModel);
 
-            if (product.ProductPics.Count > 0)
+            if (product.ProductPics?.Count > 0)
             {
-                newProductState.ProductPicsURL = await _pexitaTools.SaveEntityImages(product.ProductPics, $"{product.Brand}/{product.Title}", true);
+                productModel.ProductPicsURL = await _pexitaTools.SaveEntityImages(product.ProductPics, $"{product.Brand}/{product.Title}", true);
             }
-            var tgs = await _pexitaTools.StringToTags(product.Tags);
+            var tgs = await _pexitaTools.StringToTags(product.Tags ?? "");
             foreach (var t in tgs)
             {
-                if (!t.Products.Contains(newProductState))
+                if (!t.Products?.Contains(productModel) ?? false)
                 {
-                    t.Products.Add(newProductState);
+                    t.Products?.Add(productModel);
                 }
             }
-            newProductState.Tags = tgs;
-
+            productModel.Tags = tgs;
+            _Context.Update(productModel);
             await _Context.SaveChangesAsync();
-            if (NotInStock && product.Quantity > 0 && newProductState.NewsLetters?.Count > 0) // only releasing an event when it has subscribers
+            if (NotInStock && product.Quantity > 0 && productModel.NewsLetters?.Count > 0) // only releasing an event when it has subscribers
             {
                 var eventMessage = new ProductAvailableEvent(id); // Product has changed its state to "In stock" so we're publishing an event.
-                await _eventdispatcher.DispatchAsync(eventMessage);
+                await _eventDispatcher.DispatchAsync(eventMessage);
             }
             return ProductModelToInfoDTO(productModel);
         }
@@ -221,7 +215,7 @@ namespace Pexita.Services
 
             ProductRating rating = new() { Rating = rateDTO.ProductRating, Product = product, ProductID = product.ID };
 
-            product.Rating.Add(rating);
+            product.Rating?.Add(rating);
 
             await _Context.SaveChangesAsync();
         }
@@ -234,7 +228,7 @@ namespace Pexita.Services
         public bool IsProductAlready(string BrandName, string ProductTitle)
         {
             return _Context.Brands.Include(bp => bp.Products).AsNoTracking().FirstOrDefault(x => x.Name == BrandName)?
-                        .Products!.FirstOrDefault(x => x.Title == ProductTitle) != null;
+                        .Products?.FirstOrDefault(x => x.Title == ProductTitle) != null;
         }
         /// <summary>
         /// partially edits a product's record in database.
@@ -247,13 +241,14 @@ namespace Pexita.Services
         {
             ProductModel product = await _pexitaTools.AuthorizeProductAccessAsync(id, requestingUsername);
             bool NotInStock = product.Quantity == 0;
-            _mapper.Map(productDTO, product);
+            product = _mapper.Map(productDTO, product);
+            _Context.Update(product);
             await _Context.SaveChangesAsync();
 
             if (NotInStock && productDTO.Quantity > 0 && product.NewsLetters?.Count > 0)
             {
                 var eventMessage = new ProductAvailableEvent(product.ID);
-                await _eventdispatcher.DispatchAsync(eventMessage);
+                await _eventDispatcher.DispatchAsync(eventMessage);
             }
 
             return ProductModelToInfoDTO(product);

@@ -64,6 +64,8 @@ namespace Pexita.Services
             {
                 throw new NotFoundException("No User Found");
             }
+            else if (Count > users.Count)
+                throw new NotFoundException($"{Count} was more than the records we had.");
 
             return users.Select(UserModelToInfoDTO).ToList();
         }
@@ -77,8 +79,11 @@ namespace Pexita.Services
         public async Task<UserInfoDTO> GetUserByID(int UserID)
         {
             UserModel user = await _Context.Users
-                .Include(u => u.Orders).Include(u => u.Addresses)
-                .Include(u => u.BrandNewsletters).Include(u => u.ProductNewsletters)
+                .Include(u => u.Orders)
+                .Include(u => u.Addresses)
+                .Include(u => u.BrandNewsletters)
+                .Include(u => u.ProductNewsletters)
+                .Include(u => u.Comments)
                 .AsNoTracking()
                 .FirstOrDefaultAsync(u => u.ID == UserID) ?? throw new NotFoundException($"User With ID:{UserID} Not Found");
 
@@ -124,6 +129,7 @@ namespace Pexita.Services
             string hashedpassword = BCrypt.Net.BCrypt.HashPassword(NewPassword);
             user.Password = hashedpassword;
             user.ResetPasswordCode = null;
+            _Context.Update(user);
             await _Context.SaveChangesAsync();
             return UserModelToInfoDTO(user, userInfo.RefreshToken!, userInfo.JWToken!);
         }
@@ -154,6 +160,7 @@ namespace Pexita.Services
             string Body = $"Your Authentication Code Is {user.ResetPasswordCode}";
             _emailService.SendEmail(user.Email, Subject, Body); // we send the code to the user.
 
+            _Context.Update(user);
             await _Context.SaveChangesAsync();
 
             return UserModelToInfoDTO(user);
@@ -207,26 +214,11 @@ namespace Pexita.Services
         /// <exception cref="NotFoundException"></exception>
         public async Task<UserInfoDTO> UpdateUser(UserUpdateDTO userUpdateDTO, string requestingUsername)
         {
-            try
-            {
-                UserModel User = await _pexitaTools.AuthorizeUserAccessAsync(userUpdateDTO.ID, requestingUsername);
-
-                _mapper.Map(userUpdateDTO, User);
-
-                await _Context.SaveChangesAsync();
-
-                return UserModelToInfoDTO(User);
-            }
-
-            catch (ValidationException e)
-            {
-                throw new ValidationException(e.Message);
-            }
-
-            catch (InvalidOperationException)
-            {
-                throw new NotFoundException($"User With ID:{userUpdateDTO.ID} Not Found");
-            }
+            UserModel User = await _pexitaTools.AuthorizeUserAccessAsync(userUpdateDTO.ID, requestingUsername);
+            var res = _mapper.Map(userUpdateDTO, User);
+            _Context.Update(res);
+            await _Context.SaveChangesAsync();
+            return UserModelToInfoDTO(User);
         }
         /// <summary>
         /// Deletes a user account from database.
@@ -287,7 +279,7 @@ namespace Pexita.Services
                 throw new NotAuthorizedException("Username or Password is not correct");
             }
 
-            var result = UserModelToInfoDTO(user!);
+            UserInfoDTO result = UserModelToInfoDTO(user!);
             result.JWToken = _pexitaTools.GenerateJWToken(user!.Username, user.Role, user.Email);
             string rawRefreshToken = _pexitaTools.GenerateRefreshToken();
             UserRefreshToken refreshToken = new UserRefreshToken()
@@ -384,10 +376,10 @@ namespace Pexita.Services
         /// <param name="requestingUsername">Username of the user requesting.</param>
         /// <returns>a list of all addresses of a given user.</returns>
         /// <exception cref="NotFoundException"></exception>
-        public async Task<List<Address>> GetAddresses(int UserID, string requestingUsername)
+        public async Task<List<AddressDTO>> GetAddresses(int UserID, string requestingUsername)
         {
             UserModel user = await _Context.Users.Include(u => u.Addresses).FirstOrDefaultAsync(u => u.ID == UserID) ?? throw new NotFoundException($"User With ID:{UserID} Not Found");
-            return user.Addresses!.ToList();
+            return user.Addresses?.Select(x => _mapper.Map<AddressDTO>(x)).ToList() ?? [];
         }
         /// <summary>
         /// Adds an address to the collection of a user.
@@ -423,13 +415,13 @@ namespace Pexita.Services
             UserModel user = await _pexitaTools.AuthorizeUserAccessAsync(UserID, requestingUsername);
 
             // Find the existing address in the user's addresses list
-            Address existingAddress = user.Addresses!.FirstOrDefault(a => a.ID == address.ID) ?? throw new NotFoundException($"Address With ID:{address.ID} Not Found");
+            Address existingAddress = user.Addresses?.FirstOrDefault(a => a.ID == address.ID) ?? throw new NotFoundException($"Address With ID:{address.ID} Not Found");
 
             // Update the properties of the existing address with the values from the 'address' parameter
             existingAddress.Province = address.Province;
             existingAddress.City = address.City;
             existingAddress.Text = address.Text;
-
+            _Context.Update(existingAddress);
             await _Context.SaveChangesAsync();
         }
         /// <summary>
@@ -445,7 +437,7 @@ namespace Pexita.Services
         {
             UserModel user = await _pexitaTools.AuthorizeUserAccessAsync(UserID, requestingUsername);
 
-            _Context.Remove(user.Addresses!.FirstOrDefault(a => a.ID == id) ?? throw new NotFoundException($"Address with ID {id} Not found"));
+            _Context.Remove(user.Addresses?.FirstOrDefault(a => a.ID == id) ?? throw new NotFoundException($"Address with ID {id} Not found"));
 
             await _Context.SaveChangesAsync();
         }
@@ -455,10 +447,10 @@ namespace Pexita.Services
         /// <param name="UserID"></param>
         /// <returns>a list containing all comments of a given user.</returns>
         /// <exception cref="NotFoundException"></exception>
-        public async Task<List<CommentsModel>> GetComments(int UserID)
+        public async Task<List<CommentsDTO>> GetComments(int UserID)
         {
             UserModel user = await _Context.Users.Include(u => u.Comments).FirstOrDefaultAsync(u => u.ID == UserID) ?? throw new NotFoundException($"User With ID:{UserID} Not Found");
-            return user.Comments!.ToList();
+            return user.Comments?.Select(x => _mapper.Map<CommentsDTO>(x)).ToList() ?? [];
         }
         /// <summary>
         /// checks if a given id is a valid user.

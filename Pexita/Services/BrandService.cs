@@ -67,7 +67,7 @@ namespace Pexita.Services
                 throw new ArgumentException("Username or Password is not correct");
             }
             var result = BrandModelToInfo(brand!);
-            result.JWToken = _pexitaTools.GenerateJWToken(brand.Username, "Brand", brand.Email);
+            result.JWToken = _pexitaTools.GenerateJWToken(brand!.Username, "Brand", brand.Email);
             string rawRefreshToken = _pexitaTools.GenerateRefreshToken();
             BrandRefreshToken refreshToken = new()
             {
@@ -107,7 +107,7 @@ namespace Pexita.Services
             string Subject = "Pexita Authentication code";
             string Body = $"Your Authentication Code Is {brand.ResetPasswordCode}";
 
-            //_emailService.SendEmail(brand.Email, Subject, Body); // we send the code to the user.
+            _emailService.SendEmail(brand.Email, Subject, Body); // we send the code to the user.
             _Context.Update(brand);
             await _Context.SaveChangesAsync();
             return BrandModelToInfo(brand);
@@ -249,13 +249,13 @@ namespace Pexita.Services
         /// <exception cref="InvalidOperationException"></exception>
         public List<BrandInfoDTO> GetBrands()
         {
-            List<BrandInfoDTO> list = _Context.Brands
-                .Include(b => b.Products)!.ThenInclude(p => p.Comments)
-                .Include(b => b.Products)!.ThenInclude(p => p.Tags)
+            List<BrandInfoDTO>? list = _Context.Brands
+                .Include(b => b.Products).ThenInclude(p => p.Comments)
+                .Include(b => b.Products).ThenInclude(p => p.Tags)
                 .AsNoTracking()
                 .Select(BrandModelToInfo)
                 .ToList();
-            return list;
+            return list ?? [];
         }
         /// <summary>
         /// Getting a set amount of brands from database along their products, tags and comments of each product.
@@ -268,8 +268,8 @@ namespace Pexita.Services
         public List<BrandInfoDTO> GetBrands(int count)
         {
             List<BrandInfoDTO> brands = _Context.Brands
-                .Include(b => b.Products)!.ThenInclude(p => p.Comments)
-                .Include(b => b.Products)!.ThenInclude(p => p.Tags)
+                .Include(b => b.Products).ThenInclude(p => p.Comments)
+                .Include(b => b.Products).ThenInclude(p => p.Tags)
                 .AsNoTracking()
                 .Take(count).Select(BrandModelToInfo)
                 .ToList();
@@ -286,9 +286,9 @@ namespace Pexita.Services
         public async Task<BrandInfoDTO> GetBrandByID(int id)
         {
             return BrandModelToInfo(await _Context.Brands
-                .Include(b => b.Products!).ThenInclude(pc => pc.Tags)
+                .Include(b => b.Products)?.ThenInclude(pc => pc.Tags)
                 .AsNoTracking()
-                .FirstOrDefaultAsync(b => b.ID == id) ?? throw new NotFoundException());
+                .FirstOrDefaultAsync(b => b.ID == id) ?? throw new NotFoundException($"{id}"));
         }
         /// <summary>
         /// Getting a brand's info from its username.
@@ -317,7 +317,7 @@ namespace Pexita.Services
             var newRec = _mapper.Map(model, brand);
             if (model.BrandPic != null)
             {
-                newRec.BrandPicURL = await _pexitaTools.SaveEntityImages(model.BrandPic!, $"Brands/{model.Name}", true);
+                newRec.BrandPicURL = await _pexitaTools.SaveEntityImages(model.BrandPic, $"Brands/{model.Name}", true);
             }
             _Context.Update(brand);
             await _Context.SaveChangesAsync();

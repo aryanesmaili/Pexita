@@ -16,23 +16,17 @@ namespace Pexita.Controllers
         private readonly IBrandService _brandService;
         private readonly IValidator<BrandCreateDTO> _brandCreateValidator;
         private readonly IValidator<BrandUpdateDTO> _brandUpdateValidator;
-        private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly IValidator<LoginDTO> _userLoginValidator;
-        private readonly IHttpContextAccessor _contextAccessor;
 
         public BrandsController(IBrandService brandService,
             IValidator<BrandCreateDTO> brandCreateValidator,
             IValidator<BrandUpdateDTO> brandUpdateValidator,
-            IHttpContextAccessor httpContextAccessor,
-            IValidator<LoginDTO> userLoginValidator,
-            IHttpContextAccessor contextAccessor)
+            IValidator<LoginDTO> userLoginValidator)
         {
             _brandService = brandService;
             _brandCreateValidator = brandCreateValidator;
             _brandUpdateValidator = brandUpdateValidator;
-            _httpContextAccessor = httpContextAccessor;
             _userLoginValidator = userLoginValidator;
-            _contextAccessor = contextAccessor;
         }
 
         [HttpGet]
@@ -120,7 +114,7 @@ namespace Pexita.Controllers
             }
             catch (ArgumentException e)
             {
-                return BadRequest(e.Message);
+                return BadRequest(e);
             }
             catch (Exception e)
             {
@@ -152,8 +146,8 @@ namespace Pexita.Controllers
             }
         }
 
-        [HttpPost("AddBrand")]
-        public async Task<IActionResult> AddBrand([FromForm] BrandCreateDTO createDTO)
+        [HttpPost("Register")]
+        public async Task<IActionResult> Register([FromForm] BrandCreateDTO createDTO)
         {
             try
             {
@@ -164,30 +158,29 @@ namespace Pexita.Controllers
                 var result = await _brandService.Register(createDTO);
                 return Ok(result);
             }
-
-            catch (ArgumentNullException e)
-            {
-                return BadRequest($"Argument null {e.Message}");
-            }
-            catch (ArgumentException e)
-            {
-                return BadRequest(e.Message);
-            }
             catch (ValidationException e)
             {
                 return BadRequest(e.Message);
             }
+            catch (ArgumentNullException e)
+            {
+                return BadRequest($"Argument null {e.Message}");
+            }
+            catch (Exception e)
+            {
+                return StatusCode(500, e.Message);
+            }
         }
 
         [HttpPost("ResetPassword")]
-        public async Task<IActionResult> ResetPassword([FromBody] string userInfo)
+        public async Task<IActionResult> ResetPassword([FromBody] string brandInfo)
         {
             try
             {
 
-                BrandInfoDTO user = await _brandService.ResetPassword(userInfo);
+                BrandInfoDTO brand = await _brandService.ResetPassword(brandInfo);
 
-                return Ok(user);
+                return Ok(brand);
             }
 
             catch (ValidationException e)
@@ -206,11 +199,11 @@ namespace Pexita.Controllers
         }
 
         [HttpPost("CheckResetCode")]
-        public async Task<IActionResult> CheckResetCode([FromBody] BrandInfoDTO user, [FromQuery] string Code)
+        public async Task<IActionResult> CheckResetCode([FromBody] BrandInfoDTO brand, [FromQuery] string Code)
         {
             try
             {
-                var result = await _brandService.CheckResetCode(user, Code);
+                var result = await _brandService.CheckResetCode(brand, Code);
                 return Ok(result);
             }
             catch (ArgumentNullException e)

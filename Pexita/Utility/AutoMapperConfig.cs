@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using Microsoft.Identity.Client;
+using Pexita.Data;
 using Pexita.Data.Entities.Authentication;
 using Pexita.Data.Entities.Brands;
 using Pexita.Data.Entities.Comments;
@@ -12,6 +13,7 @@ using Pexita.Data.Entities.Tags;
 using Pexita.Data.Entities.User;
 using Pexita.Services;
 using Pexita.Services.Interfaces;
+using Pexita.Utility.Exceptions;
 
 namespace Pexita.Utility
 {
@@ -78,11 +80,16 @@ namespace Pexita.Utility
                 .ForMember(u => u.ShoppingCarts, opt => opt.MapFrom(src => new List<ShoppingCartModel>()))
                 .ForMember(u => u.BrandNewsletters, opt => opt.MapFrom(src => new List<BrandNewsletterModel>()))
                 .ForMember(u => u.ProductNewsletters, opt => opt.MapFrom(src => new List<ProductNewsLetterModel>()))
-                .ForMember(u => u.Comments, opt => opt.MapFrom(src => new List<CommentsModel>()));
+                .ForMember(u => u.Comments, opt => opt.MapFrom(src => new List<CommentsModel>()))
+                .ForMember(u => u.ProfilePicURL, opt => opt.MapFrom<UserPicURLResolver>());
+
 
             CreateMap<BrandRefreshToken, BrandRefreshTokenDTO>();
             CreateMap<UserRefreshToken, UserRefreshTokenDTO>();
+
             CreateMap<Address, AddressDTO>();
+            CreateMap<AddressDTO, Address>()
+                .ForMember(x => x.User, opt => opt.MapFrom<AddressUserResolver>());
 
             CreateMap<CommentsModel, CommentsDTO>()
                 .ForMember(u => u.User, opt => opt.MapFrom<CommentUserResolver>())
@@ -492,6 +499,20 @@ namespace Pexita.Utility
         public List<ProductNewsLetterDTO>? Resolve(UserModel source, UserInfoDTO destination, List<ProductNewsLetterDTO>? destMember, ResolutionContext context)
         {
             return source.ProductNewsletters?.Select(x => _mapper.Map<ProductNewsLetterDTO>(x)).ToList();
+        }
+    }
+    public class AddressUserResolver : IValueResolver<AddressDTO, Address, UserModel>
+    {
+        private readonly AppDBContext _context;
+
+        public AddressUserResolver(AppDBContext context)
+        {
+            _context = context;
+        }
+
+        public UserModel Resolve(AddressDTO source, Address destination, UserModel destMember, ResolutionContext context)
+        {
+            return _context.Users.Find(source.UserID) ?? throw new NotFoundException($"user {source.UserID} not found.");
         }
     }
 }

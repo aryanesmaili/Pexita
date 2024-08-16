@@ -20,8 +20,8 @@ namespace Pexita.Services.Interfaces
         public Task<UserInfoDTO> TokenRefresher(string token);
         public Task RevokeToken(string token);
         public Task<List<AddressDTO>> GetAddresses(int UserID, string requestingUsername);
-        public Task AddAddress(int UserID, Address address, string requestingUsername);
-        public Task UpdateAddress(int UserID, Address address, string requestingUsername);
+        public Task AddAddress(int UserID, AddressDTO address, string requestingUsername);
+        public Task UpdateAddress(int UserID, AddressDTO address, string requestingUsername);
         public Task DeleteAddress(int UserID, int id, string requestingUsername);
         public Task<List<CommentsDTO>> GetComments(int UserID);
         public UserInfoDTO UserModelToInfoDTO(UserModel userModel);

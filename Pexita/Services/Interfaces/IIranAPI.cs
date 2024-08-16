@@ -2,7 +2,7 @@
 {
     public interface IIranAPI
     {
-        Task<bool> IsCityValid(string StateName, string CityName);
-        Task<bool> IsStateValid(string StateName);
+        Task<bool> IsCityValid(string StateName, string CityName, bool isEng);
+        Task<bool> IsStateValid(string StateName, bool isEng);
     }
 }

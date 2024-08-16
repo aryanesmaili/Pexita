@@ -56,17 +56,16 @@ namespace Pexita.Services
         {
             BrandModel? brand = null;
 
-            if (!string.IsNullOrEmpty(userLoginDTO.UserName)) // we find the user based on their username if they've entered username.
-                brand = await _Context.Brands.FirstOrDefaultAsync(u => u.Username == userLoginDTO.UserName) ?? throw new NotFoundException();
-
-            else if (!string.IsNullOrEmpty(userLoginDTO.Email)) // we find the user based on their email if they've entered email.
-                brand = await _Context.Brands.FirstOrDefaultAsync(u => u.Email == userLoginDTO.Email) ?? throw new NotFoundException();
+            if (_pexitaTools.IsEmail(userLoginDTO.Identifier))
+                brand = await _Context.Brands.FirstOrDefaultAsync(u => u.Email == userLoginDTO.Identifier) ?? throw new NotFoundException($"No brand with email {userLoginDTO.Identifier} exists.");
+            else
+                brand = await _Context.Brands.FirstOrDefaultAsync(u => u.Username == userLoginDTO.Identifier) ?? throw new NotFoundException($"No brand with username {userLoginDTO.Identifier} exists.");
 
             if (brand == null || !BCrypt.Net.BCrypt.Verify(userLoginDTO.Password, brand?.Password)) // verifying password with its hash in database.
             {
                 throw new ArgumentException("Username or Password is not correct");
             }
-            var result = BrandModelToInfo(brand!);
+            BrandInfoDTO result = BrandModelToInfo(brand!);
             result.JWToken = _pexitaTools.GenerateJWToken(brand!.Username, "Brand", brand.Email);
             string rawRefreshToken = _pexitaTools.GenerateRefreshToken();
             BrandRefreshToken refreshToken = new()
@@ -239,7 +238,7 @@ namespace Pexita.Services
                 await _Context.SaveChangesAsync();
                 return;
             }
-            throw new Exception("Operation cannot be done.");
+            throw new Exception("token either invalid or already inactive.");
         }
         /// <summary>
         /// Get the list of all brands along with their products, tags and comments of each product.
@@ -304,21 +303,21 @@ namespace Pexita.Services
         /// fully updating a brand info in the database table.
         /// </summary>
         /// <param name="id">brand's id</param>
-        /// <param name="model">object containing new info</param>
+        /// <param name="newData">object containing new info</param>
         /// <param name="requestingUsername"> the user requesting the change.</param>
         /// <returns>new brand info.</returns>
         /// <exception cref="NotAuthorizedException"></exception>
         /// <exception cref="NotFoundException"></exception>
         /// <exception cref="ValidationException"></exception>
-        public async Task<BrandInfoDTO> UpdateBrandInfo(int id, BrandUpdateDTO model, string requestingUsername)
+        public async Task<BrandInfoDTO> UpdateBrandInfo(int id, BrandUpdateDTO newData, string requestingUsername)
         {
             BrandModel brand = await _pexitaTools.AuthorizeBrandAccessAsync(id, requestingUsername);
 
-            var newRec = _mapper.Map(model, brand);
-            if (model.BrandPic != null)
-            {
-                newRec.BrandPicURL = await _pexitaTools.SaveEntityImages(model.BrandPic, $"Brands/{model.Name}", true);
-            }
+            BrandModel newState = _mapper.Map(newData, brand);
+
+            if (newData.BrandPic != null)
+                newState.BrandPicURL = await _pexitaTools.SaveEntityImages(newData.BrandPic, $"Brands/{newData.Name}", true);
+
             _Context.Update(brand);
             await _Context.SaveChangesAsync();
             var result = BrandModelToInfo(brand);
@@ -379,6 +378,5 @@ namespace Pexita.Services
         {
             return _Context.Brands.FirstOrDefault(x => x.Name == BrandName) != null;
         }
-
     }
 }

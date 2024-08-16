@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Pexita.Data.Entities.User;
 using Pexita.Services.Interfaces;
 using Pexita.Utility.Exceptions;
+using System.Security.Claims;
 
 namespace Pexita.Controllers
 {
@@ -15,16 +16,14 @@ namespace Pexita.Controllers
         private readonly IValidator<UserCreateDTO> _createValidator;
         private readonly IValidator<LoginDTO> _loginValidator;
         private readonly IValidator<UserUpdateDTO> _updateValidator;
-        private readonly IValidator<Address> _addressValidator;
-        private readonly IHttpContextAccessor _contextAccessor;
+        private readonly IValidator<AddressDTO> _addressValidator;
         private readonly INewsletterService _newsletterService;
 
         public UserController(IUserService userService,
             IValidator<UserCreateDTO> CreateValidator,
             IValidator<LoginDTO> LoginValidator,
             IValidator<UserUpdateDTO> UpdateValidator,
-            IValidator<Address> addressValidator,
-            IHttpContextAccessor contextAccessor,
+            IValidator<AddressDTO> addressValidator,
             INewsletterService newsletterService)
         {
             _userService = userService;
@@ -32,10 +31,8 @@ namespace Pexita.Controllers
             _loginValidator = LoginValidator;
             _updateValidator = UpdateValidator;
             _addressValidator = addressValidator;
-            _contextAccessor = contextAccessor;
             _newsletterService = newsletterService;
         }
-
 
         [HttpGet]
         public IActionResult GetUsers()
@@ -87,57 +84,46 @@ namespace Pexita.Controllers
                 return StatusCode(500, e.Message);
             }
         }
-        [HttpPost("Auth/Login")]
+        [HttpPost("Login")]
         public async Task<IActionResult> Login([FromForm] LoginDTO loginDTO)
         {
             try
             {
                 await _loginValidator.ValidateAndThrowAsync(loginDTO);
-
-                var token = await _userService.Login(loginDTO);
-                return Ok(token);
+                var result = await _userService.Login(loginDTO);
+                return Ok(result);
             }
-            catch (NotFoundException e)
+            catch (NotFoundException)
             {
-                return NotFound(nameof(loginDTO.UserName));
+                return NotFound(loginDTO);
             }
             catch (ValidationException e)
+            {
+                return BadRequest(e.Message);
+            }
+            catch (ArgumentException e)
             {
                 return BadRequest(e.Message);
             }
             catch (Exception e)
             {
-                return StatusCode(500, e.StackTrace);
+                return StatusCode(500, new { error = e.Message });
             }
-
         }
-        [HttpPost("Auth/Register")]
+        [HttpPost("Register")]
         public async Task<IActionResult> Register([FromForm] UserCreateDTO userCreateDTO)
         {
             try
             {
-                if (userCreateDTO == null)
-                    throw new ArgumentNullException($"{nameof(userCreateDTO)} is Null");
-
+                ArgumentNullException.ThrowIfNull(userCreateDTO);
                 await _createValidator.ValidateAndThrowAsync(userCreateDTO);
                 var result = await _userService.Register(userCreateDTO);
-
                 return Ok(result);
-            }
-            catch (NotAuthorizedException)
-            {
-                return Unauthorized();
             }
             catch (ValidationException e)
             {
                 return BadRequest(e.Message);
             }
-
-            catch (NotFoundException e)
-            {
-                return NotFound(e.Message);
-            }
-
             catch (ArgumentNullException e)
             {
                 return BadRequest(e.Message);
@@ -148,13 +134,14 @@ namespace Pexita.Controllers
             }
         }
         [Authorize(Policy = "AllUsers")]
-        [HttpPost("Auth/Logout")]
+        [HttpPost("Logout")]
         public async Task<IActionResult> Logout([FromBody] string logout)
         {
             try
             {
-                await _userService.RevokeToken(logout);
+                ArgumentNullException.ThrowIfNull(logout);
 
+                await _userService.RevokeToken(logout);
                 return Ok();
             }
             catch (ArgumentNullException)
@@ -167,23 +154,20 @@ namespace Pexita.Controllers
             }
             catch (Exception e)
             {
-                return StatusCode(500, e.Message);
+                return StatusCode(500, e.StackTrace);
             }
         }
+
         [Authorize(Policy = "AllUsers")]
         [HttpPut("Edit")]
-        public async Task<IActionResult> UpdateUser([FromBody] UserUpdateDTO userUpdateDTO)
+        public async Task<IActionResult>  UpdateUser([FromForm] UserUpdateDTO userUpdateDTO)
         {
-            var requestingUsername = _contextAccessor.HttpContext!.User?.Identity?.Name;
+            var requestingUsername = User.FindFirstValue(ClaimTypes.Name);
             try
             {
-                UserInfoDTO? result = null;
-
-                if (userUpdateDTO == null)
-                    throw new ArgumentNullException($"{nameof(userUpdateDTO)} is Null");
-
                 await _updateValidator.ValidateAndThrowAsync(userUpdateDTO);
-                result = await _userService.UpdateUser(userUpdateDTO, requestingUsername!);
+
+                UserInfoDTO result = await _userService.UpdateUser(userUpdateDTO, requestingUsername!);
 
                 return Ok(result);
             }
@@ -210,12 +194,11 @@ namespace Pexita.Controllers
                 return StatusCode(500, e.Message);
             }
         }
-        [HttpPut("ResetPassword")]
+        [HttpPost("ResetPassword")]
         public async Task<IActionResult> ResetPassword([FromBody] string userInfo)
         {
             try
             {
-
                 UserInfoDTO user = await _userService.ResetPassword(userInfo);
 
                 return Ok(user);
@@ -258,13 +241,12 @@ namespace Pexita.Controllers
         }
         [Authorize(Policy = "OnlyUsers")]
         [HttpPut("ChangePassword")]
-        public async Task<IActionResult> ChangePassword([FromBody] UserInfoDTO userID, [FromForm] string newPassword, [FromForm] string confirmPassword)
+        public async Task<IActionResult> ChangePassword([FromBody] UserInfoDTO userID, [FromQuery] string newPassword, [FromQuery] string confirmPassword)
         {
-            var requestingUsername = _contextAccessor.HttpContext!.User?.Identity?.Name;
+            var requestingUsername = User.FindFirstValue(ClaimTypes.Name);
             try
             {
                 var result = await _userService.ChangePassword(userID, newPassword, confirmPassword, requestingUsername!);
-
                 return Ok(result);
             }
             catch (NotAuthorizedException e)
@@ -292,7 +274,6 @@ namespace Pexita.Controllers
             try
             {
                 var result = await _userService.TokenRefresher(refreshToken);
-
                 return Ok(result);
             }
 
@@ -314,7 +295,7 @@ namespace Pexita.Controllers
         [HttpDelete("Delete/{id:int}")]
         public async Task<IActionResult> DeleteUser(int id)
         {
-            var requestingUsername = _contextAccessor.HttpContext!.User?.Identity?.Name;
+            var requestingUsername = User.FindFirstValue(ClaimTypes.Name);
 
             try
             {
@@ -334,15 +315,16 @@ namespace Pexita.Controllers
                 return StatusCode(500, e.Message);
             }
         }
+
         [Authorize(Policy = "OnlyUsers")]
         [HttpGet("Addresses/{id:int}")]
         public async Task<IActionResult> GetAddresses(int id)
         {
-            var requestingUsername = _contextAccessor.HttpContext!.User?.Identity?.Name;
+            var requestingUsername = User.FindFirstValue(ClaimTypes.Name);
 
             try
             {
-                return Ok(await _userService.GetAddresses(id, requestingUsername));
+                return Ok(await _userService.GetAddresses(id, requestingUsername!));
             }
             catch (NotAuthorizedException e)
             {
@@ -358,21 +340,18 @@ namespace Pexita.Controllers
             }
         }
         [Authorize(Policy = "OnlyUsers")]
-        [HttpPost("Addresses/{id:int}")]
-        public async Task<IActionResult> AddAddress(int id, [FromBody] Address address)
+        [HttpPost("Addresses/Add/{id:int}")]
+        public async Task<IActionResult> AddAddress(int id, [FromForm] AddressDTO address)
         {
-            var requestingUsername = _contextAccessor.HttpContext!.User?.Identity?.Name;
+            var requestingUsername = User.FindFirstValue(ClaimTypes.Name);
 
             try
             {
-                if (address == null)
-                    throw new ArgumentNullException($"{nameof(address)} is Null");
-
+                ArgumentNullException.ThrowIfNull(address);
                 await _addressValidator.ValidateAndThrowAsync(address);
                 await _userService.AddAddress(id, address, requestingUsername!);
 
                 return Ok();
-
             }
             catch (NotAuthorizedException e)
             {
@@ -380,31 +359,26 @@ namespace Pexita.Controllers
             }
             catch (NotFoundException)
             {
-                return NotFound($"Address ID : {address.ID} Not found");
+                return NotFound($"Address ID {address.ID} Not found");
             }
-
             catch (ArgumentNullException e)
-            {
-                return BadRequest(e.Message);
-            }
-
-            catch (ArgumentException e)
             {
                 return BadRequest(e.Message);
             }
             catch (Exception e)
             {
-                return StatusCode(500, e.Message);
+                return StatusCode(500, new { error = e.Message });
             }
         }
         [Authorize(Policy = "OnlyUsers")]
         [HttpPut("Address/Edit/{id:int}")]
-        public async Task<IActionResult> UpdateAddress(int id, [FromBody] Address address)
+        public async Task<IActionResult> UpdateAddress(int id, [FromForm] AddressDTO address)
         {
-            var requestingUsername = _contextAccessor.HttpContext!.User?.Identity?.Name;
+            var requestingUsername = User.FindFirstValue(ClaimTypes.Name);
 
             try
             {
+                await _addressValidator.ValidateAndThrowAsync(address);
                 await _userService.UpdateAddress(id, address, requestingUsername!);
                 return Ok();
             }
@@ -423,13 +397,12 @@ namespace Pexita.Controllers
         }
         [Authorize(Policy = "OnlyUsers")]
         [HttpDelete("Address/Delete/{id:int}")]
-        public async Task<IActionResult> RemoveAddress(int id, [FromBody] Address address)
+        public async Task<IActionResult> RemoveAddress(int id, [FromBody] AddressDTO address)
         {
-            var requestingUsername = _contextAccessor.HttpContext!.User?.Identity?.Name;
+            var requestingUsername = User.FindFirstValue(ClaimTypes.Name);
 
             try
             {
-                await _addressValidator.ValidateAndThrowAsync(address);
                 await _userService.DeleteAddress(id, address.ID, requestingUsername!);
                 return Ok();
             }
@@ -467,11 +440,10 @@ namespace Pexita.Controllers
         [HttpPost("Newsletters/Add/Product")]
         public async Task<IActionResult> AddProductNewsletter([FromQuery] int UserID, [FromQuery] int ProductID)
         {
-            var requestingUsername = _contextAccessor.HttpContext!.User?.Identity?.Name;
+            var requestingUsername = User.FindFirstValue(ClaimTypes.Name);
             try
             {
                 await _newsletterService.AddProductNewsLetter(UserID, ProductID, requestingUsername!);
-
                 return Ok(ProductID);
             }
             catch (ArgumentNullException e)
@@ -495,7 +467,7 @@ namespace Pexita.Controllers
         [HttpPost("Newsletters/Add/Brand")]
         public async Task<IActionResult> AddBrandNewsletter([FromQuery] int UserID, [FromQuery] int ProductID)
         {
-            var requestingUsername = _contextAccessor.HttpContext!.User?.Identity?.Name;
+            var requestingUsername = User.FindFirstValue(ClaimTypes.Name);
             try
             {
                 await _newsletterService.AddBrandNewProductNewsLetter(UserID, ProductID, requestingUsername!);

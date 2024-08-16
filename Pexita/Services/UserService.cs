@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using Elfie.Serialization;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -207,18 +208,25 @@ namespace Pexita.Services
         /// <summary>
         /// updates a user's cred in database.
         /// </summary>
-        /// <param name="userUpdateDTO">new information and changes.</param>
+        /// <param name="newData">new information and changes.</param>
         /// <param name="requestingUsername">the username requesting the change.</param>
         /// <returns>a <see cref="UserInfoDTO"/> object containing new record's info.</returns>
         /// <exception cref="ValidationException"></exception>
         /// <exception cref="NotFoundException"></exception>
-        public async Task<UserInfoDTO> UpdateUser(UserUpdateDTO userUpdateDTO, string requestingUsername)
+        public async Task<UserInfoDTO> UpdateUser(UserUpdateDTO newData, string requestingUsername)
         {
-            UserModel User = await _pexitaTools.AuthorizeUserAccessAsync(userUpdateDTO.ID, requestingUsername);
-            var res = _mapper.Map(userUpdateDTO, User);
-            _Context.Update(res);
+            UserModel User = await _pexitaTools.AuthorizeUserAccessAsync(newData.ID, requestingUsername);
+
+            UserModel newState = _mapper.Map(newData, User);
+
+            if (newData.ProfilePic != null)
+                newState.ProfilePicURL = await _pexitaTools.SaveEntityImages(newData.ProfilePic, $"Users/{User.Username}", true);
+
+            _Context.Update(newState);
             await _Context.SaveChangesAsync();
-            return UserModelToInfoDTO(User);
+            var result = UserModelToInfoDTO(User);
+            result.JWToken = _pexitaTools.GenerateJWToken(User.Username, User.Role, User.Email);
+            return result;
         }
         /// <summary>
         /// Deletes a user account from database.
@@ -265,18 +273,16 @@ namespace Pexita.Services
         /// <exception cref="NotAuthorizedException"></exception>
         public async Task<UserInfoDTO> Login(LoginDTO userLoginDTO)
         {
-            // TODO: Implement token service and refresh token for Brands too.
             UserModel? user = null;
 
-            if (!string.IsNullOrEmpty(userLoginDTO.UserName))
-                user = await _Context.Users.FirstOrDefaultAsync(u => u.Username == userLoginDTO.UserName) ?? throw new NotFoundException();
+            if (_pexitaTools.IsEmail(userLoginDTO.Identifier))
+                user = await _Context.Users.FirstOrDefaultAsync(u => u.Email == userLoginDTO.Identifier) ?? throw new NotFoundException($"No user with email {userLoginDTO.Identifier} exists.");
+            else
+                user = await _Context.Users.FirstOrDefaultAsync(u => u.Username == userLoginDTO.Identifier) ?? throw new NotFoundException($"No user with username {userLoginDTO.Identifier} exists.");
 
-            else if (string.IsNullOrEmpty(userLoginDTO.Email))
-                user = await _Context.Users.FirstOrDefaultAsync(u => u.Email == userLoginDTO.Email) ?? throw new NotFoundException();
-
-            if (user == null && !BCrypt.Net.BCrypt.Verify(userLoginDTO.Password, user?.Password))
+            if (user == null || !BCrypt.Net.BCrypt.Verify(userLoginDTO.Password, user?.Password))
             {
-                throw new NotAuthorizedException("Username or Password is not correct");
+                throw new ArgumentException("Username or Password is not correct");
             }
 
             UserInfoDTO result = UserModelToInfoDTO(user!);
@@ -291,6 +297,7 @@ namespace Pexita.Services
                 UserId = user.ID
             };
             _Context.UserRefreshTokens.Add(refreshToken);
+            await _Context.SaveChangesAsync();
             result.RefreshToken = _mapper.Map<UserRefreshTokenDTO>(refreshToken);
             return result;
         }
@@ -345,14 +352,16 @@ namespace Pexita.Services
         {
             if (token == null)
                 throw new ArgumentNullException(token);
+
             var tokenRecord = await _Context.UserRefreshTokens.FirstOrDefaultAsync(t => t.Token == token) ?? throw new NotFoundException();
             if (tokenRecord != null && tokenRecord.IsActive)
             {
                 tokenRecord.Revoked = DateTime.UtcNow;
                 _Context.UserRefreshTokens.Update(tokenRecord);
                 await _Context.SaveChangesAsync();
+                return;
             }
-            throw new Exception("Operation cannot be done.");
+            throw new Exception("token either invalid or already inactive.");
         }
         /// <summary>
         /// registers a new user.
@@ -361,14 +370,13 @@ namespace Pexita.Services
         /// <returns>a <see cref="UserInfoDTO"/> object containing information about the new user.</returns>
         public async Task<UserInfoDTO> Register(UserCreateDTO userCreateDTO)
         {
-
             UserModel User = _mapper.Map<UserModel>(userCreateDTO); // creating an object that matches our DB table.
             User.Password = BCrypt.Net.BCrypt.HashPassword(User.Password); // Hashing user's password to ensure security
             await _Context.Users.AddAsync(User);
             await _Context.SaveChangesAsync();
             return UserModelToInfoDTO(User);
         }
-        // TODO: make sure all user controllers have unAuthorized catch
+        // TODO: make sure all user controllers have unAuthorized catch.
         /// <summary>
         /// Gets all of the addresses of a given user.
         /// </summary>
@@ -385,21 +393,16 @@ namespace Pexita.Services
         /// Adds an address to the collection of a user.
         /// </summary>
         /// <param name="UserID"></param>
-        /// <param name="address"></param>
+        /// <param name="newAddress"></param>
         /// <param name="requestingUsername"></param>
         /// <returns></returns>
         /// <exception cref="NotAuthorizedException"></exception>
         /// <exception cref="NotFoundException"></exception>
-        public async Task AddAddress(int UserID, Address address, string requestingUsername)
+        public async Task AddAddress(int UserID, AddressDTO newAddress, string requestingUsername)
         {
-
             UserModel user = await _pexitaTools.AuthorizeUserAccessAsync(UserID, requestingUsername);
-
-            if (user.Addresses == null)
-                user.Addresses = new List<Address>();
-
-            user.Addresses.Add(address);
-
+            Address address = _mapper.Map<Address>(newAddress);
+            user.Addresses?.Add(address);
             await _Context.SaveChangesAsync();
         }
         /// <summary>
@@ -410,7 +413,7 @@ namespace Pexita.Services
         /// <param name="requestingUsername"></param>
         /// <returns></returns>
         /// <exception cref="NotFoundException"></exception>
-        public async Task UpdateAddress(int UserID, Address address, string requestingUsername)
+        public async Task UpdateAddress(int UserID, AddressDTO address, string requestingUsername)
         {
             UserModel user = await _pexitaTools.AuthorizeUserAccessAsync(UserID, requestingUsername);
 

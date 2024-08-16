@@ -177,7 +177,6 @@ namespace Pexita.Controllers
         {
             try
             {
-
                 BrandInfoDTO brand = await _brandService.ResetPassword(brandInfo);
 
                 return Ok(brand);

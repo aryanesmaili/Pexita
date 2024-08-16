@@ -1,9 +1,11 @@
 ﻿using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Mvc;
 using Pexita.Data.Entities.Products;
 using Pexita.Services.Interfaces;
 using Pexita.Utility.Exceptions;
+using System.Security.Claims;
 
 namespace Pexita.Controllers
 {
@@ -16,10 +18,11 @@ namespace Pexita.Controllers
         private readonly IValidator<ProductUpdateDTO> _productUpdateValidator;
         private readonly IValidator<UpdateProductRateDTO> _productRateValidator;
         private readonly IValidator<ProductCommentDTO> _productCommentValidator;
+        private readonly ITagsService _tagsService;
         private readonly IHttpContextAccessor _contextAccessor;
 
         public ProductsController(IProductService productService, IValidator<ProductCreateDTO> productCreateValidator
-            , IValidator<ProductUpdateDTO> productUpdateValidator, IValidator<UpdateProductRateDTO> productRateValidator, IValidator<ProductCommentDTO> productCommentValidator, IHttpContextAccessor contextAccessor)
+            , IValidator<ProductUpdateDTO> productUpdateValidator, IValidator<UpdateProductRateDTO> productRateValidator, IValidator<ProductCommentDTO> productCommentValidator, IHttpContextAccessor contextAccessor, ITagsService tagsService)
         {
             _productService = productService;
             _productCreateValidator = productCreateValidator;
@@ -27,6 +30,7 @@ namespace Pexita.Controllers
             _productRateValidator = productRateValidator;
             _productCommentValidator = productCommentValidator;
             _contextAccessor = contextAccessor;
+            _tagsService = tagsService;
         }
 
         [HttpGet()]
@@ -234,6 +238,63 @@ namespace Pexita.Controllers
                 return StatusCode(StatusCodes.Status500InternalServerError, $"there was an error processing your request: {e.Message}");
             }
         }
+        [HttpGet("Tags")]
+        public async Task<IActionResult> GetAllTags()
+        {
+            try
+            {
+                return Ok(await _tagsService.GetAllTags());
+            }
+            catch (Exception e)
+            {
+                return StatusCode(500, e.Message);
+            }
+        }
+        [Authorize(Policy = "AllUsers")]
+        [HttpPost("Tags/Add")]
+        public async Task<IActionResult> AddTag(string tagTitle)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(tagTitle))
+                    throw new ArgumentNullException(nameof(tagTitle));
+
+                await _tagsService.AddTag(tagTitle);
+                return Ok();
+            }
+            catch (ArgumentNullException e)
+            {
+                return BadRequest(e.Message);
+            }
+            catch (Exception e)
+            {
+                return StatusCode(500, e.Message);
+            }
+        }
+        [Authorize(Policy = "AdminOnly")]
+        [HttpDelete("Tags/Delete/{TagID:int}")]
+        public async Task<IActionResult> DeleteTag(int TagID)
+        {
+            var requesterRole = User.FindFirstValue(ClaimTypes.Role);
+            try
+            {
+                if (requesterRole != "admin")
+                    throw new NotAuthorizedException($"This user does not have authorization.");
+                await _tagsService.DeleteTag(TagID);
+                return Ok();
+            }
+            catch (NotFoundException e)
+            {
+                return NotFound(e.Message);
+            }
+            catch(NotAuthorizedException e)
+            {
+                return Unauthorized(e.Message);
+            }
+            catch (Exception e)
+            {
+                return StatusCode(500, e.Message);
+            }
+        }
     }
 }
-

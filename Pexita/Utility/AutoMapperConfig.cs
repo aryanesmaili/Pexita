@@ -127,6 +127,7 @@ namespace Pexita.Utility
 
             CreateMap<TagModel, TagInfoDTO>()
                 .ForMember(t => t.Products, opt => opt.MapFrom<TagProductResolver>());
+
         }
     }
     public class ProductBrandResolver : IValueResolver<ProductModel, ProductInfoDTO, BrandInfoDTO>
@@ -442,7 +443,7 @@ namespace Pexita.Utility
 
         public List<ProductInfoDTO>? Resolve(TagModel source, TagInfoDTO destination, List<ProductInfoDTO>? destMember, ResolutionContext context)
         {
-            return source.Products.Select(x => _productService.ProductModelToInfoDTO(x)).ToList();
+            return source.Products?.Select(x => _productService.ProductModelToInfoDTO(x)).ToList();
         }
     }
     public class UserAddressResolver : IValueResolver<UserModel, UserInfoDTO, List<AddressDTO>?>

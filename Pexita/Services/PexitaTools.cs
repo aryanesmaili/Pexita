@@ -35,7 +35,7 @@ namespace Pexita.Services
         /// <returns></returns>
         public bool PictureFileValidation(IFormFile file, int MaxSizeMB)
         {
-            string[] allowedTypes = new[] { "image/jpeg", "image/png" };
+            string[] allowedTypes = ["image/jpeg", "image/png"];
 
             if (!allowedTypes.Contains(file.ContentType))
                 return false;
@@ -48,16 +48,17 @@ namespace Pexita.Services
         /// saves a list of given images.
         /// </summary>
         /// <param name="files">list of files.</param>
-        /// <param name="file_save_folder">identifier indicating where they should be saved at.</param>
+        /// <param name="identifier">identifier indicating where they should be saved at.</param>
         /// <param name="isUpdate">is this an update operation or a creation.</param>
         /// <returns></returns>
         /// <exception cref="ArgumentException"></exception>
-        public async Task<string> SaveEntityImages(List<IFormFile> files, string file_save_folder, bool isUpdate = false)
+        public async Task<string> SaveEntityImages(List<IFormFile> files, string identifier, bool isUpdate = false)
         {
-            if (string.IsNullOrWhiteSpace(file_save_folder))
-                throw new ArgumentException("Identifier cannot be null or empty.", nameof(file_save_folder));
+            if (string.IsNullOrWhiteSpace(identifier))
+                throw new ArgumentException("Identifier cannot be null or empty.", nameof(identifier));
 
-            string imagePath = Path.Combine(_webHostEnvironment.WebRootPath, $"Images/{file_save_folder}");
+            string imagePath = Path.Combine(_webHostEnvironment.WebRootPath, $"Images/{identifier}");
+
             // this is for POST requests or when the directory doesn't exist
             if (!isUpdate || !Directory.Exists(imagePath))
             {
@@ -83,8 +84,7 @@ namespace Pexita.Services
             if (string.IsNullOrWhiteSpace(identifier))
                 throw new ArgumentException("Identifier cannot be null or empty.", nameof(identifier));
 
-            //string imagePath = Path.Combine(_webHostEnvironment.WebRootPath, $"Images/{identifier}");
-            string imagePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), $"Images/{identifier}");
+            string imagePath = Path.Combine(_webHostEnvironment.WebRootPath, $"Images/{identifier}");
 
             if (!Directory.Exists(imagePath))
                 Directory.CreateDirectory(imagePath);
@@ -184,39 +184,46 @@ namespace Pexita.Services
             return imagePath;
         }
         /// <summary>
-        /// given a string of tags, returns a list of <see cref="TagModel"/> objects.
+        /// Used in Object creation and updates. Given a string of tags, returns a list of <see cref="TagModel"/> objects.
         /// </summary>
-        /// <param name="tagString">a string containing list of tags.</param>
-        /// <returns>the list of tag model objects.</returns>
-        public async Task<List<TagModel>> StringToTags(string tagString)
+        /// <param name="tagString">A string containing a list of tags, separated by commas.</param>
+        /// <returns>The list of <see cref="TagModel"/> objects.</returns>
+        public async Task<List<TagModel>> StringToTags(string tagString, ProductModel product)
         {
             List<TagModel> result = [];
-
             if (string.IsNullOrEmpty(tagString))
             {
                 return result;
             }
 
-            // Split the input string into an array of tags
-            var tags = tagString.Split(',', StringSplitOptions.RemoveEmptyEntries);
+            product.Tags ??= [];
 
-            // Fetch all existing tags in a single query
-            Dictionary<string, TagModel>? existingTags = await _Context.Tags
-                .Where(t => tags.Contains(t.Title))
-                .ToDictionaryAsync(t => t.Title); //TODO: Make all ToList()s async
+            var tags = tagString
+                .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                .Select(tag => tag.Trim().ToLowerInvariant())
+                .ToHashSet();
+
+            var existingTags = await _Context.Tags
+                .Where(t => tags.Contains(t.Title.ToLower()))
+                .ToDictionaryAsync(t => t.Title.ToLower(), StringComparer.OrdinalIgnoreCase);
 
             foreach (var tag in tags)
             {
-                var trimmedTag = tag.Trim();
-
-                if (existingTags.TryGetValue(trimmedTag, out TagModel? tagModel))
+                if (existingTags.TryGetValue(tag, out TagModel? tagModel))
                 {
-                    tagModel.TimesUsed++;
+                    if (!product.Tags.Any(x => x.ID == tagModel.ID))
+                    {
+                        tagModel.TimesUsed++;
+                        tagModel.Products?.Add(product);
+                        product.Tags.Add(tagModel);
+                    }
                     result.Add(tagModel);
                 }
                 else
                 {
-                    TagModel newTag = new() { Title = trimmedTag, TimesUsed = 1, Products = [] };
+                    TagModel newTag = new() { Title = tag, TimesUsed = 1, Products = [product] };
+                    _Context.Tags.Add(newTag);
+                    product.Tags.Add(newTag);
                     result.Add(newTag);
                 }
             }
@@ -228,7 +235,12 @@ namespace Pexita.Services
         /// </summary>
         /// <param name="Ratings">List of ratings.</param>
         /// <returns></returns>
-        public double? GetRating(List<int>? Ratings) => Ratings.Average();
+        public double? GetRating(List<int>? Ratings)
+        {
+            if (Ratings.IsNullOrEmpty())
+                return 0;
+            return Ratings?.Average();
+        }
         public string GenerateRandomPassword(int length)
         {
             Random random = new();
@@ -260,12 +272,12 @@ namespace Pexita.Services
 
             foreach (var address in addresses)
             {
-                if (user.Addresses.FirstOrDefault(a => a.ID == address.ID) == null)
+                if (user.Addresses?.FirstOrDefault(a => a.ID == address.ID) == null)
                 {
                     user.Addresses?.Add(address);
                 }
             }
-            _Context.SaveChanges();
+            await _Context.SaveChangesAsync();
 
             return user.Addresses?.ToList() ?? [];
         }
@@ -273,61 +285,66 @@ namespace Pexita.Services
         /// checks if a product row can be accessed and modified by a certain user. the user can only make changes if they're an admin or owner of the record.
         /// </summary>
         /// <param name="id">id of the product that wants to be </param>
-        /// <param name="username">the user requesting to modify a product.</param>
+        /// <param name="requesterUsername">the user requesting to modify a product.</param>
         /// <returns>the product row to be edited.</returns>
         /// <exception cref="ArgumentNullException"></exception>
         /// <exception cref="NotFoundException"></exception>
         /// <exception cref="NotAuthorizedException"></exception>
-        public async Task<ProductModel> AuthorizeProductAccessAsync(int id, string username)
+        public async Task<ProductModel> AuthorizeProductAccessAsync(int id, string requesterUsername)
         {
-            if (string.IsNullOrEmpty(username))
-                throw new ArgumentNullException(nameof(username));
+            if (string.IsNullOrEmpty(requesterUsername))
+                throw new ArgumentNullException(nameof(requesterUsername));
 
-            ProductModel product = _Context.Products
+            ProductModel productToAccess = _Context.Products
                 .Include(p => p.Brand)
                 .Include(p => p.Comments)
                 .Include(p => p.Tags)
                 .FirstOrDefault(p => p.ID == id)
                 ?? throw new NotFoundException($"Entity {id} not found in products.");
 
-            var reqUser = await _Context.Users.AsNoTracking()
-                .FirstOrDefaultAsync(x => x.Username == username)
-                ?? throw new NotFoundException($"User {username} not found in Users.");
-
-            bool isAdmin = reqUser.Role == "admin";
-            bool isOwner = reqUser.ID == product.Brand.ID;
+            BrandModel? requester = await _Context.Brands // looking for the brand requesting the addition
+                                          .AsNoTracking()
+                                          .FirstOrDefaultAsync(u => u.Username == requesterUsername);
+            bool isAdmin = false;
+            if (requester == null)
+            {
+                var possibleAdmin = await _Context.Users.AsNoTracking()
+                    .FirstOrDefaultAsync(x => x.Username == requesterUsername)
+                    ?? throw new NotFoundException($"User {requesterUsername} not found in Users.");
+                isAdmin = possibleAdmin.Role == "admin";
+            }
+            bool isOwner = requesterUsername == productToAccess.Brand.Username;
 
             if (!isAdmin && !isOwner) // only an admin or the owner of the record can modify it.
             {
-                throw new NotAuthorizedException($"User {username} is not authorized to modify product {id}");
+                throw new NotAuthorizedException($"User {requesterUsername} is not authorized to modify product {id}");
             }
-            return product;
+            return productToAccess;
         }
         /// <summary>
         /// checks if an incoming request is authorized to add a product to a brand's collection. the user can only make changes if they're an admin or owner of the record.
         /// </summary>
-        /// <param name="targetBrand">the brand the requester wants to add products to.</param>
+        /// <param name="targetBrandID">the brand the requester wants to add products to.</param>
         /// <param name="requesterUsername">the requester who wants to add a product</param>
         /// <returns></returns>
         /// <exception cref="ArgumentNullException"></exception>
         /// <exception cref="NotFoundException"></exception>
         /// <exception cref="NotAuthorizedException"></exception>
-        public async Task AuthorizeProductCreationAsync(string targetBrand, string requesterUsername)
+        public async Task<BrandModel> AuthorizeProductCreationAsync(int targetBrandID, string requesterUsername)
         {
             if (string.IsNullOrEmpty(requesterUsername))
                 throw new ArgumentNullException(nameof(requesterUsername));
 
-            BrandModel brandToBeEdited = await _Context.Brands
-                                                .AsNoTracking()
-                                                .FirstOrDefaultAsync(b => b.Username == targetBrand)
-                                                ?? throw new NotFoundException($"Brand {targetBrand} not found");
+            BrandModel brandToBeAccessed = await _Context.Brands
+                                                .FindAsync(targetBrandID)
+                                                ?? throw new NotFoundException($"Brand {targetBrandID} not found");
 
-            var requester = await _Context.Brands
+            BrandModel? requester = await _Context.Brands // looking for the brand requesting the addition
                                           .AsNoTracking()
                                           .FirstOrDefaultAsync(u => u.Username == requesterUsername);
 
             bool isAdmin = false;
-            if (requester == null)
+            if (requester == null) // then maybe it is an admin requesting the addition
             {
                 var possibleAdmin = await _Context.Users
                                                 .AsNoTracking()
@@ -336,10 +353,11 @@ namespace Pexita.Services
                 isAdmin = possibleAdmin.Role == "admin";
             }
 
-            bool isOwner = requesterUsername == brandToBeEdited.Username;
+            bool isOwner = requesterUsername == brandToBeAccessed.Username;
 
             if (!isAdmin && !isOwner)
-                throw new NotAuthorizedException($"User {requesterUsername} is not authorized to create products for brand {targetBrand}");
+                throw new NotAuthorizedException($"User {requesterUsername} is not authorized to create products for brand {targetBrandID}");
+            return brandToBeAccessed;
         }
         /// <summary>
         /// Checks if a username has enough authorization to modify a certain brand's record in database. the user can only make changes if they're an admin or owner of the record.

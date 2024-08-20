@@ -19,7 +19,7 @@ namespace Pexita.Utility.Validators
 
             RuleFor(bt => bt.Name).Must(x => !_brandService.IsBrand(x)).WithMessage("Brand with this name already exists.");
 
-            RuleFor(b => b.Brandpic).Must(file => file != null && _pexitaTools.PictureFileValidation(file, 10))
+            RuleFor(b => b.BrandPic).Must(file => file != null && _pexitaTools.PictureFileValidation(file, 10)).When(b => b.BrandPic?.Length > 0)
                 .WithMessage("Invalid or missing brand picture.");
 
             RuleFor(b => b.ConfirmPassword).NotEmpty();

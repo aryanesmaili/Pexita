@@ -1,5 +1,4 @@
 ﻿using AutoMapper;
-using Elfie.Serialization;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -376,7 +375,6 @@ namespace Pexita.Services
             await _Context.SaveChangesAsync();
             return UserModelToInfoDTO(User);
         }
-        // TODO: make sure all user controllers have unAuthorized catch.
         /// <summary>
         /// Gets all of the addresses of a given user.
         /// </summary>

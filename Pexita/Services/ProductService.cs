@@ -44,22 +44,13 @@ namespace Pexita.Services
         /// <exception cref="Exception"></exception>
         public async Task<ProductInfoDTO> AddProduct(ProductCreateDTO product, string requestingUsername)
         {
-            await _pexitaTools.AuthorizeProductCreationAsync(product.Brand, requestingUsername);
 
+            BrandModel productBrand = await _pexitaTools.AuthorizeProductCreationAsync(product.BrandID, requestingUsername);
             // resolving some values asynchronously. the reason is that auto mapper is originally made for Entity => DTO mapping not the other way around.
             // so it doesn't support asynchronous functions. I have to resolve some values here if I want that to be done asynchronously.
-            BrandModel productBrand = await _brandService.GetBrandByName(product.Brand);
-            string ProductPicsURL = await _pexitaTools.SaveEntityImages(product.ProductPics ?? [], $"{product.Brand}/{product.Title}", false);
-            var Tags = await _pexitaTools.StringToTags(product.Tags ?? "");
 
             ProductModel NewProduct = _mapper.Map<ProductModel>(product);
             NewProduct.Brand = productBrand;
-            NewProduct.ProductPicsURL = ProductPicsURL;
-            foreach (var tag in Tags)
-            {
-                tag.Products?.Add(NewProduct);
-            }
-            NewProduct.Tags = Tags;
 
             _Context.Products.Add(NewProduct);
             await _Context.SaveChangesAsync();
@@ -69,6 +60,7 @@ namespace Pexita.Services
                 BrandNewProductEvent Event = new() { Brand = NewProduct.Brand, BrandID = NewProduct.BrandID, Product = NewProduct, ProductID = NewProduct.ID };
                 _eventDispatcher.Dispatch(Event);
             }
+
             return ProductModelToInfoDTO(NewProduct);
         }
         /// <summary>
@@ -90,7 +82,6 @@ namespace Pexita.Services
                 throw new NotFoundException("No Records found in Products Table");
             }
         }
-
         /// <summary>
         /// get a set amount of products from database.
         /// </summary>
@@ -133,12 +124,14 @@ namespace Pexita.Services
         /// <exception cref="NotFoundException"></exception>
         public async Task<ProductInfoDTO> GetProductByID(int id)
         {
-            return ProductModelToInfoDTO(await _Context.Products
-                                                        .Include(p => p.Brand)
-                                                        .Include(p => p.Comments)
-                                                        .Include(p => p.Tags)
-                                                        .FirstOrDefaultAsync(p => p.ID == id)
-                                                        ?? throw new NotFoundException($"Entity {id} not Found in Products."));
+            var x = await _Context.Products
+                .Include(p => p.Brand)
+                .Include(p => p.Comments)
+                .Include(p => p.Tags)
+                .FirstOrDefaultAsync(p => p.ID == id)
+                ?? throw new NotFoundException($"Entity {id} not Found in Products.");
+            var result = ProductModelToInfoDTO(x);
+            return result;
         }
         /// <summary>
         /// Completely Edits a database table based on the object given (PUT). publishes a <see cref="ProductAvailableEvent"/> if a product's state changes.
@@ -149,27 +142,14 @@ namespace Pexita.Services
         /// <returns></returns>
         public async Task<ProductInfoDTO> UpdateProductInfo(int id, ProductUpdateDTO product, string requestingUsername)
         {
-
             ProductModel productModel = await _pexitaTools.AuthorizeProductAccessAsync(id, requestingUsername);
             bool NotInStock = productModel.Quantity == 0;
 
             productModel = _mapper.Map(product, productModel);
 
-            if (product.ProductPics?.Count > 0)
-            {
-                productModel.ProductPicsURL = await _pexitaTools.SaveEntityImages(product.ProductPics, $"{product.Brand}/{product.Title}", true);
-            }
-            var tgs = await _pexitaTools.StringToTags(product.Tags ?? "");
-            foreach (var t in tgs)
-            {
-                if (!t.Products?.Contains(productModel) ?? false)
-                {
-                    t.Products?.Add(productModel);
-                }
-            }
-            productModel.Tags = tgs;
             _Context.Update(productModel);
             await _Context.SaveChangesAsync();
+
             if (NotInStock && product.Quantity > 0 && productModel.NewsLetters?.Count > 0) // only releasing an event when it has subscribers
             {
                 var eventMessage = new ProductAvailableEvent(id); // Product has changed its state to "In stock" so we're publishing an event.
@@ -196,10 +176,10 @@ namespace Pexita.Services
         /// <param name="commentDTO">the comment to be added.</param>
         /// <param name="requestingUsername">the requester's username.used in authenticating request.</param>
         /// <returns></returns>
-        public async Task AddCommentToProduct(ProductCommentDTO commentDTO, string requestingUsername)
+        public async Task AddCommentToProduct(CommentsDTO commentDTO, string requestingUsername)
         {
             ProductModel product = await _pexitaTools.AuthorizeProductAccessAsync(commentDTO.ProductID, requestingUsername);
-            CommentsModel commentsModel = _mapper.Map<CommentsModel>(commentDTO); // TODO: add configuration 
+            CommentsModel commentsModel = _mapper.Map<CommentsModel>(commentDTO);
             product.Comments?.Add(commentsModel);
             await _Context.SaveChangesAsync();
         }
@@ -211,11 +191,11 @@ namespace Pexita.Services
         /// <returns></returns>
         public async Task UpdateProductRate(UpdateProductRateDTO rateDTO, string requestingUsername)
         {
-            ProductModel product = await _pexitaTools.AuthorizeProductAccessAsync(rateDTO.ProductID, requestingUsername);
+            ProductModel product = await _Context.Products.FindAsync(rateDTO.ProductID) ?? throw new NotFoundException($"Product {rateDTO.ProductID} not found.");
 
             ProductRating rating = new() { Rating = rateDTO.ProductRating, Product = product, ProductID = product.ID };
 
-            product.Rating?.Add(rating);
+            _Context.Ratings.Add(rating);
 
             await _Context.SaveChangesAsync();
         }
@@ -225,33 +205,17 @@ namespace Pexita.Services
         /// <param name="BrandName"></param>
         /// <param name="ProductTitle"></param>
         /// <returns></returns>
-        public bool IsProductAlready(string BrandName, string ProductTitle)
+        public async Task<bool> IsProductAlready(int BrandID, string ProductTitle)
         {
-            return _Context.Brands.Include(bp => bp.Products).AsNoTracking().FirstOrDefault(x => x.Name == BrandName)?
-                        .Products?.FirstOrDefault(x => x.Title == ProductTitle) != null;
-        }
-        /// <summary>
-        /// partially edits a product's record in database.
-        /// </summary>
-        /// <param name="id">ID of the product to be edited</param>
-        /// <param name="productDTO">new product's info.</param>
-        /// <param name="requestingUsername">the user requesting the edit.used in authenticating the request</param>
-        /// <returns></returns>
-        public async Task<ProductInfoDTO> PatchProductInfo(int id, ProductUpdateDTO productDTO, string requestingUsername)
-        {
-            ProductModel product = await _pexitaTools.AuthorizeProductAccessAsync(id, requestingUsername);
-            bool NotInStock = product.Quantity == 0;
-            product = _mapper.Map(productDTO, product);
-            _Context.Update(product);
-            await _Context.SaveChangesAsync();
+            var brand = await _Context.Brands
+                .Include(b => b.Products)
+                .FirstOrDefaultAsync(b => b.ID == BrandID);
 
-            if (NotInStock && productDTO.Quantity > 0 && product.NewsLetters?.Count > 0)
-            {
-                var eventMessage = new ProductAvailableEvent(product.ID);
-                await _eventDispatcher.DispatchAsync(eventMessage);
-            }
+            if (brand == null)
+                throw new NotFoundException($"Brand {BrandID} Does not Exist.");
 
-            return ProductModelToInfoDTO(product);
+            brand.Products ??= [];
+            return brand.Products.Any(x => x.Title == ProductTitle);
         }
     }
 }

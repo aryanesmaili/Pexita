@@ -374,7 +374,7 @@ namespace Pexita.Migrations
 
                     b.HasIndex("ProductID");
 
-                    b.ToTable("ProductRating");
+                    b.ToTable("Ratings");
                 });
 
             modelBuilder.Entity("Pexita.Data.Entities.ShoppingCart.CartItems", b =>

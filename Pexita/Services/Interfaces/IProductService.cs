@@ -1,4 +1,5 @@
-﻿using Pexita.Data.Entities.Products;
+﻿using Pexita.Data.Entities.Comments;
+using Pexita.Data.Entities.Products;
 namespace Pexita.Services.Interfaces
 {
     public interface IProductService
@@ -8,12 +9,11 @@ namespace Pexita.Services.Interfaces
         public List<ProductInfoDTO> GetProducts(int count);
         public Task<ProductInfoDTO> GetProductByID(int id);
         public Task<ProductInfoDTO> UpdateProductInfo(int id, ProductUpdateDTO product, string requestingUsername);
-        public Task<ProductInfoDTO> PatchProductInfo(int id, ProductUpdateDTO product, string requestingUsername);
         public Task DeleteProduct(int id, string requestingUsername);
         public ProductInfoDTO ProductModelToInfoDTO(ProductModel model);
-        public Task AddCommentToProduct(ProductCommentDTO commentDTO, string requestingUsername);
+        public Task AddCommentToProduct(CommentsDTO commentDTO, string requestingUsername);
         public Task UpdateProductRate(UpdateProductRateDTO rateDTO, string requestingUsername);
-        public bool IsProductAlready(string BrandName, string ProductTitle);
+        public Task<bool> IsProductAlready(int BrandID, string ProductTitle);
     }
 }
 

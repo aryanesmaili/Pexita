@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore.Migrations;
+﻿using System;
+using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
@@ -58,7 +59,8 @@ namespace Pexita.Migrations
                     Role = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     PhoneNumber = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     DateCreated = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    ResetPasswordCode = table.Column<string>(type: "nvarchar(max)", nullable: true)
+                    ResetPasswordCode = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    ProfilePicURL = table.Column<string>(type: "nvarchar(max)", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -100,7 +102,7 @@ namespace Pexita.Migrations
                     Quantity = table.Column<int>(type: "int", nullable: true),
                     IsAvailable = table.Column<bool>(type: "bit", nullable: false),
                     Colors = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    ProductPicsURL = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    ProductPicsURL = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     DateCreated = table.Column<DateTime>(type: "datetime2", nullable: false),
                     BrandID = table.Column<int>(type: "int", nullable: false)
                 },
@@ -295,7 +297,7 @@ namespace Pexita.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "ProductRating",
+                name: "Ratings",
                 columns: table => new
                 {
                     ID = table.Column<int>(type: "int", nullable: false)
@@ -305,9 +307,9 @@ namespace Pexita.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_ProductRating", x => x.ID);
+                    table.PrimaryKey("PK_Ratings", x => x.ID);
                     table.ForeignKey(
-                        name: "FK_ProductRating_Products_ProductID",
+                        name: "FK_Ratings_Products_ProductID",
                         column: x => x.ProductID,
                         principalTable: "Products",
                         principalColumn: "ID",
@@ -320,7 +322,7 @@ namespace Pexita.Migrations
                 {
                     ID = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    ProductID = table.Column<int>(type: "int", nullable: true),
+                    ProductID = table.Column<int>(type: "int", nullable: false),
                     Count = table.Column<int>(type: "int", nullable: false),
                     ShoppingCartID = table.Column<int>(type: "int", nullable: false)
                 },
@@ -331,7 +333,8 @@ namespace Pexita.Migrations
                         name: "FK_CartItems_Products_ProductID",
                         column: x => x.ProductID,
                         principalTable: "Products",
-                        principalColumn: "ID");
+                        principalColumn: "ID",
+                        onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
                         name: "FK_CartItems_ShoppingCarts_ShoppingCartID",
                         column: x => x.ShoppingCartID,
@@ -354,7 +357,7 @@ namespace Pexita.Migrations
                     HashedCardNo = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     DateIssued = table.Column<DateTime>(type: "datetime2", nullable: false),
                     DateTimePaid = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    Successfull = table.Column<bool>(type: "bit", nullable: true),
+                    Successful = table.Column<bool>(type: "bit", nullable: true),
                     PaymentVerificationDate = table.Column<DateTime>(type: "datetime2", nullable: false),
                     ShoppingCartID = table.Column<int>(type: "int", nullable: true)
                 },
@@ -512,14 +515,14 @@ namespace Pexita.Migrations
                 column: "UserID");
 
             migrationBuilder.CreateIndex(
-                name: "IX_ProductRating_ProductID",
-                table: "ProductRating",
-                column: "ProductID");
-
-            migrationBuilder.CreateIndex(
                 name: "IX_Products_BrandID",
                 table: "Products",
                 column: "BrandID");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Ratings_ProductID",
+                table: "Ratings",
+                column: "ProductID");
 
             migrationBuilder.CreateIndex(
                 name: "IX_ShoppingCarts_UserID",
@@ -560,7 +563,7 @@ namespace Pexita.Migrations
                 name: "ProductNewsletters");
 
             migrationBuilder.DropTable(
-                name: "ProductRating");
+                name: "Ratings");
 
             migrationBuilder.DropTable(
                 name: "UserRefreshTokens");

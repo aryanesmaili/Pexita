@@ -12,12 +12,8 @@ using Pexita.Data.Entities.User;
 
 namespace Pexita.Data
 {
-    public class AppDBContext : DbContext
+    public class AppDBContext(DbContextOptions<AppDBContext> options) : DbContext(options)
     {
-        public AppDBContext(DbContextOptions<AppDBContext> options) : base(options)
-        {
-
-        }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<UserModel>()
@@ -92,6 +88,7 @@ namespace Pexita.Data
                 .HasMany(t => t.Tags)
                 .WithMany(p => p.Products);
 
+
             modelBuilder.Entity<ProductModel>()
                 .HasMany(ci => ci.CartItems)
                 .WithOne(ci => ci.Product)
@@ -144,6 +141,7 @@ namespace Pexita.Data
                 .OnDelete(DeleteBehavior.Cascade);
         }
         public virtual DbSet<ProductModel> Products { get; set; }
+        public DbSet<ProductRating> Ratings { get; set; }
         public DbSet<BrandModel> Brands { get; set; }
         public DbSet<CommentsModel> Comments { get; set; }
         public DbSet<OrdersModel> Orders { get; set; }

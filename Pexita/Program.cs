@@ -25,7 +25,7 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddHttpContextAccessor();
 
 builder.Services.AddAutoMapper(typeof(AutoMapperConfig));
-
+builder.Services.AddAutoMapper(typeof(ProductMapper));
 
 //builder.Services.AddTransient<AutoMapperConfig>();
 

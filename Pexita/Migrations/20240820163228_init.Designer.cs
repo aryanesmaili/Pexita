@@ -12,7 +12,7 @@ using Pexita.Data;
 namespace Pexita.Migrations
 {
     [DbContext(typeof(AppDBContext))]
-    [Migration("20240809230420_init")]
+    [Migration("20240820163228_init")]
     partial class init
     {
         /// <inheritdoc />
@@ -303,7 +303,7 @@ namespace Pexita.Migrations
                     b.Property<int?>("ShoppingCartID")
                         .HasColumnType("int");
 
-                    b.Property<bool?>("Successfull")
+                    b.Property<bool?>("Successful")
                         .HasColumnType("bit");
 
                     b.Property<string>("TransactionID")
@@ -343,7 +343,6 @@ namespace Pexita.Migrations
                         .HasColumnType("float");
 
                     b.Property<string>("ProductPicsURL")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<int?>("Quantity")
@@ -378,7 +377,7 @@ namespace Pexita.Migrations
 
                     b.HasIndex("ProductID");
 
-                    b.ToTable("ProductRating");
+                    b.ToTable("Ratings");
                 });
 
             modelBuilder.Entity("Pexita.Data.Entities.ShoppingCart.CartItems", b =>
@@ -392,7 +391,7 @@ namespace Pexita.Migrations
                     b.Property<int>("Count")
                         .HasColumnType("int");
 
-                    b.Property<int?>("ProductID")
+                    b.Property<int>("ProductID")
                         .HasColumnType("int");
 
                     b.Property<int>("ShoppingCartID")
@@ -515,6 +514,9 @@ namespace Pexita.Migrations
 
                     b.Property<string>("PhoneNumber")
                         .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ProfilePicURL")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("ResetPasswordCode")
@@ -712,7 +714,9 @@ namespace Pexita.Migrations
                 {
                     b.HasOne("Pexita.Data.Entities.Products.ProductModel", "Product")
                         .WithMany("CartItems")
-                        .HasForeignKey("ProductID");
+                        .HasForeignKey("ProductID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.HasOne("Pexita.Data.Entities.ShoppingCart.ShoppingCartModel", "ShoppingCart")
                         .WithMany("CartItems")
@@ -795,8 +799,7 @@ namespace Pexita.Migrations
                 {
                     b.Navigation("CartItems");
 
-                    b.Navigation("Order")
-                        .IsRequired();
+                    b.Navigation("Order");
 
                     b.Navigation("Payments");
                 });

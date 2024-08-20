@@ -34,7 +34,6 @@ namespace Pexita.Data.Entities.ShoppingCart
         public required List<CartItemsDTO> Items { get; set; }
         public double TotalPrice { get; set; }
         public int UserID { get; set; }
-        public required UserInfoDTO User { get; set; }
         public List<PaymentDTO>? Payments { get; set; }
         public OrdersDTO? Order { get; set; }
     }

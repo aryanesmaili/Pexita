@@ -357,6 +357,15 @@ namespace Pexita.Services
         {
             return $"{BrandID}{ProductID}{UserID}{Datetime}";
         }
+
+        public bool IsValidPayment(int id)
+        {
+            return _Context.Payments.Find(id) != null;
+        }
+        public bool AreValidPayments(List<PaymentDTO> payments)
+        {
+            return payments.All(x => IsValidPayment(x.ID));
+        }
     }
     /// <summary>
     /// Info required for requesting a payment from IDPay as an object.

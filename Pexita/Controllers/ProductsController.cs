@@ -1,7 +1,7 @@
 ﻿using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Mvc;
+using Pexita.Data.Entities.Comments;
 using Pexita.Data.Entities.Products;
 using Pexita.Services.Interfaces;
 using Pexita.Utility.Exceptions;
@@ -17,12 +17,12 @@ namespace Pexita.Controllers
         private readonly IValidator<ProductCreateDTO> _productCreateValidator;
         private readonly IValidator<ProductUpdateDTO> _productUpdateValidator;
         private readonly IValidator<UpdateProductRateDTO> _productRateValidator;
-        private readonly IValidator<ProductCommentDTO> _productCommentValidator;
+        private readonly IValidator<CommentsDTO> _productCommentValidator;
         private readonly ITagsService _tagsService;
         private readonly IHttpContextAccessor _contextAccessor;
 
         public ProductsController(IProductService productService, IValidator<ProductCreateDTO> productCreateValidator
-            , IValidator<ProductUpdateDTO> productUpdateValidator, IValidator<UpdateProductRateDTO> productRateValidator, IValidator<ProductCommentDTO> productCommentValidator, IHttpContextAccessor contextAccessor, ITagsService tagsService)
+            , IValidator<ProductUpdateDTO> productUpdateValidator, IValidator<UpdateProductRateDTO> productRateValidator, IValidator<CommentsDTO> productCommentValidator, IHttpContextAccessor contextAccessor, ITagsService tagsService)
         {
             _productService = productService;
             _productCreateValidator = productCreateValidator;
@@ -94,17 +94,16 @@ namespace Pexita.Controllers
         [HttpPost("add")]
         public async Task<IActionResult> AddProduct([FromForm] ProductCreateDTO product)
         {
-            var requestingUsername = _contextAccessor.HttpContext?.User.Identity?.Name;
+            var requestingUsername = User.FindFirstValue(ClaimTypes.Name);
             try
             {
-                if (product == null)
-                    throw new ArgumentNullException(nameof(product));
+                ArgumentNullException.ThrowIfNull(product);
 
                 await _productCreateValidator.ValidateAndThrowAsync(product);
 
-                await _productService.AddProduct(product, requestingUsername!);
+                var result = await _productService.AddProduct(product, requestingUsername!);
 
-                return Ok();
+                return Ok(result);
             }
 
             catch (ValidationException e)
@@ -119,52 +118,32 @@ namespace Pexita.Controllers
 
             catch (ArgumentNullException e)
             {
-                return BadRequest($"Arguement null {e.Message}");
+                return BadRequest($"Argument null {e.Message}");
             }
 
             catch (Exception e)
             {
-                return StatusCode(StatusCodes.Status500InternalServerError, $"there was an error processing your request: {e.Message}, {e.InnerException}");
-            }
-        }
-        [Authorize(Policy = "Brand")]
-        [HttpPatch("patch/{id}")]
-        public async Task<IActionResult> UpdateProductPartially(int id, [FromForm] ProductUpdateDTO product)
-        {
-            var requestingUsername = _contextAccessor.HttpContext?.User.Identity?.Name;
-            try
-            {
-                ProductInfoDTO? update = null;
-                update = await _productService.PatchProductInfo(id, product, requestingUsername);
-                return Ok(update);
-            }
-            catch (NotFoundException)
-            {
-                return NotFound(id);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, ex.Message);
+                return StatusCode(StatusCodes.Status500InternalServerError, $"{e.Message}, {e.InnerException} \n \n \n \n \n \n{e.StackTrace}");
             }
         }
         [Authorize(Policy = "Brand")]
         [HttpPut("update/{id}")]
         public async Task<IActionResult> UpdateProduct(int id, [FromForm] ProductUpdateDTO product)
         {
-            var requestingUsername = _contextAccessor.HttpContext!.User?.Identity?.Name;
+            var requestingUsername = User.FindFirstValue(ClaimTypes.Name);
             try
             {
                 ProductInfoDTO? update = null;
 
                 await _productUpdateValidator.ValidateAndThrowAsync(product);
 
-                update = await _productService.UpdateProductInfo(id, product, requestingUsername);
+                update = await _productService.UpdateProductInfo(id, product, requestingUsername!);
                 return Ok(update);
             }
 
-            catch (NotFoundException)
+            catch (NotFoundException e)
             {
-                return NotFound();
+                return NotFound(e.Message);
             }
 
             catch (ValidationException e)
@@ -175,18 +154,22 @@ namespace Pexita.Controllers
 
         [Authorize(Policy = "OnlyUsers")]
         [HttpPut("update/rate")]
-        public async Task<IActionResult> UpdateProductRate([FromBody] UpdateProductRateDTO rateDTO)
+        public async Task<IActionResult> UpdateProductRate([FromForm] UpdateProductRateDTO rateDTO)
         {
-            string requestingUsername = _contextAccessor.HttpContext!.User?.Identity?.Name!;
+            var requestingUsername = User.FindFirstValue(ClaimTypes.Name);
             try
             {
                 await _productRateValidator.ValidateAndThrowAsync(rateDTO);
-                return Ok(_productService.UpdateProductRate(rateDTO, requestingUsername));
+                await _productService.UpdateProductRate(rateDTO, requestingUsername!);
+                return Ok();
             }
-
-            catch (NotFoundException)
+            catch (NotAuthorizedException e)
             {
-                return NotFound(rateDTO.ProductID);
+                return Unauthorized(e.Message);
+            }
+            catch (NotFoundException e)
+            {
+                return NotFound(e.Message);
             }
             catch (ValidationException e)
             {
@@ -194,18 +177,18 @@ namespace Pexita.Controllers
             }
             catch (Exception e)
             {
-                return StatusCode(StatusCodes.Status500InternalServerError, $"there was an error processing your request: {e.Message}");
+                return StatusCode(500, e.StackTrace);
             }
         }
         [Authorize(Policy = "Brand")]
         [HttpDelete("delete/{id}")]
         public async Task<IActionResult> DeleteProduct(int id)
         {
-            string requestingUsername = _contextAccessor.HttpContext!.User?.Identity?.Name!;
+            var requestingUsername = User.FindFirstValue(ClaimTypes.Name);
 
             try
             {
-                await _productService.DeleteProduct(id, requestingUsername);
+                await _productService.DeleteProduct(id, requestingUsername!);
                 return NoContent();
             }
             catch (NotFoundException)
@@ -218,16 +201,16 @@ namespace Pexita.Controllers
             }
         }
         [Authorize(Policy = "AllUsers")]
-        [HttpPost("Comments/Add/{id:int}")]
-        public async Task<IActionResult> AddCommentToProduct(ProductCommentDTO commentDTO)
+        [HttpPost("Comments/Add")]
+        public async Task<IActionResult> AddCommentToProduct(CommentsDTO commentDTO)
         {
-            string requestingUsername = _contextAccessor.HttpContext!.User?.Identity?.Name!;
+            var requestingUsername = User.FindFirstValue(ClaimTypes.Name);
 
             try
             {
                 await _productCommentValidator.ValidateAndThrowAsync(commentDTO);
 
-                return Ok(_productService.AddCommentToProduct(commentDTO, requestingUsername));
+                return Ok(_productService.AddCommentToProduct(commentDTO, requestingUsername!));
             }
             catch (NotFoundException)
             {
@@ -252,7 +235,7 @@ namespace Pexita.Controllers
         }
         [Authorize(Policy = "AllUsers")]
         [HttpPost("Tags/Add")]
-        public async Task<IActionResult> AddTag(string tagTitle)
+        public async Task<IActionResult> AddTag([FromForm] string tagTitle)
         {
             try
             {
@@ -287,7 +270,7 @@ namespace Pexita.Controllers
             {
                 return NotFound(e.Message);
             }
-            catch(NotAuthorizedException e)
+            catch (NotAuthorizedException e)
             {
                 return Unauthorized(e.Message);
             }

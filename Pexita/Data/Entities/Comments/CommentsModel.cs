@@ -22,10 +22,8 @@ namespace Pexita.Data.Entities.Comments
         public required string Text { get; set; }
         public DateTime DateCreated { get; set; }
 
-        //Navigation Properties
         public int? UserID { get; set; }
         public required UserInfoDTO User { get; set; }
         public int ProductID { get; set; }
-        public required ProductInfoDTO Product { get; set; }
     }
 }

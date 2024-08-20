@@ -29,7 +29,6 @@ namespace Pexita.Services
             _jwtSettings = jwtSettings;
             _emailService = emailService;
         }
-        // TODO: add _context.Update() to all services.
         /// <summary>
         /// Registering a new brand.
         /// </summary>
@@ -136,7 +135,6 @@ namespace Pexita.Services
             await _Context.SaveChangesAsync();
             return BrandModelToInfo(brand, brandInfo.RefreshToken!, brandInfo.JWToken!);
         }
-        //TODO: add controllers for password reset procedure to brand controller.
         /// <summary>
         /// checks if the given code matches the one in Database.
         /// </summary>
@@ -347,7 +345,8 @@ namespace Pexita.Services
         /// <returns></returns>
         public BrandInfoDTO BrandModelToInfo(BrandModel model)
         {
-            return _mapper.Map(model, new BrandInfoDTO());
+            var result = _mapper.Map<BrandInfoDTO>(model);
+            return result;
         }
         /// <summary>
         /// Maps a BrandModel database record to a representable object.

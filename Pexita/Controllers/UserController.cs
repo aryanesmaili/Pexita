@@ -160,7 +160,7 @@ namespace Pexita.Controllers
 
         [Authorize(Policy = "AllUsers")]
         [HttpPut("Edit")]
-        public async Task<IActionResult>  UpdateUser([FromForm] UserUpdateDTO userUpdateDTO)
+        public async Task<IActionResult> UpdateUser([FromForm] UserUpdateDTO userUpdateDTO)
         {
             var requestingUsername = User.FindFirstValue(ClaimTypes.Name);
             try

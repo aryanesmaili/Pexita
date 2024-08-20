@@ -1,5 +1,5 @@
 ﻿using AutoMapper;
-using Microsoft.Identity.Client;
+using Microsoft.EntityFrameworkCore;
 using Pexita.Data;
 using Pexita.Data.Entities.Authentication;
 using Pexita.Data.Entities.Brands;
@@ -38,18 +38,6 @@ namespace Pexita.Utility
         public AutoMapperConfig()
         {
 
-            CreateMap<ProductCreateDTO, ProductModel>()
-                .ForMember(Product => Product.DateCreated, opt => opt.MapFrom(src => DateTime.UtcNow))
-                .ForMember(Product => Product.IsAvailable, opt => opt.MapFrom(src => true))
-                .ForMember(Product => Product.Comments, opt => opt.MapFrom(src => new List<CommentsModel>()))
-                .ForMember(Product => Product.Rating, opt => opt.MapFrom(src => new List<ProductRating>()));
-
-            CreateMap<ProductUpdateDTO, ProductModel>();
-
-            CreateMap<ProductModel, ProductInfoDTO>()
-                .ForMember(p => p.Brand, opt => opt.MapFrom<ProductBrandResolver>())
-                .ForMember(p => p.Tags, opt => opt.MapFrom<ProductTagsResolver>())
-                .ForMember(p => p.Rate, opt => opt.MapFrom<ProductRateResolver>());
 
             CreateMap<BrandCreateDTO, BrandModel>()
                 .ForMember(Brand => Brand.BrandPicURL, opt => opt.MapFrom<BrandPicURLResolver>())
@@ -62,7 +50,7 @@ namespace Pexita.Utility
             CreateMap<BrandUpdateDTO, BrandModel>();
 
             CreateMap<BrandModel, BrandInfoDTO>()
-                .ForMember(b => b.Products, opt => opt.MapFrom<BrandProductResolver>());
+                .ForMember(b => b.ProductsIDs, opt => opt.MapFrom<BrandProductResolver>());
 
 
             CreateMap<UserUpdateDTO, UserModel>();
@@ -92,8 +80,7 @@ namespace Pexita.Utility
                 .ForMember(x => x.User, opt => opt.MapFrom<AddressUserResolver>());
 
             CreateMap<CommentsModel, CommentsDTO>()
-                .ForMember(u => u.User, opt => opt.MapFrom<CommentUserResolver>())
-                .ForMember(p => p.Product, opt => opt.MapFrom<CommentProductResolver>());
+                .ForMember(u => u.User, opt => opt.MapFrom<CommentUserResolver>());
 
             CreateMap<BrandNewsletterModel, BrandNewsLetterDTO>()
                 .ForMember(b => b.Brand, opt => opt.MapFrom<BNewsletterBrandResolver>())
@@ -114,8 +101,7 @@ namespace Pexita.Utility
             CreateMap<ShoppingCartModel, ShoppingCartDTO>()
                 .ForMember(ci => ci.Items, opt => opt.MapFrom<ShoppingCartCartItemResolver>())
                 .ForMember(o => o.Order, opt => opt.MapFrom<ShoppingCartOrderResolver>())
-                .ForMember(p => p.Payments, opt => opt.MapFrom<ShoppingCartPaymentResolver>())
-                .ForMember(u => u.User, opt => opt.MapFrom<ShoppingCartUserResolver>());
+                .ForMember(p => p.Payments, opt => opt.MapFrom<ShoppingCartPaymentResolver>());
 
             CreateMap<PaymentModel, PaymentDTO>()
                 .ForMember(sc => sc.ShoppingCart, opt => opt.MapFrom<PaymentShoppingCartResolver>());
@@ -128,48 +114,7 @@ namespace Pexita.Utility
             CreateMap<TagModel, TagInfoDTO>()
                 .ForMember(t => t.Products, opt => opt.MapFrom<TagProductResolver>());
 
-        }
-    }
-    public class ProductBrandResolver : IValueResolver<ProductModel, ProductInfoDTO, BrandInfoDTO>
-    {
-        private readonly IBrandService _brandService;
-
-        public ProductBrandResolver(IBrandService brandService)
-        {
-            _brandService = brandService;
-        }
-
-        public BrandInfoDTO Resolve(ProductModel source, ProductInfoDTO destination, BrandInfoDTO destMember, ResolutionContext context)
-        {
-            return _brandService.BrandModelToInfo(source.Brand);
-        }
-    }
-    public class ProductTagsResolver : IValueResolver<ProductModel, ProductInfoDTO, List<TagInfoDTO>?>
-    {
-        private readonly IMapper _mapper;
-
-        public ProductTagsResolver(IMapper mapper)
-        {
-            _mapper = mapper;
-        }
-
-        public List<TagInfoDTO>? Resolve(ProductModel source, ProductInfoDTO destination, List<TagInfoDTO>? destMember, ResolutionContext context)
-        {
-            return source.Tags?.Select(x => _mapper.Map<TagInfoDTO>(x)).ToList() ?? [];
-        }
-    }
-    public class ProductRateResolver : IValueResolver<ProductModel, ProductInfoDTO, double?>
-    {
-        private readonly IPexitaTools _pexitaTools;
-
-        public ProductRateResolver(IPexitaTools pexitaTools)
-        {
-            _pexitaTools = pexitaTools;
-        }
-
-        public double? Resolve(ProductModel source, ProductInfoDTO destination, double? destMember, ResolutionContext context)
-        {
-            return _pexitaTools.GetRating(source.Rating?.Select(x => x.Rating).ToList() ?? null) ?? null;
+            CreateMap<TagModel, ProductTagInfoDTO>();
         }
     }
     public class CommentUserResolver : IValueResolver<CommentsModel, CommentsDTO, UserInfoDTO>
@@ -298,20 +243,6 @@ namespace Pexita.Utility
             return _mapper.Map<OrdersDTO>(source.Order);
         }
     }
-    public class ShoppingCartUserResolver : IValueResolver<ShoppingCartModel, ShoppingCartDTO, UserInfoDTO>
-    {
-        private readonly IUserService _userService;
-
-        public ShoppingCartUserResolver(IUserService userService)
-        {
-            _userService = userService;
-        }
-
-        public UserInfoDTO Resolve(ShoppingCartModel source, ShoppingCartDTO destination, UserInfoDTO destMember, ResolutionContext context)
-        {
-            return _userService.UserModelToInfoDTO(source.User);
-        }
-    }
     public class ShoppingCartPaymentResolver : IValueResolver<ShoppingCartModel, ShoppingCartDTO, List<PaymentDTO>?>
     {
         private readonly IMapper _mapper;
@@ -323,7 +254,7 @@ namespace Pexita.Utility
 
         public List<PaymentDTO>? Resolve(ShoppingCartModel source, ShoppingCartDTO destination, List<PaymentDTO>? destMember, ResolutionContext context)
         {
-            return source.Payments.Select(paymentModel => _mapper.Map<PaymentDTO>(paymentModel)).ToList();
+            return source.Payments?.Select(paymentModel => _mapper.Map<PaymentDTO>(paymentModel)).ToList();
         }
     }
     public class OrdersUserResolver : IValueResolver<OrdersModel, OrdersDTO, UserInfoDTO>
@@ -393,25 +324,29 @@ namespace Pexita.Utility
         public string? Resolve(BrandCreateDTO source, BrandModel destination, string? destinationMember, ResolutionContext context)
         {
             // Only set the URL if BrandPic is not null or empty
-            if (source.Brandpic != null && source.Brandpic.Length > 0)
+            if (source.BrandPic != null && source.BrandPic.Length > 0)
             {
-                return _pexitaTools.SaveEntityImages(source.Brandpic, $"Brands/{source.Name}", false).Result;
+                return _pexitaTools.SaveEntityImages(source.BrandPic, $"Brands/{source.Name}", false).Result;
             }
             return null; // return null if the pic is empty.
         }
     }
-    public class BrandProductResolver : IValueResolver<BrandModel, BrandInfoDTO, List<ProductInfoDTO>?>
+    public class BrandProductResolver : IValueResolver<BrandModel, BrandInfoDTO, List<int>?>
     {
-        private readonly IProductService _productService;
+        private readonly AppDBContext _context;
 
-        public BrandProductResolver(IProductService productService)
+        public BrandProductResolver(AppDBContext context)
         {
-            _productService = productService;
+            _context = context;
         }
 
-        public List<ProductInfoDTO>? Resolve(BrandModel source, BrandInfoDTO destination, List<ProductInfoDTO>? destMember, ResolutionContext context)
+        public List<int>? Resolve(BrandModel source, BrandInfoDTO destination, List<int>? destMember, ResolutionContext context)
         {
-            var result = source.Products?.Select(_productService.ProductModelToInfoDTO).ToList();
+            List<int>? result = _context.Products
+                .AsNoTracking()
+                .Where(x => x.BrandID == source.ID)
+                .Select(x => x.ID)
+                .ToList();
             return result;
         }
     }
@@ -432,7 +367,7 @@ namespace Pexita.Utility
             return null;
         }
     }
-    public class TagProductResolver : IValueResolver<TagModel, TagInfoDTO, List<ProductInfoDTO>?>
+    public class TagProductResolver : IValueResolver<TagModel, TagInfoDTO, List<int>?>
     {
         private readonly IProductService _productService;
 
@@ -441,9 +376,10 @@ namespace Pexita.Utility
             _productService = productService;
         }
 
-        public List<ProductInfoDTO>? Resolve(TagModel source, TagInfoDTO destination, List<ProductInfoDTO>? destMember, ResolutionContext context)
+        public List<int>? Resolve(TagModel source, TagInfoDTO destination, List<int>? destMember, ResolutionContext context)
         {
-            return source.Products?.Select(x => _productService.ProductModelToInfoDTO(x)).ToList();
+            var s = source.Products?.Select(x => x.ID).ToList();
+            return s;
         }
     }
     public class UserAddressResolver : IValueResolver<UserModel, UserInfoDTO, List<AddressDTO>?>

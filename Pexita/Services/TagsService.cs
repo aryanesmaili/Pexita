@@ -28,7 +28,7 @@ namespace Pexita.Services
 
         public async Task<List<TagInfoDTO>> GetAllTags()
         {
-            return await _Context.Tags
+            return await _Context.Tags.Include(x => x.Products)
                 .AsNoTracking()
                 .Select(x => _mapper.Map<TagInfoDTO>(x))
                 .ToListAsync();

@@ -139,7 +139,7 @@ namespace Pexita.Controllers
         {
             try
             {
-                ArgumentNullException.ThrowIfNull(logout);
+                ArgumentNullException.ThrowIfNullOrWhiteSpace(logout);
 
                 await _userService.RevokeToken(logout);
                 return Ok();

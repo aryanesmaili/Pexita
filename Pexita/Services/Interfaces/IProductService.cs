@@ -14,6 +14,8 @@ namespace Pexita.Services.Interfaces
         public Task AddCommentToProduct(CommentsDTO commentDTO, string requestingUsername);
         public Task UpdateProductRate(UpdateProductRateDTO rateDTO, string requestingUsername);
         public Task<bool> IsProductAlready(int BrandID, string ProductTitle);
+        public bool IsProduct(int id);
+        public bool IsProduct(ProductInfoDTO product);
     }
 }
 

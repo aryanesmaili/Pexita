@@ -2,7 +2,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace Pexita.Utility
+namespace Pexita.Services
 {
     public class IranAPI : IIranAPI
     {

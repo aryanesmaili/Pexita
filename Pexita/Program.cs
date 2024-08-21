@@ -11,7 +11,7 @@ using Pexita.Data.Entities.Payment;
 using Pexita.Data.Entities.SMTP;
 using Pexita.Services;
 using Pexita.Services.Interfaces;
-using Pexita.Utility;
+using Pexita.Utility.MapperConfigs;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -24,8 +24,13 @@ builder.Services.AddSwaggerGen();
 
 builder.Services.AddHttpContextAccessor();
 
-builder.Services.AddAutoMapper(typeof(AutoMapperConfig));
+builder.Services.AddAutoMapper(typeof(TagMapper));
 builder.Services.AddAutoMapper(typeof(ProductMapper));
+builder.Services.AddAutoMapper(typeof(BrandMapper));
+builder.Services.AddAutoMapper(typeof(CartMapper));
+builder.Services.AddAutoMapper(typeof(NewsLettersMapper));
+builder.Services.AddAutoMapper(typeof(TokenMapper));
+builder.Services.AddAutoMapper(typeof(UserMapper));
 
 //builder.Services.AddTransient<AutoMapperConfig>();
 

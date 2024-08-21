@@ -217,5 +217,23 @@ namespace Pexita.Services
             brand.Products ??= [];
             return brand.Products.Any(x => x.Title == ProductTitle);
         }
+        /// <summary>
+        /// Checks if a given ID is a valid product.
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns>True if it's a record False otherwise.</returns>
+        public bool IsProduct(int id)
+        {
+            return _Context.Products.FirstOrDefault(x => x.ID == id) != null;
+        }
+        /// <summary>
+        /// Checks if a given DTO is a true representative of sth in DB.
+        /// </summary>
+        /// <param name="product"></param>
+        /// <returns>True if it's a record False otherwise.</returns>
+        public bool IsProduct(ProductInfoDTO product)
+        {
+            return IsProduct(product.ID);
+        }
     }
 }

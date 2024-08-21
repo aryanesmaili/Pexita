@@ -44,5 +44,6 @@ namespace Pexita.Data.Entities.ShoppingCart
         public int ProductID { get; set; }
         public required ProductInfoDTO Product { get; set; }
         public int Count { get; set; }
+        public int ShoppingCartID { get; set; }
     }
 }

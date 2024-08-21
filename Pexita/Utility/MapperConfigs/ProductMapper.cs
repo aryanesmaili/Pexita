@@ -3,9 +3,10 @@ using Pexita.Data;
 using Pexita.Data.Entities.Comments;
 using Pexita.Data.Entities.Products;
 using Pexita.Data.Entities.Tags;
+using Pexita.Data.Entities.User;
 using Pexita.Services.Interfaces;
 
-namespace Pexita.Utility
+namespace Pexita.Utility.MapperConfigs
 {
     public class ProductMapper : Profile
     {
@@ -26,6 +27,9 @@ namespace Pexita.Utility
             CreateMap<ProductUpdateDTO, ProductModel>()
                 .ForMember(p => p.ProductPicsURL, opt => opt.MapFrom<ProductUpdatePicResolver>())
                 .ForMember(p => p.Tags, opt => opt.MapFrom<ProductUpdateTagsResolver>());
+
+            CreateMap<CommentsModel, CommentsDTO>()
+                .ForMember(u => u.User, opt => opt.MapFrom<CommentUserResolver>());
         }
     }
     public class ProductCommentResolver : IValueResolver<ProductModel, ProductInfoDTO, List<CommentsDTO>?>
@@ -132,6 +136,34 @@ namespace Pexita.Utility
         {
             var ratings = _context.Ratings.Where(x => x.ProductID == source.ID).Select(x => x.Rating).ToList();
             return _pexitaTools.GetRating(ratings) ?? null;
+        }
+    }
+    public class CommentUserResolver : IValueResolver<CommentsModel, CommentsDTO, UserInfoDTO>
+    {
+        private readonly IUserService _userService;
+
+        public CommentUserResolver(IUserService userService)
+        {
+            _userService = userService;
+        }
+
+        public UserInfoDTO Resolve(CommentsModel source, CommentsDTO destination, UserInfoDTO destMember, ResolutionContext context)
+        {
+            return _userService.UserModelToInfoDTO(source.User);
+        }
+    }
+    public class CommentProductResolver : IValueResolver<CommentsModel, CommentsDTO, ProductInfoDTO>
+    {
+        private readonly IProductService _productService;
+
+        public CommentProductResolver(IProductService productService)
+        {
+            _productService = productService;
+        }
+
+        public ProductInfoDTO Resolve(CommentsModel source, CommentsDTO destination, ProductInfoDTO destMember, ResolutionContext context)
+        {
+            return _productService.ProductModelToInfoDTO(source.Product);
         }
     }
 }

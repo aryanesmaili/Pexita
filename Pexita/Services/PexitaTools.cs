@@ -4,6 +4,7 @@ using Pexita.Data;
 using Pexita.Data.Entities.Authentication;
 using Pexita.Data.Entities.Brands;
 using Pexita.Data.Entities.Products;
+using Pexita.Data.Entities.ShoppingCart;
 using Pexita.Data.Entities.Tags;
 using Pexita.Data.Entities.User;
 using Pexita.Services.Interfaces;
@@ -292,8 +293,7 @@ namespace Pexita.Services
         /// <exception cref="NotAuthorizedException"></exception>
         public async Task<ProductModel> AuthorizeProductAccessAsync(int id, string requesterUsername)
         {
-            if (string.IsNullOrEmpty(requesterUsername))
-                throw new ArgumentNullException(nameof(requesterUsername));
+            ArgumentNullException.ThrowIfNullOrWhiteSpace(requesterUsername);
 
             ProductModel productToAccess = _Context.Products
                 .Include(p => p.Brand)
@@ -317,7 +317,7 @@ namespace Pexita.Services
 
             if (!isAdmin && !isOwner) // only an admin or the owner of the record can modify it.
             {
-                throw new NotAuthorizedException($"User {requesterUsername} is not authorized to modify product {id}");
+                throw new NotAuthorizedException($"User {requesterUsername} is not authorized to Access or  modify product {id}");
             }
             return productToAccess;
         }
@@ -332,8 +332,7 @@ namespace Pexita.Services
         /// <exception cref="NotAuthorizedException"></exception>
         public async Task<BrandModel> AuthorizeProductCreationAsync(int targetBrandID, string requesterUsername)
         {
-            if (string.IsNullOrEmpty(requesterUsername))
-                throw new ArgumentNullException(nameof(requesterUsername));
+            ArgumentNullException.ThrowIfNullOrWhiteSpace(requesterUsername);
 
             BrandModel brandToBeAccessed = await _Context.Brands
                                                 .FindAsync(targetBrandID)
@@ -473,6 +472,64 @@ namespace Pexita.Services
         {
             string emailPattern = @"^[^@\s]+@[^@\s]+\.[^@\s]+$";
             return Regex.IsMatch(input, emailPattern);
+        }
+        /// <summary>
+        /// Checks if a username as the authority to access a certain DB record.
+        /// </summary>
+        /// <param name="cartID">ID of the cart record the username wants to access.</param>
+        /// <param name="reqUsername">Username of the user requesting the access.</param>
+        /// <returns>a <see cref="ShoppingCartModel"/> Database record.</returns>
+        /// <exception cref="NotFoundException"></exception>
+        /// <exception cref="NotAuthorizedException"></exception>
+        public async Task<ShoppingCartModel> AuthorizeCartAccess(int cartID, string reqUsername)
+        {
+            ArgumentNullException.ThrowIfNullOrWhiteSpace(reqUsername);
+
+            ShoppingCartModel cartToAccess = await _Context.ShoppingCarts
+                .Include(x => x.User)
+                .Include(x => x.Order)
+                .Include(x => x.CartItems)
+                .FirstOrDefaultAsync(x => x.ID == cartID)
+                ?? throw new NotFoundException($"Entity {cartID} not found in Carts.");
+
+            UserModel requester = await _Context.Users
+                .FirstOrDefaultAsync(x => x.Username == reqUsername)
+                ?? throw new NotFoundException($"User {reqUsername} not found in Users.");
+
+            bool isAdmin = requester.Role == "admin";
+            bool isOwner = cartToAccess.UserID == requester.ID;
+            if (!isAdmin && !isOwner)
+            {
+                throw new NotAuthorizedException($"User {reqUsername} is not authorized to modify or Access cart {cartID}");
+            }
+            return cartToAccess;
+        }
+        /// <summary>
+        /// Checks if a username as the authority to create a DB record.
+        /// </summary>
+        /// <param name="cartID">ID of the cart record the username wants to create record.</param>
+        /// <param name="reqUsername">Username of the user requesting the creation.</param>
+        /// <returns></returns>
+        /// <exception cref="NotFoundException"></exception>
+        /// <exception cref="NotAuthorizedException"></exception>
+        public async Task<UserModel> AuthorizeCartCreation(int UserID, string reqUsername)
+        {
+            ArgumentNullException.ThrowIfNullOrWhiteSpace(reqUsername);
+
+            UserModel userToBeAccessed = await _Context.Users.FindAsync(UserID) ?? throw new NotFoundException($"User {UserID} does not exist.");
+
+            UserModel requester = await _Context.Users
+                .AsNoTracking()
+                .FirstOrDefaultAsync(x => x.Username == reqUsername) 
+                ?? throw new NotFoundException($"User {reqUsername} does not exist.");
+
+            bool isAdmin = requester.Role == "admin";
+            bool isOwner = requester.Username == userToBeAccessed.Username;
+            if (!isAdmin && !isOwner)
+            {
+                throw new NotAuthorizedException($"User {reqUsername} does not have permission to Access or Modify User {UserID}");
+            }
+            return userToBeAccessed;
         }
     }
 }

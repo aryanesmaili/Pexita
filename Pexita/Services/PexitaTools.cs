@@ -453,7 +453,6 @@ namespace Pexita.Services
         /// Generates the refresh token needed for user to refresh their JWToken.
         /// </summary>
         /// <returns>a random string containing the new RefreshToken</returns>
-        /// <exception cref="NotImplementedException"></exception>
         public string GenerateRefreshToken()
         {
             var randomBytes = new byte[64];

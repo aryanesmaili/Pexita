@@ -59,6 +59,7 @@ builder.Services.AddTransient<IPexitaTools, PexitaTools>();
 builder.Services.AddTransient<IIranAPI, IranAPI>();
 builder.Services.AddTransient<BrandPicURLResolver>();
 builder.Services.AddTransient<INewsletterService, NewsletterService>();
+builder.Services.AddTransient<ICartService, CartService>();
 
 builder.Services.Configure<PaymentSettings>(builder.Configuration.GetSection("PaymentSettings"));
 

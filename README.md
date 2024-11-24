@@ -103,10 +103,6 @@ The system implements an event-driven architecture through:
 - Validator configurations using FluentValidation
 - Clean separation of concerns
 
-## 🤝 Contributing
-
-Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduct and the process for submitting pull requests.
-
 ## 📝 License
 
 This project is licensed under the GPLv3 License - see the [LICENSE.md](LICENSE.md) file for details.

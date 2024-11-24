@@ -69,7 +69,7 @@ namespace Pexita.Controllers
                 return StatusCode(500, e.Message);
             }
         }
-        [Authorize(Policy ="OnlyUsers")]
+        [Authorize(Policy = "OnlyUsers")]
         [HttpPut("/Update")]
         public async Task<IActionResult> UpdateCartInfo([FromForm] ShoppingCartDTO cartDTO)
         {
@@ -97,7 +97,7 @@ namespace Pexita.Controllers
                 return StatusCode(500, e.Message);
             }
         }
-        [Authorize(Policy ="OnlyUsers")]
+        [Authorize(Policy = "OnlyUsers")]
         [HttpDelete("/Delete/{id:int}")]
         public async Task<IActionResult> DeleteCart([FromRoute] int id)
         {

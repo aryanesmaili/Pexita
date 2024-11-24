@@ -1,6 +1,4 @@
-﻿using Pexita.Data.Entities.Products;
-
-namespace Pexita.Data.Entities.Tags
+﻿namespace Pexita.Data.Entities.Tags
 {
     public class ProductTagInfoDTO
     {

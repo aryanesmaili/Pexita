@@ -519,7 +519,7 @@ namespace Pexita.Services
 
             UserModel requester = await _Context.Users
                 .AsNoTracking()
-                .FirstOrDefaultAsync(x => x.Username == reqUsername) 
+                .FirstOrDefaultAsync(x => x.Username == reqUsername)
                 ?? throw new NotFoundException($"User {reqUsername} does not exist.");
 
             bool isAdmin = requester.Role == "admin";

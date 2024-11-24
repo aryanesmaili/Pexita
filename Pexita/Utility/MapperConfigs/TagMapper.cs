@@ -1,19 +1,6 @@
 ﻿using AutoMapper;
-using Microsoft.EntityFrameworkCore;
-using Pexita.Data;
-using Pexita.Data.Entities.Authentication;
-using Pexita.Data.Entities.Brands;
-using Pexita.Data.Entities.Comments;
-using Pexita.Data.Entities.Newsletter;
-using Pexita.Data.Entities.Orders;
-using Pexita.Data.Entities.Payment;
-using Pexita.Data.Entities.Products;
-using Pexita.Data.Entities.ShoppingCart;
 using Pexita.Data.Entities.Tags;
-using Pexita.Data.Entities.User;
-using Pexita.Services;
 using Pexita.Services.Interfaces;
-using Pexita.Utility.Exceptions;
 
 namespace Pexita.Utility.MapperConfigs
 {

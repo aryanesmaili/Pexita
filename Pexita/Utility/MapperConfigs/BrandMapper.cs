@@ -5,7 +5,6 @@ using Pexita.Data.Entities.Brands;
 using Pexita.Data.Entities.Newsletter;
 using Pexita.Data.Entities.Products;
 using Pexita.Services.Interfaces;
-using System.Drawing.Drawing2D;
 
 namespace Pexita.Utility.MapperConfigs
 {
